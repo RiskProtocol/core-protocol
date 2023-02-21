@@ -1,23 +1,43 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "./DevToken.sol";
 
-error TokenFactory__NotEnough();
-error TokenFactory__ConversionError();
+error TokenFactory__InsufficientFund();
 
-contract TokenFactory {  
-    DevToken[] public s_devTokenArray;
-    address[] public s_funders;
-    uint256 private constant INITIAL_USD_ETH_PRICE = 100;
-    uint256 private constant FINAL_USD_ETH_PRICE = 173;
-    uint256 private constant AMOUNT = 1 * 1e18;
+/**
+ * @title ERC-20 Rebase Tokens
+ * @author Okwuosa Chijioke
+ * @notice Still under development
+ * @dev This implements 2 ERC-20 tokens that will be minted in exactly the same proportion as the
+ * underlying ERC-20 token transferred into the Factory contract.
+ * The asset will be burned in exactly the same proportion when asked to redeem/withdrawal the underlying asset.
+ * The contract will implement periodic rebalancing
+ */
+contract TokenFactory is ReentrancyGuard{
+    // State variables
+    DevToken[] private s_devTokenArray;
+    address private immutable i_baseTokenAddress;
+    address[] private s_funders;
 
-    constructor() {
-        DevToken devToken1 = new DevToken("DevToken1", "DVT1");
+    // Events
+    event AssetBought(address indexed recipient, uint256 amount);
+    event AssetWithdrawn(address indexed owner, uint256 amount);
+
+    constructor(
+        address baseTokenAddress,
+        string memory token1Name,
+        string memory token1Symbol,
+        string memory token2Name,
+        string memory token2Symbol
+    ) {
+        i_baseTokenAddress = baseTokenAddress;
+
+        DevToken devToken1 = new DevToken(token1Name, token1Symbol);
         s_devTokenArray.push(devToken1);
 
-        DevToken devToken2 = new DevToken("DevToken2", "DVT2");
+        DevToken devToken2 = new DevToken(token2Name, token2Symbol);
         s_devTokenArray.push(devToken2);
     }
 
@@ -44,47 +64,19 @@ contract TokenFactory {
         s_devTokenArray[_devTokenIndex].burnToken(_owner, _amount);
     }
 
-    function buyAssets() public payable {
-        if (msg.value < AMOUNT) revert TokenFactory__NotEnough();
+    function buyAsset() public payable nonReentrant {
+        sendToken(0, msg.sender, msg.value);
+        sendToken(1, msg.sender, msg.value);
         s_funders.push(msg.sender);
-        sendToken(0, msg.sender, 1 * 1e18);
-        sendToken(1, msg.sender, 1 * 1e18);
+        emit AssetBought(msg.sender, msg.value);
     }
 
-    function rebase() public {
-        address[] memory funders = s_funders;
-        uint256 dvt1Balance;
-        uint256 dvt2Balance;
-        uint256 accountValue;
-        uint256 rollOverValueInUSD;
-        uint256 rollOverDivisor;
-        for (
-            uint256 funderIndex = 0;
-            funderIndex < funders.length;
-            funderIndex++
-        ) {
-            address funder = funders[funderIndex];
-            dvt1Balance = getBalance(0, funder) / 1e18;
-            dvt2Balance = getBalance(1, funder) / 1e18;
-            accountValue =
-                (dvt1Balance * (INITIAL_USD_ETH_PRICE / 2)) +
-                (dvt2Balance * (INITIAL_USD_ETH_PRICE / 2));
-            rollOverValueInUSD = accountValue / 2;
-            rollOverDivisor = FINAL_USD_ETH_PRICE / 2;
-
-            burnToken(0, funder, getBalance(0, funder));
-            burnToken(1, funder, getBalance(1, funder));
-
-            sendToken(
-                0,
-                funder,
-                (((rollOverValueInUSD * 1e18) / rollOverDivisor) * 1e18) / 1e18
-            );
-            sendToken(
-                1,
-                funder,
-                (((rollOverValueInUSD * 1e18) / rollOverDivisor) * 1e18) / 1e18
-            );
-        }
+    function withdrawAsset(uint256 _amount) public nonReentrant{
+        if (_amount > getBalance(0, msg.sender))
+            revert TokenFactory__InsufficientFund();
+        burnToken(0, msg.sender, _amount);
+        burnToken(1, msg.sender, _amount);
+        payable(msg.sender).transfer(_amount);
+        emit AssetWithdrawn(msg.sender, _amount);
     }
 }

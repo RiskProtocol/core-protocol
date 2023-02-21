@@ -1,6 +1,7 @@
 import { DeployFunction } from 'hardhat-deploy/types';
 import { developmentChains, networkConfig } from '../helper-hardhat-config';
 import { verify } from '../utils/verify';
+import { BASE_TOKEN_ADDRESS, TOKEN1_NAME, TOKEN1_SYMBOL, TOKEN2_NAME, TOKEN2_SYMBOL } from '../helper-hardhat-config';
 
 const func: DeployFunction = async ({ getNamedAccounts, deployments, network }) => {
     const { deploy, log } = deployments
@@ -20,19 +21,19 @@ const func: DeployFunction = async ({ getNamedAccounts, deployments, network }) 
         ethUsdPriceFeedAddress = networkConfig[network.name].ethUsdPriceFeed!
     }
 
-    const GoFundMe = await deploy("GoFundMe", {
+    const TokenFactory = await deploy("TokenFactory", {
         from: deployer,
-        args: [ethUsdPriceFeedAddress], // put price feed address here
+        args: [BASE_TOKEN_ADDRESS, TOKEN1_NAME, TOKEN1_SYMBOL, TOKEN2_NAME, TOKEN2_SYMBOL], 
         log: true,
         // we need to wait if on a live network so we can verify properly
         waitConfirmations: networkConfig[network.name].blockConfirmations || 1,
     })
 
-    log("GoFundMe Deployed!")
+    log("TokenFactory Deployed!")
     log("----------------------------------")
 
     if (!developmentChains.includes(network.name) && process.env.ETHERSCAN_API_KEY) {
-        await verify(GoFundMe.address, [ethUsdPriceFeedAddress])
+        await verify(TokenFactory.address, [BASE_TOKEN_ADDRESS, TOKEN1_NAME, TOKEN1_SYMBOL, TOKEN2_NAME, TOKEN2_SYMBOL])
     }
 };
 export default func;
