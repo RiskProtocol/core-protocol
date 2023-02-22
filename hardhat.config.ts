@@ -52,6 +52,11 @@ const config: HardhatUserConfig = {
         1: 0, // similarly on mainnet it will take the first account as deployer.
         5: 0, // on goerli it will take first account
     },
+    tester:{
+      default: 1, // here this will by default take the second account as tester
+      1: 1, // similarly on mainnet it will take the second account as tester.
+      5: 1, // on goerli it will take second account
+    }
   },
 };
 

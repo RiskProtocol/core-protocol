@@ -79,4 +79,8 @@ contract TokenFactory is ReentrancyGuard{
         payable(msg.sender).transfer(_amount);
         emit AssetWithdrawn(msg.sender, _amount);
     }
+
+    function getBaseTokenAddress() public view returns (address) {
+        return i_baseTokenAddress;
+    }
 }
