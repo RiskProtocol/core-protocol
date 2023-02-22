@@ -2,7 +2,10 @@
 pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/math/Math.sol";
 import "./DevToken.sol";
+import "./library/PriceConverter.sol";
+import "hardhat/console.sol";
 
 error TokenFactory__InsufficientFund();
 
@@ -16,10 +19,14 @@ error TokenFactory__InsufficientFund();
  * The contract will implement periodic rebalancing
  */
 contract TokenFactory is ReentrancyGuard{
+    using PriceConverter for AggregatorV3Interface;
+    using Math for uint256;
+
     // State variables
     DevToken[] private s_devTokenArray;
     address private immutable i_baseTokenAddress;
     address[] private s_funders;
+    AggregatorV3Interface private immutable i_priceFeed;
 
     // Events
     event AssetBought(address indexed recipient, uint256 amount);
@@ -27,12 +34,14 @@ contract TokenFactory is ReentrancyGuard{
 
     constructor(
         address baseTokenAddress,
+        address priceFeedAddress,
         string memory token1Name,
         string memory token1Symbol,
         string memory token2Name,
         string memory token2Symbol
     ) {
         i_baseTokenAddress = baseTokenAddress;
+        i_priceFeed = AggregatorV3Interface(priceFeedAddress);
 
         DevToken devToken1 = new DevToken(token1Name, token1Symbol);
         s_devTokenArray.push(devToken1);
@@ -82,5 +91,41 @@ contract TokenFactory is ReentrancyGuard{
 
     function getBaseTokenAddress() public view returns (address) {
         return i_baseTokenAddress;
+    }
+
+    function getFunderAddressByIndex(uint index) public view returns (address) {
+        return s_funders[index];
+    }
+
+    function rebase() public {        
+        address[] memory funders = s_funders;      
+        uint256 rebasePrice = i_priceFeed.getPrice()/1e18;
+        uint256 asset1Price = rebasePrice.ceilDiv(3); // this should be gotten from the oracle
+        uint256 asset2Price = rebasePrice - asset1Price;
+        uint256 asset1Balance;
+        uint256 asset2Balance;
+        uint256 accountValue;
+        uint256 rollOverValueInUSD;
+        uint256 rollOverDivisor;        
+       
+        for (
+            uint256 funderIndex = 0;
+            funderIndex < funders.length;
+            funderIndex++
+        ) {
+            address funder = funders[funderIndex];
+            asset1Balance = getBalance(0, funder) / 1e18;
+            asset2Balance = getBalance(1, funder) / 1e18;            
+            accountValue =
+                (asset1Balance * asset1Price) +
+                (asset2Balance * asset2Price);
+            rollOverValueInUSD = accountValue / 2;
+            rollOverDivisor = rebasePrice/2; 
+           
+            burnToken(0, funder, getBalance(0, funder));
+            burnToken(1, funder, getBalance(1, funder));            
+            sendToken(0, funder, (rollOverValueInUSD *1e18/rollOverDivisor* 1e18)/1e18);
+            sendToken(1, funder, (rollOverValueInUSD *1e18/rollOverDivisor* 1e18)/1e18);
+        }
     }
 }

@@ -23,7 +23,7 @@ const func: DeployFunction = async ({ getNamedAccounts, deployments, network }) 
 
     const TokenFactory = await deploy("TokenFactory", {
         from: deployer,
-        args: [BASE_TOKEN_ADDRESS, TOKEN1_NAME, TOKEN1_SYMBOL, TOKEN2_NAME, TOKEN2_SYMBOL], 
+        args: [BASE_TOKEN_ADDRESS,ethUsdPriceFeedAddress, TOKEN1_NAME, TOKEN1_SYMBOL, TOKEN2_NAME, TOKEN2_SYMBOL], 
         log: true,
         // we need to wait if on a live network so we can verify properly
         waitConfirmations: networkConfig[network.name].blockConfirmations || 1,
@@ -33,7 +33,7 @@ const func: DeployFunction = async ({ getNamedAccounts, deployments, network }) 
     log("----------------------------------")
 
     if (!developmentChains.includes(network.name) && process.env.ETHERSCAN_API_KEY) {
-        await verify(TokenFactory.address, [BASE_TOKEN_ADDRESS, TOKEN1_NAME, TOKEN1_SYMBOL, TOKEN2_NAME, TOKEN2_SYMBOL])
+        await verify(TokenFactory.address, [BASE_TOKEN_ADDRESS, ethUsdPriceFeedAddress, TOKEN1_NAME, TOKEN1_SYMBOL, TOKEN2_NAME, TOKEN2_SYMBOL])
     }
 };
 export default func;
