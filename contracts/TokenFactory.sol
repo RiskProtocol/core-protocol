@@ -144,6 +144,10 @@ contract TokenFactory is ReentrancyGuard{
         return i_baseTokenAddress;
     }
 
+    function getPriceFeedAddress() public view returns (AggregatorV3Interface) {
+        return i_priceFeed;
+    }
+
     function getFunderAddressByIndex(uint index) public view returns (address) {
         return s_funders[index];
     }
