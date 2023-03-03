@@ -11,15 +11,22 @@ contract DevToken is ERC20, Ownable {
         string memory tokenSymbol
     ) ERC20(tokenName, tokenSymbol) {}
 
-    function issueToken(address receiver, uint256 amount) public onlyOwner {
+    
+
+    function mint(address receiver, uint256 amount) public onlyOwner {
         _mint(receiver, amount);
     }
 
-    function tokenBalance(address owner) public view returns (uint256) {
-        return balanceOf(owner);
+    function balanceOf(address owner) public view override returns (uint256) {
+        return super.balanceOf(owner);
     }
 
-    function burnToken(address account, uint256 amount) public onlyOwner {
+    function burn(address account, uint256 amount) public onlyOwner {
         _burn(account, amount);
+    }
+
+    function transfer(address to, uint256 value) public override returns (bool)
+    {
+        return super.transfer(to, value);
     }
 }
