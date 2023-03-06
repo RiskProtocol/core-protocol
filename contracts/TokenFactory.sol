@@ -31,10 +31,7 @@ contract TokenFactory is ReentrancyGuard {
     DevToken[] private s_devTokenArray;
     address private immutable i_baseTokenAddress;
     AggregatorV3Interface private immutable i_priceFeed;
-    mapping(address => uint256) s_lastRebaseCount;
-    uint256 private s_scallingFactorX;
-    uint256 private s_scallingFactorY;
-    uint256 private s_rebaseCount;
+    mapping(address => uint256) s_lastRebaseCount; 
 
     // Events
     event AssetBought(address indexed recipient, uint256 amount);
@@ -77,13 +74,7 @@ contract TokenFactory is ReentrancyGuard {
             ].scallingFactorX;
             uint256 scallingFactorY = s_scallingFactor[
                 s_lastRebaseCount[msg.sender]
-            ].scallingFactorY;
-
-            console.log("scaling factor x");
-            console.log(scallingFactorX);
-
-            console.log("scallingFactorY");
-            console.log(scallingFactorY);
+            ].scallingFactorY;           
 
             uint256 newTokenValue = ((s_devTokenArray[0].balanceOf(_owner) /
                 1e18) * scallingFactorX) +
@@ -105,6 +96,7 @@ contract TokenFactory is ReentrancyGuard {
             applyRebase();
         }
         return true;
+        // fix the bug here
         // return s_devTokenArray[_devTokenIndex].transfer(to, value);
     }
 
@@ -119,19 +111,6 @@ contract TokenFactory is ReentrancyGuard {
     function rebase() public {
         uint256 rebasePrice = i_priceFeed.getPrice() / 1e18;
         uint256 asset1Price = rebasePrice.ceilDiv(3); // this should be gotten from the oracle
-        uint256 asset2Price = rebasePrice - asset1Price;
-        uint256 divisor = rebasePrice.ceilDiv(2);
-        s_scallingFactor.push(
-            scallingFactor(
-                ((asset1Price * 1e18) / 2) / divisor,
-                ((asset2Price * 1e18) / 2) / divisor
-            )
-        );
-    }
-
-    function rebase1() public {
-        uint256 rebasePrice = 500;
-        uint256 asset1Price = 200; // this should be gotten from the oracle
         uint256 asset2Price = rebasePrice - asset1Price;
         uint256 divisor = rebasePrice.ceilDiv(2);
         s_scallingFactor.push(
@@ -171,22 +150,11 @@ contract TokenFactory is ReentrancyGuard {
         }
 
         s_lastRebaseCount[msg.sender] = getScallingFactorLength();
-
-         console.log("scaling factor x");
-        console.log(scallingFactorX);
-
-        console.log("scallingFactorY");
-        console.log(scallingFactorY);
-
-        console.log("rollOverValue");
-        console.log(rollOverValue);
     }
 
     function buyAsset() public payable nonReentrant {
         mint(0, msg.sender, msg.value);
-        mint(1, msg.sender, msg.value);
-        // mint(0, msg.sender, 1e18);
-        // mint(1, msg.sender, msg.value);
+        mint(1, msg.sender, msg.value);       
         emit AssetBought(msg.sender, msg.value);
     }
 
