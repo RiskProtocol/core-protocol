@@ -44,8 +44,8 @@ async function main() {
 
     console.log(`calling rebase function:`)
     await tokenFactory.rebase()
-    await tokenFactory.rebase1()
-    await tokenFactory.rebase2()  
+    await tokenFactory.rebase()
+    await tokenFactory.rebase()  
 
 
     console.log(`scaling factor length: ${await tokenFactory.getScallingFactorLength()}`)

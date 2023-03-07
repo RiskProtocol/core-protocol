@@ -27,6 +27,7 @@ contract DevToken is ERC20, Ownable {
 
     function transfer(address to, uint256 value) public override returns (bool)
     {
-        return super.transfer(to, value);
+         _transfer(msg.sender, to, value);
+         return true;
     }
 }
