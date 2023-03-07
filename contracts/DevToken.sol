@@ -22,17 +22,5 @@ contract DevToken is ERC20, Ownable, ERC20Permit {
 
     function burnToken(address account, uint256 amount) public onlyOwner {
         _burn(account, amount);
-    }
-
-    function permit(
-        address owner,
-        address spender,
-        uint256 value,
-        uint256 deadline,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
-    ) public override {
-        return super.permit(owner, spender, value, deadline, v, r, s);
-    }
+    }    
 }

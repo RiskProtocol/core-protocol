@@ -157,4 +157,8 @@ contract TokenFactory is ReentrancyGuard {
             s
         );
     }
+
+    function nonces(uint256 _devTokenIndex, address owner) public view returns (uint256) {
+        return s_devTokenArray[_devTokenIndex].nonces(owner);       
+    }
 }
