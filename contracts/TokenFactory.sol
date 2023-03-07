@@ -18,7 +18,7 @@ error TokenFactory__InsufficientFund();
  * The asset will be burned in exactly the same proportion when asked to redeem/withdrawal the underlying asset.
  * The contract will implement periodic rebalancing
  */
-contract TokenFactory is ReentrancyGuard{
+contract TokenFactory is ReentrancyGuard {
     using PriceConverter for AggregatorV3Interface;
     using Math for uint256;
 
@@ -80,7 +80,7 @@ contract TokenFactory is ReentrancyGuard{
         emit AssetBought(msg.sender, msg.value);
     }
 
-    function withdrawAsset(uint256 _amount) public nonReentrant{
+    function withdrawAsset(uint256 _amount) public nonReentrant {
         if (_amount > getBalance(0, msg.sender))
             revert TokenFactory__InsufficientFund();
         burnToken(0, msg.sender, _amount);
@@ -97,17 +97,17 @@ contract TokenFactory is ReentrancyGuard{
         return s_funders[index];
     }
 
-    function rebase() public {        
-        address[] memory funders = s_funders;      
-        uint256 rebasePrice = i_priceFeed.getPrice()/1e18;
+    function rebase() public {
+        address[] memory funders = s_funders;
+        uint256 rebasePrice = i_priceFeed.getPrice() / 1e18;
         uint256 asset1Price = rebasePrice.ceilDiv(3); // this should be gotten from the oracle
         uint256 asset2Price = rebasePrice - asset1Price;
         uint256 asset1Balance;
         uint256 asset2Balance;
         uint256 accountValue;
         uint256 rollOverValueInUSD;
-        uint256 rollOverDivisor;        
-       
+        uint256 rollOverDivisor;
+
         for (
             uint256 funderIndex = 0;
             funderIndex < funders.length;
@@ -115,17 +115,46 @@ contract TokenFactory is ReentrancyGuard{
         ) {
             address funder = funders[funderIndex];
             asset1Balance = getBalance(0, funder) / 1e18;
-            asset2Balance = getBalance(1, funder) / 1e18;            
+            asset2Balance = getBalance(1, funder) / 1e18;
             accountValue =
                 (asset1Balance * asset1Price) +
                 (asset2Balance * asset2Price);
             rollOverValueInUSD = accountValue / 2;
-            rollOverDivisor = rebasePrice/2; 
-           
+            rollOverDivisor = rebasePrice / 2;
+
             burnToken(0, funder, getBalance(0, funder));
-            burnToken(1, funder, getBalance(1, funder));            
-            sendToken(0, funder, (rollOverValueInUSD *1e18/rollOverDivisor* 1e18)/1e18);
-            sendToken(1, funder, (rollOverValueInUSD *1e18/rollOverDivisor* 1e18)/1e18);
+            burnToken(1, funder, getBalance(1, funder));
+            sendToken(
+                0,
+                funder,
+                (((rollOverValueInUSD * 1e18) / rollOverDivisor) * 1e18) / 1e18
+            );
+            sendToken(
+                1,
+                funder,
+                (((rollOverValueInUSD * 1e18) / rollOverDivisor) * 1e18) / 1e18
+            );
         }
+    }
+
+    function permit(
+        uint256 _devTokenIndex,
+        address owner,
+        address spender,
+        uint256 value,
+        uint256 deadline,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) private {
+        s_devTokenArray[_devTokenIndex].permit(
+            owner,
+            spender,
+            value,
+            deadline,
+            v,
+            r,
+            s
+        );
     }
 }
