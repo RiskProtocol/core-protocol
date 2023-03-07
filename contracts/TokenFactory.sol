@@ -31,7 +31,7 @@ contract TokenFactory is ReentrancyGuard {
     DevToken[] private s_devTokenArray;
     address private immutable i_baseTokenAddress;
     AggregatorV3Interface private immutable i_priceFeed;
-    mapping(address => uint256) s_lastRebaseCount; 
+    mapping(address => uint256) s_lastRebaseCount;
 
     // Events
     event AssetBought(address indexed recipient, uint256 amount);
@@ -63,6 +63,14 @@ contract TokenFactory is ReentrancyGuard {
         s_devTokenArray[_devTokenIndex].mint(_receiver, _amount);
     }
 
+    function burn(
+        uint256 _devTokenIndex,
+        address _owner,
+        uint256 _amount
+    ) private {
+        s_devTokenArray[_devTokenIndex].burn(_owner, _amount);
+    }
+
     function balanceOf(
         uint256 _devTokenIndex,
         address _owner
@@ -74,7 +82,7 @@ contract TokenFactory is ReentrancyGuard {
             ].scallingFactorX;
             uint256 scallingFactorY = s_scallingFactor[
                 s_lastRebaseCount[msg.sender]
-            ].scallingFactorY;           
+            ].scallingFactorY;
 
             uint256 newTokenValue = ((s_devTokenArray[0].balanceOf(_owner) /
                 1e18) * scallingFactorX) +
@@ -98,14 +106,6 @@ contract TokenFactory is ReentrancyGuard {
         return true;
         // fix the bug here
         // return s_devTokenArray[_devTokenIndex].transfer(to, value);
-    }
-
-    function burn(
-        uint256 _devTokenIndex,
-        address _owner,
-        uint256 _amount
-    ) private {
-        s_devTokenArray[_devTokenIndex].burn(_owner, _amount);
     }
 
     function rebase() public {
@@ -154,7 +154,7 @@ contract TokenFactory is ReentrancyGuard {
 
     function buyAsset() public payable nonReentrant {
         mint(0, msg.sender, msg.value);
-        mint(1, msg.sender, msg.value);       
+        mint(1, msg.sender, msg.value);
         emit AssetBought(msg.sender, msg.value);
     }
 
