@@ -4,6 +4,7 @@ pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "hardhat/console.sol";
 
 contract DevToken is ERC20, Ownable {
     constructor(
@@ -17,5 +18,12 @@ contract DevToken is ERC20, Ownable {
 
     function burn(address account, uint256 amount) public onlyOwner {
         _burn(account, amount);
-    }    
+    } 
+
+    function transfer(address to, uint256 amount) public override returns (bool) {       
+        address owner = tx.origin;        
+        _transfer(owner, to, amount);
+        return true;
+    }   
 }
+

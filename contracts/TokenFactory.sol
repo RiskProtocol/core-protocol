@@ -102,10 +102,8 @@ contract TokenFactory is ReentrancyGuard {
     ) public returns (bool) {
         if (s_lastRebaseCount[msg.sender] != getScallingFactorLength()) {
             applyRebase();
-        }
-        return true;
-        // fix the bug here
-        // return s_devTokenArray[_devTokenIndex].transfer(to, value);
+        }       
+        return s_devTokenArray[_devTokenIndex].transfer(to, value);
     }
 
     function rebase() public {
