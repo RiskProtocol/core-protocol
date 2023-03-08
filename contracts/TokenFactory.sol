@@ -75,8 +75,7 @@ contract TokenFactory is ReentrancyGuard {
         uint256 _devTokenIndex,
         address _owner
     ) public view returns (uint256) {
-        if (s_lastRebaseCount[msg.sender] != getScallingFactorLength()) {
-            console.log("rebase needed");
+        if (s_lastRebaseCount[msg.sender] != getScallingFactorLength()) {         
             uint256 scallingFactorX = s_scallingFactor[
                 s_lastRebaseCount[msg.sender]
             ].scallingFactorX;
@@ -89,8 +88,7 @@ contract TokenFactory is ReentrancyGuard {
                 ((s_devTokenArray[1].balanceOf(_owner) / 1e18) *
                     scallingFactorY);
             return newTokenValue;
-        } else {
-            console.log("rebase not needed");
+        } else {           
             return s_devTokenArray[_devTokenIndex].balanceOf(_owner);
         }
     }
@@ -119,8 +117,7 @@ contract TokenFactory is ReentrancyGuard {
         );
     }
 
-    function applyRebase() internal {
-        console.log("applying rebase");
+    function applyRebase() internal {        
         uint256 scallingFactorX = s_scallingFactor[
             s_lastRebaseCount[msg.sender]
         ].scallingFactorX;
