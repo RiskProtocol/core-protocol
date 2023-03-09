@@ -87,9 +87,7 @@ contract TokenFactory is ReentrancyGuard {
     function balanceOf(
         uint256 _devTokenIndex,
         address _owner
-    ) public view returns (uint256) {    
-        console.log('i am inside balanceOF ot token factory');
-        console.log(_owner);
+    ) public view returns (uint256) {        
         return s_devTokenArray[_devTokenIndex].balanceOf(_owner);        
     }
 
