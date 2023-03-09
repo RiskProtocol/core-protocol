@@ -22,32 +22,41 @@ contract TokenFactory is ReentrancyGuard {
     using PriceFeed for AggregatorV3Interface;
     using Math for uint256;
 
-    // State variables    
+    // State variables
     uint256[] private s_scallingFactorX;
     DevToken[] private s_devTokenArray;
     address private immutable i_baseTokenAddress;
     AggregatorV3Interface private immutable i_priceFeed;
-    mapping(address => uint256) s_lastRebaseCount;
+    mapping(address => uint256) private s_lastRebaseCount;
 
     // Events
     event AssetBought(address indexed recipient, uint256 amount);
     event AssetWithdrawn(address indexed owner, uint256 amount);
 
-    constructor(
-        address baseTokenAddress,
-        address priceFeedAddress,
+    constructor(address baseTokenAddress, address priceFeedAddress) {
+        i_baseTokenAddress = baseTokenAddress;
+        i_priceFeed = AggregatorV3Interface(priceFeedAddress);
+    }
+
+    function initialize(
         string memory token1Name,
         string memory token1Symbol,
         string memory token2Name,
-        string memory token2Symbol
-    ) {
-        i_baseTokenAddress = baseTokenAddress;
-        i_priceFeed = AggregatorV3Interface(priceFeedAddress);
-
-        DevToken devToken1 = new DevToken(token1Name, token1Symbol);
+        string memory token2Symbol,
+        address tokenFactoryAddress
+    ) public {
+        DevToken devToken1 = new DevToken(
+            token1Name,
+            token1Symbol,
+            tokenFactoryAddress
+        );
         s_devTokenArray.push(devToken1);
 
-        DevToken devToken2 = new DevToken(token2Name, token2Symbol);
+        DevToken devToken2 = new DevToken(
+            token2Name,
+            token2Symbol,
+            tokenFactoryAddress
+        );
         s_devTokenArray.push(devToken2);
     }
 
@@ -66,29 +75,22 @@ contract TokenFactory is ReentrancyGuard {
     ) private {
         s_devTokenArray[_devTokenIndex].burn(_owner, _amount);
     }
-    
-    function subUnchecked(uint256 scallingFactorX) public pure returns(uint256) {
-        unchecked { return 1e18 - scallingFactorX;}
+
+    function subUnchecked(
+        uint256 scallingFactorX
+    ) public pure returns (uint256) {
+        unchecked {
+            return 1e18 - scallingFactorX;
+        }
     }
-    
+
     function balanceOf(
         uint256 _devTokenIndex,
         address _owner
-    ) public view returns (uint256) {
-        if (s_lastRebaseCount[msg.sender] != getScallingFactorLength()) {         
-            uint256 scallingFactorX = s_scallingFactorX[
-                s_lastRebaseCount[msg.sender]
-            ];
-            uint256 scallingFactorY = subUnchecked(scallingFactorX);
-
-            uint256 newTokenValue = ((s_devTokenArray[0].balanceOf(_owner) /
-                1e18) * scallingFactorX) +
-                ((s_devTokenArray[1].balanceOf(_owner) / 1e18) *
-                    scallingFactorY);
-            return newTokenValue;
-        } else {           
-            return s_devTokenArray[_devTokenIndex].balanceOf(_owner);
-        }
+    ) public view returns (uint256) {    
+        console.log('i am inside balanceOF ot token factory');
+        console.log(_owner);
+        return s_devTokenArray[_devTokenIndex].balanceOf(_owner);        
     }
 
     function transfer(
@@ -96,9 +98,6 @@ contract TokenFactory is ReentrancyGuard {
         address to,
         uint256 value
     ) public returns (bool) {
-        if (s_lastRebaseCount[msg.sender] != getScallingFactorLength()) {
-            applyRebase();
-        }       
         return s_devTokenArray[_devTokenIndex].transfer(to, value);
     }
 
@@ -109,18 +108,11 @@ contract TokenFactory is ReentrancyGuard {
         s_scallingFactorX.push(((asset1Price * 1e18) / 2) / divisor);
     }
 
-    function applyRebase() internal {        
-        uint256 scallingFactorX = s_scallingFactorX[
-            s_lastRebaseCount[msg.sender]
-        ];
-        uint256 scallingFactorY = subUnchecked(scallingFactorX);
+    function applyRebase() public {
+        uint256 asset1ValueEth = s_devTokenArray[0].balanceOf(msg.sender);
+        uint256 asset2ValueEth = s_devTokenArray[1].balanceOf(msg.sender);
 
-        uint256 asset1Balance = s_devTokenArray[0].balanceOf(msg.sender) / 1e18;
-        uint256 asset2Balance = s_devTokenArray[1].balanceOf(msg.sender) / 1e18;
-        uint256 asset1ValueEth = asset1Balance * 1e18;
-        uint256 asset2ValueEth = asset2Balance * 1e18;
-        uint256 rollOverValue = (asset1Balance * scallingFactorX) +
-            (asset2Balance * scallingFactorY);
+        uint256 rollOverValue = calculateRollOverValue(msg.sender);
 
         if (rollOverValue > asset1ValueEth) {
             mint(0, msg.sender, (rollOverValue - asset1ValueEth));
@@ -137,16 +129,29 @@ contract TokenFactory is ReentrancyGuard {
         s_lastRebaseCount[msg.sender] = getScallingFactorLength();
     }
 
+    function calculateRollOverValue(address _owner) public view returns (uint256) {
+        uint256 scallingFactorX = s_scallingFactorX[
+            s_lastRebaseCount[_owner]
+        ];
+        uint256 scallingFactorY = subUnchecked(scallingFactorX);
+
+        uint256 asset1Balance = s_devTokenArray[0].unScaledbalanceOf(_owner) / 1e18;
+        uint256 asset2Balance = s_devTokenArray[1].unScaledbalanceOf(_owner) / 1e18;
+        uint256 rollOverValue = (asset1Balance * scallingFactorX) +
+            (asset2Balance * scallingFactorY);
+        return rollOverValue;
+    }
+
     function buyAsset() public payable nonReentrant {
         mint(0, msg.sender, msg.value);
-        mint(1, msg.sender, msg.value);
+        mint(1, msg.sender, msg.value);       
         emit AssetBought(msg.sender, msg.value);
     }
 
     function withdrawAsset(uint256 _amount) public nonReentrant {
         if (s_lastRebaseCount[msg.sender] != getScallingFactorLength()) {
             applyRebase();
-        }       
+        }
         if (_amount > balanceOf(0, msg.sender))
             revert TokenFactory__InsufficientFund();
         burn(0, msg.sender, _amount);
@@ -163,13 +168,17 @@ contract TokenFactory is ReentrancyGuard {
         return i_priceFeed;
     }
 
-    function getScallingFactor(
-        uint256 index
-    ) public view returns (uint256) {
+    function getScallingFactor(uint256 index) public view returns (uint256) {
         return s_scallingFactorX[index];
     }
 
     function getScallingFactorLength() public view returns (uint256) {
         return s_scallingFactorX.length;
+    }
+
+    function getUserLastRebaseCount(
+        address userAddress
+    ) public view returns (uint256) {
+        return s_lastRebaseCount[userAddress];
     }
 }
