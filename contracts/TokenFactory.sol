@@ -107,8 +107,8 @@ contract TokenFactory is ReentrancyGuard {
     }
 
     function applyRebase() public {
-        uint256 asset1ValueEth = s_devTokenArray[0].balanceOf(msg.sender);
-        uint256 asset2ValueEth = s_devTokenArray[1].balanceOf(msg.sender);
+        uint256 asset1ValueEth = s_devTokenArray[0].unScaledbalanceOf(msg.sender);
+        uint256 asset2ValueEth = s_devTokenArray[1].unScaledbalanceOf(msg.sender);
 
         uint256 rollOverValue = calculateRollOverValue(msg.sender);
 
