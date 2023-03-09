@@ -24,6 +24,7 @@ export const developmentChains = ['localhost','hardhat']
 export const DECIMALS = "18"
 export const INITIAL_PRICE = "2000000000000000000000" // 2000, we then add the 18 decimals which is 18 zeros
 export const BASE_TOKEN_ADDRESS ="0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619"
+export const BASE_TOKEN_DECIMALS =18
 export const TOKEN1_NAME ="RistP One"
 export const TOKEN1_SYMBOL ="R1"
 export const TOKEN2_NAME ="RistP Two"

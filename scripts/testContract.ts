@@ -7,6 +7,9 @@ async function main() {
     const tokenFactory = await ethers.getContract("TokenFactory", tester)
     const tokenFactory1 = await ethers.getContract("TokenFactory", deployer)
 
+    console.log(`Demo function produced: ${await tokenFactory.pow(10,18)}`)
+
+
     console.log(`Deploying tokens: ${await tokenFactory.initialize(TOKEN1_NAME, TOKEN1_SYMBOL, TOKEN2_NAME, TOKEN2_SYMBOL, require('../deployments/localhost/TokenFactory.json').address)}`)
     
     // console.log(`Base address token: ${await tokenFactory.getBaseTokenAddress()}`)
@@ -18,7 +21,7 @@ async function main() {
     // console.log(`balance of Btoken1 before funding: ${await tokenFactory1.balanceOf(1,'0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266')}`)
 
     console.log('Funding Contract...')
-    const transactionResponse = await tokenFactory.buyAsset({ value: ethers.utils.parseEther('2') })
+    const transactionResponse = await tokenFactory.buyAsset({ value: ethers.utils.parseEther('6') })
     await transactionResponse.wait(1)
     console.log('Funded')
 
