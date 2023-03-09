@@ -8,7 +8,7 @@ import "./TokenFactory.sol";
 import "hardhat/console.sol";
 
 contract DevToken is ERC20, Ownable {
-    TokenFactory public tokenFactory;
+    TokenFactory private tokenFactory;
 
     constructor(
         string memory tokenName,
