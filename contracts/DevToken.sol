@@ -48,7 +48,7 @@ contract DevToken is ERC20, Ownable {
         ) {
             return tokenFactory.calculateRollOverValue(account);
         } else {            
-            return super.balanceOf(account);
+            return unScaledbalanceOf(account);
         }
     }
 
