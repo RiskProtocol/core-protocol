@@ -28,7 +28,6 @@ contract TokenFactory is ReentrancyGuard {
     // State variables
     uint256[] private s_scallingFactorX;
     DevToken[] private s_devTokenArray;
-    // address private immutable i_baseTokenAddress;
     AggregatorV3Interface private immutable i_priceFeed;
     mapping(address => uint256) private s_lastRebaseCount;
     uint8 private i_baseTokenDecimals;
