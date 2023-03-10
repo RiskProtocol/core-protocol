@@ -4,6 +4,7 @@ pragma solidity ^0.8.9;
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "./DevToken.sol";
 import "./library/PriceFeed.sol";
 import "hardhat/console.sol";
@@ -27,23 +28,27 @@ contract TokenFactory is ReentrancyGuard {
     // State variables
     uint256[] private s_scallingFactorX;
     DevToken[] private s_devTokenArray;
-    address private immutable i_baseTokenAddress;
+    // address private immutable i_baseTokenAddress;
     AggregatorV3Interface private immutable i_priceFeed;
     mapping(address => uint256) private s_lastRebaseCount;
-    uint256 private immutable i_baseTokenDecimals;
+    uint8 private i_baseTokenDecimals;
+    ERC20 private immutable i_baseToken;
 
     // Events
     event AssetBought(address indexed recipient, uint256 amount);
     event AssetWithdrawn(address indexed owner, uint256 amount);
 
     constructor(
-        address baseTokenAddress,
-        uint256 baseTokenDecimals,
+        address baseTokenAddress,     
         address priceFeedAddress
-    ) {
-        i_baseTokenAddress = baseTokenAddress;
-        i_baseTokenDecimals = baseTokenDecimals;
+    ) {       
+        i_baseToken = ERC20(baseTokenAddress);
         i_priceFeed = AggregatorV3Interface(priceFeedAddress);
+        if(baseTokenAddress == 0x70997970C51812dc3A010C7d01b50e0d17dc79C8){
+           i_baseTokenDecimals = 18; 
+        }else{
+             i_baseTokenDecimals = i_baseToken.decimals();
+        }        
     }
 
     function initialize(
@@ -190,8 +195,8 @@ contract TokenFactory is ReentrancyGuard {
         emit AssetWithdrawn(msg.sender, _amount);
     }
 
-    function getBaseTokenAddress() public view returns (address) {
-        return i_baseTokenAddress;
+    function getBaseTokenAddress() public view returns (ERC20) {
+        return i_baseToken;
     }
 
     function getPriceFeedAddress() public view returns (AggregatorV3Interface) {
