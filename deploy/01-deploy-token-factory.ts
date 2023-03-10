@@ -13,17 +13,22 @@ const func: DeployFunction = async ({ getNamedAccounts, deployments, network }) 
     */
 
     let ethUsdPriceFeedAddress: string
+    let baseTokenAddress: string
 
     if (developmentChains.includes(network.name)) {
         const ethUsdAggregator = await deployments.get('MockV3Aggregator');
         ethUsdPriceFeedAddress = ethUsdAggregator.address
+
+        const mockERC20Token = await deployments.get('MockERC20Token');
+        baseTokenAddress = mockERC20Token.address
     } else {
         ethUsdPriceFeedAddress = networkConfig[network.name].ethUsdPriceFeed!
+        baseTokenAddress = BASE_TOKEN_ADDRESS
     }
 
     const TokenFactory = await deploy("TokenFactory", {
         from: deployer,
-        args: [BASE_TOKEN_ADDRESS, ethUsdPriceFeedAddress],
+        args: [baseTokenAddress, ethUsdPriceFeedAddress],
         log: true,
         // we need to wait if on a live network so we can verify properly
         waitConfirmations: networkConfig[network.name].blockConfirmations || 1,
@@ -33,7 +38,7 @@ const func: DeployFunction = async ({ getNamedAccounts, deployments, network }) 
     log("----------------------------------")
 
     if (!developmentChains.includes(network.name) && process.env.ETHERSCAN_API_KEY) {
-        await verify(TokenFactory.address, [BASE_TOKEN_ADDRESS, ethUsdPriceFeedAddress])
+        await verify(TokenFactory.address, [baseTokenAddress, ethUsdPriceFeedAddress])
     }
 };
 export default func;
