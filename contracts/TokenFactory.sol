@@ -88,25 +88,10 @@ contract TokenFactory is ReentrancyGuard {
         uint256 scallingFactorX
     ) public view returns (uint256) {
         unchecked {
-            return pow(10, i_baseTokenDecimals) - scallingFactorX;
+            return 10**i_baseTokenDecimals - scallingFactorX;
         }
     }
-
-    function pow(uint n, uint e) public pure returns (uint) {
-        if (e == 0) {
-            return 1;
-        } else if (e == 1) {
-            return n;
-        } else {
-            uint p = pow(n, e.div(2));
-            p = p.mul(p);
-            if (e.mod(2) == 1) {
-                p = p.mul(n);
-            }
-            return p;
-        }
-    }
-
+   
     function balanceOf(
         uint256 _devTokenIndex,
         address _owner
@@ -124,11 +109,11 @@ contract TokenFactory is ReentrancyGuard {
 
     function rebase() public {
         uint256 rebasePrice = i_priceFeed.getPrice() /
-            pow(10, i_baseTokenDecimals);
+            10**i_baseTokenDecimals;
         uint256 asset1Price = rebasePrice.ceilDiv(3); // this should be gotten from the oracle
         uint256 divisor = rebasePrice.ceilDiv(2);
         s_scallingFactorX.push(
-            ((asset1Price * pow(10, i_baseTokenDecimals)) / 2) / divisor
+            ((asset1Price * 10**i_baseTokenDecimals) / 2) / divisor
         );
     }
 
@@ -164,9 +149,9 @@ contract TokenFactory is ReentrancyGuard {
         uint256 scallingFactorY = subUnchecked(scallingFactorX);
 
         uint256 asset1Balance = s_devTokenArray[0].unScaledbalanceOf(_owner) /
-            pow(10, i_baseTokenDecimals);
+            10**i_baseTokenDecimals;
         uint256 asset2Balance = s_devTokenArray[1].unScaledbalanceOf(_owner) /
-            pow(10, i_baseTokenDecimals);
+            10**i_baseTokenDecimals;
         uint256 rollOverValue = (asset1Balance * scallingFactorX) +
             (asset2Balance * scallingFactorY);
         return rollOverValue;
