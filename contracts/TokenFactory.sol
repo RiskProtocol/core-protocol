@@ -3,8 +3,10 @@ pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "./DevToken.sol";
-import "./library/PriceConverter.sol";
+import "./library/PriceFeed.sol";
 import "hardhat/console.sol";
 
 error TokenFactory__InsufficientFund();
@@ -18,114 +20,180 @@ error TokenFactory__InsufficientFund();
  * The asset will be burned in exactly the same proportion when asked to redeem/withdrawal the underlying asset.
  * The contract will implement periodic rebalancing
  */
-contract TokenFactory is ReentrancyGuard{
-    using PriceConverter for AggregatorV3Interface;
+contract TokenFactory is ReentrancyGuard {
+    using PriceFeed for AggregatorV3Interface;
     using Math for uint256;
+    using SafeMath for uint256;
 
     // State variables
+    uint256[] private s_scallingFactorX;
     DevToken[] private s_devTokenArray;
-    address private immutable i_baseTokenAddress;
-    address[] private s_funders;
     AggregatorV3Interface private immutable i_priceFeed;
+    mapping(address => uint256) private s_lastRebaseCount;
+    uint8 private i_baseTokenDecimals;
+    ERC20 private immutable i_baseToken;
 
     // Events
     event AssetBought(address indexed recipient, uint256 amount);
     event AssetWithdrawn(address indexed owner, uint256 amount);
 
     constructor(
-        address baseTokenAddress,
-        address priceFeedAddress,
+        address baseTokenAddress,     
+        address priceFeedAddress
+    ) {       
+        i_baseToken = ERC20(baseTokenAddress);
+        i_priceFeed = AggregatorV3Interface(priceFeedAddress);
+        i_baseTokenDecimals = i_baseToken.decimals(); 
+    }
+
+    function initialize(
         string memory token1Name,
         string memory token1Symbol,
         string memory token2Name,
-        string memory token2Symbol
-    ) {
-        i_baseTokenAddress = baseTokenAddress;
-        i_priceFeed = AggregatorV3Interface(priceFeedAddress);
-
-        DevToken devToken1 = new DevToken(token1Name, token1Symbol);
+        string memory token2Symbol,
+        address tokenFactoryAddress
+    ) public {
+        DevToken devToken1 = new DevToken(
+            token1Name,
+            token1Symbol,
+            tokenFactoryAddress
+        );
         s_devTokenArray.push(devToken1);
 
-        DevToken devToken2 = new DevToken(token2Name, token2Symbol);
+        DevToken devToken2 = new DevToken(
+            token2Name,
+            token2Symbol,
+            tokenFactoryAddress
+        );
         s_devTokenArray.push(devToken2);
     }
 
-    function sendToken(
+    function mint(
         uint256 _devTokenIndex,
         address _receiver,
         uint256 _amount
     ) private {
-        s_devTokenArray[_devTokenIndex].issueToken(_receiver, _amount);
+        s_devTokenArray[_devTokenIndex].mint(_receiver, _amount);
     }
 
-    function getBalance(
-        uint256 _devTokenIndex,
-        address _owner
-    ) public view returns (uint256) {
-        return s_devTokenArray[_devTokenIndex].tokenBalance(_owner);
-    }
-
-    function burnToken(
+    function burn(
         uint256 _devTokenIndex,
         address _owner,
         uint256 _amount
     ) private {
-        s_devTokenArray[_devTokenIndex].burnToken(_owner, _amount);
+        s_devTokenArray[_devTokenIndex].burn(_owner, _amount);
+    }
+
+    function subUnchecked(
+        uint256 scallingFactorX
+    ) public view returns (uint256) {
+        unchecked {
+            return 10**i_baseTokenDecimals - scallingFactorX;
+        }
+    }
+   
+    function balanceOf(
+        uint256 _devTokenIndex,
+        address _owner
+    ) public view returns (uint256) {
+        return s_devTokenArray[_devTokenIndex].balanceOf(_owner);
+    }
+
+    function transfer(
+        uint256 _devTokenIndex,
+        address to,
+        uint256 value
+    ) public returns (bool) {
+        return s_devTokenArray[_devTokenIndex].transfer(to, value);
+    }
+
+    function rebase() public {
+        uint256 rebasePrice = i_priceFeed.getPrice() /
+            10**i_baseTokenDecimals;
+        uint256 asset1Price = rebasePrice.ceilDiv(3); // this should be gotten from the oracle
+        uint256 divisor = rebasePrice.ceilDiv(2);
+        s_scallingFactorX.push(
+            ((asset1Price * 10**i_baseTokenDecimals) / 2) / divisor
+        );
+    }
+
+    function applyRebase() public {
+        uint256 asset1ValueEth = s_devTokenArray[0].unScaledbalanceOf(
+            msg.sender
+        );
+        uint256 asset2ValueEth = s_devTokenArray[1].unScaledbalanceOf(
+            msg.sender
+        );
+
+        uint256 rollOverValue = calculateRollOverValue(msg.sender);
+
+        if (rollOverValue > asset1ValueEth) {
+            mint(0, msg.sender, (rollOverValue - asset1ValueEth));
+        } else {
+            burn(0, msg.sender, (asset1ValueEth - rollOverValue));
+        }
+
+        if (rollOverValue > asset2ValueEth) {
+            mint(1, msg.sender, (rollOverValue - asset2ValueEth));
+        } else {
+            burn(1, msg.sender, (asset2ValueEth - rollOverValue));
+        }
+
+        s_lastRebaseCount[msg.sender] = getScallingFactorLength();
+    }
+
+    function calculateRollOverValue(
+        address _owner
+    ) public view returns (uint256) {
+        uint256 scallingFactorX = s_scallingFactorX[s_lastRebaseCount[_owner]];
+        uint256 scallingFactorY = subUnchecked(scallingFactorX);
+
+        uint256 asset1Balance = s_devTokenArray[0].unScaledbalanceOf(_owner) /
+            10**i_baseTokenDecimals;
+        uint256 asset2Balance = s_devTokenArray[1].unScaledbalanceOf(_owner) /
+            10**i_baseTokenDecimals;
+        uint256 rollOverValue = (asset1Balance * scallingFactorX) +
+            (asset2Balance * scallingFactorY);
+        return rollOverValue;
     }
 
     function buyAsset() public payable nonReentrant {
-        sendToken(0, msg.sender, msg.value);
-        sendToken(1, msg.sender, msg.value);
-        s_funders.push(msg.sender);
+        mint(0, msg.sender, msg.value);
+        mint(1, msg.sender, msg.value);
         emit AssetBought(msg.sender, msg.value);
     }
 
-    function withdrawAsset(uint256 _amount) public nonReentrant{
-        if (_amount > getBalance(0, msg.sender))
+    function withdrawAsset(uint256 _amount) public nonReentrant {
+        if (s_lastRebaseCount[msg.sender] != getScallingFactorLength()) {
+            applyRebase();
+        }
+        if (_amount > balanceOf(0, msg.sender))
             revert TokenFactory__InsufficientFund();
-        burnToken(0, msg.sender, _amount);
-        burnToken(1, msg.sender, _amount);
+        burn(0, msg.sender, _amount);
+        burn(1, msg.sender, _amount);
         payable(msg.sender).transfer(_amount);
         emit AssetWithdrawn(msg.sender, _amount);
     }
 
-    function getBaseTokenAddress() public view returns (address) {
-        return i_baseTokenAddress;
+    function getBaseTokenAddress() public view returns (ERC20) {
+        return i_baseToken;
     }
 
-    function getFunderAddressByIndex(uint index) public view returns (address) {
-        return s_funders[index];
+    function getPriceFeedAddress() public view returns (AggregatorV3Interface) {
+        return i_priceFeed;
     }
 
-    function rebase() public {        
-        address[] memory funders = s_funders;      
-        uint256 rebasePrice = i_priceFeed.getPrice()/1e18;
-        uint256 asset1Price = rebasePrice.ceilDiv(3); // this should be gotten from the oracle
-        uint256 asset2Price = rebasePrice - asset1Price;
-        uint256 asset1Balance;
-        uint256 asset2Balance;
-        uint256 accountValue;
-        uint256 rollOverValueInUSD;
-        uint256 rollOverDivisor;        
-       
-        for (
-            uint256 funderIndex = 0;
-            funderIndex < funders.length;
-            funderIndex++
-        ) {
-            address funder = funders[funderIndex];
-            asset1Balance = getBalance(0, funder) / 1e18;
-            asset2Balance = getBalance(1, funder) / 1e18;            
-            accountValue =
-                (asset1Balance * asset1Price) +
-                (asset2Balance * asset2Price);
-            rollOverValueInUSD = accountValue / 2;
-            rollOverDivisor = rebasePrice/2; 
-           
-            burnToken(0, funder, getBalance(0, funder));
-            burnToken(1, funder, getBalance(1, funder));            
-            sendToken(0, funder, (rollOverValueInUSD *1e18/rollOverDivisor* 1e18)/1e18);
-            sendToken(1, funder, (rollOverValueInUSD *1e18/rollOverDivisor* 1e18)/1e18);
-        }
+    function getScallingFactor(uint256 index) public view returns (uint256) {
+        return s_scallingFactorX[index];
+    }
+
+    function getScallingFactorLength() public view returns (uint256) {
+        return s_scallingFactorX.length;
+    }
+
+    function getUserLastRebaseCount(
+        address userAddress
+    ) public view returns (uint256) {
+        return s_lastRebaseCount[userAddress];
     }
 }

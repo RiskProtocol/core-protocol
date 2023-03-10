@@ -11,13 +11,24 @@ const deployMocks: DeployFunction = async ({ getNamedAccounts, deployments, netw
     */
     if (developmentChains.includes(network.name)) {
         log('Local network detected! Deploying mocks...')
+        log('Deploying MockV3Aggregator')
         await deploy("MockV3Aggregator", {
             contract: "MockV3Aggregator",
             from: deployer,
             args: [DECIMALS, INITIAL_PRICE], // from github MockV3Aggragator has 2 argument for the contructors
             log: true
         })
-        log("Mocks Deployed!")
+        log("MockV3Aggregator Deployed!")
+        log("----------------------------------")
+
+        log('Deploying MockERC20Token')
+        await deploy("MockERC20Token", {
+            contract: "MockERC20Token",
+            from: deployer,
+            args: [], // from github MockV3Aggragator has 2 argument for the contructors
+            log: true
+        })
+        log("MockERC20Token Deployed!")
         log("----------------------------------")
     }
 };

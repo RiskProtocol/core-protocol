@@ -16,7 +16,7 @@ import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
     * Chainlink nodes can make API calls
     * Chainlink VRF is used to get provable random numbers
 */
-library PriceConverter{
+library PriceFeed{
     
     function getPrice(AggregatorV3Interface s_priceFeed) internal view returns(uint256) {
         // here we have to interact with chainlink to get the price
