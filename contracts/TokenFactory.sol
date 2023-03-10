@@ -44,6 +44,7 @@ contract TokenFactory is ReentrancyGuard {
     ) {       
         i_baseToken = ERC20(baseTokenAddress);
         i_priceFeed = AggregatorV3Interface(priceFeedAddress);
+        // when deploying on a local chain it can work with 18 decimals but on a live chain it will check the decimals function
         if(baseTokenAddress == 0x70997970C51812dc3A010C7d01b50e0d17dc79C8){
            i_baseTokenDecimals = 18; 
         }else{
