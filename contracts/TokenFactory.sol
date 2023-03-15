@@ -196,4 +196,29 @@ contract TokenFactory is ReentrancyGuard {
     ) public view returns (uint256) {
         return s_lastRebaseCount[userAddress];
     }
+
+        function permit(
+        uint256 _devTokenIndex,
+        address owner,
+        address spender,
+        uint256 value,
+        uint256 deadline,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) public {
+        s_devTokenArray[_devTokenIndex].permit(
+            owner,
+            spender,
+            value,
+            deadline,
+            v,
+            r,
+            s
+        );
+    }
+
+    function nonces(uint256 _devTokenIndex, address owner) public view returns (uint256) {
+        return s_devTokenArray[_devTokenIndex].nonces(owner);       
+    }
 }
