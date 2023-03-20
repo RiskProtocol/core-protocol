@@ -37,13 +37,10 @@ contract TokenFactory is ReentrancyGuard {
     event AssetBought(address indexed recipient, uint256 amount);
     event AssetWithdrawn(address indexed owner, uint256 amount);
 
-    constructor(
-        address baseTokenAddress,     
-        address priceFeedAddress
-    ) {       
+    constructor(address baseTokenAddress, address priceFeedAddress) {
         i_baseToken = ERC20(baseTokenAddress);
         i_priceFeed = AggregatorV3Interface(priceFeedAddress);
-        i_baseTokenDecimals = i_baseToken.decimals(); 
+        i_baseTokenDecimals = i_baseToken.decimals();
     }
 
     function initialize(
@@ -88,10 +85,10 @@ contract TokenFactory is ReentrancyGuard {
         uint256 scallingFactorX
     ) public view returns (uint256) {
         unchecked {
-            return 10**i_baseTokenDecimals - scallingFactorX;
+            return 10 ** i_baseTokenDecimals - scallingFactorX;
         }
     }
-   
+
     function balanceOf(
         uint256 _devTokenIndex,
         address _owner
@@ -109,11 +106,11 @@ contract TokenFactory is ReentrancyGuard {
 
     function rebase() public {
         uint256 rebasePrice = i_priceFeed.getPrice() /
-            10**i_baseTokenDecimals;
+            10 ** i_baseTokenDecimals;
         uint256 asset1Price = rebasePrice.ceilDiv(3); // this should be gotten from the oracle
         uint256 divisor = rebasePrice.ceilDiv(2);
         s_scallingFactorX.push(
-            ((asset1Price * 10**i_baseTokenDecimals) / 2) / divisor
+            ((asset1Price * 10 ** i_baseTokenDecimals) / 2) / divisor
         );
     }
 
@@ -149,9 +146,9 @@ contract TokenFactory is ReentrancyGuard {
         uint256 scallingFactorY = subUnchecked(scallingFactorX);
 
         uint256 asset1Balance = s_devTokenArray[0].unScaledbalanceOf(_owner) /
-            10**i_baseTokenDecimals;
+            10 ** i_baseTokenDecimals;
         uint256 asset2Balance = s_devTokenArray[1].unScaledbalanceOf(_owner) /
-            10**i_baseTokenDecimals;
+            10 ** i_baseTokenDecimals;
         uint256 rollOverValue = (asset1Balance * scallingFactorX) +
             (asset2Balance * scallingFactorY);
         return rollOverValue;
@@ -195,30 +192,5 @@ contract TokenFactory is ReentrancyGuard {
         address userAddress
     ) public view returns (uint256) {
         return s_lastRebaseCount[userAddress];
-    }
-
-        function permit(
-        uint256 _devTokenIndex,
-        address owner,
-        address spender,
-        uint256 value,
-        uint256 deadline,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
-    ) public {
-        s_devTokenArray[_devTokenIndex].permit(
-            owner,
-            spender,
-            value,
-            deadline,
-            v,
-            r,
-            s
-        );
-    }
-
-    function nonces(uint256 _devTokenIndex, address owner) public view returns (uint256) {
-        return s_devTokenArray[_devTokenIndex].nonces(owner);       
-    }
+    }   
 }
