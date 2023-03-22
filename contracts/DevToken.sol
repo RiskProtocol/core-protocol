@@ -30,13 +30,13 @@ contract DevToken is ERC20, Ownable {
         address to,
         uint256 amount
     ) public override returns (bool) {
+        address owner = tx.origin;
         if (
             tokenFactory.getUserLastRebaseCount(msg.sender) !=
             tokenFactory.getScallingFactorLength()
         ) {
-            tokenFactory.applyRebase();
-        }
-        address owner = tx.origin;
+            tokenFactory.applyRebase(owner);
+        }        
         _transfer(owner, to, amount);
         return true;
     }

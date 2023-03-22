@@ -7,10 +7,11 @@ async function main() {
     const tokenFactory = await ethers.getContract("TokenFactory", tester)
     const tokenFactory1 = await ethers.getContract("TokenFactory", deployer)
 
-    console.log(`Demo function produced: ${await tokenFactory.pow(10,18)}`)
+    console.log(`DevToken Address 1: ${await tokenFactory.getDevTokenAddress(0)}`)
+    console.log(`DevToken Address 2: ${await tokenFactory.getDevTokenAddress(1)}`)
 
 
-    console.log(`Deploying tokens: ${await tokenFactory.initialize(TOKEN1_NAME, TOKEN1_SYMBOL, TOKEN2_NAME, TOKEN2_SYMBOL, require('../deployments/localhost/TokenFactory.json').address)}`)
+    // console.log(`Deploying tokens: ${await tokenFactory.initialize(TOKEN1_NAME, TOKEN1_SYMBOL, TOKEN2_NAME, TOKEN2_SYMBOL, require('../deployments/localhost/TokenFactory.json').address)}`)
     
     // console.log(`Base address token: ${await tokenFactory.getBaseTokenAddress()}`)
 
@@ -54,16 +55,17 @@ async function main() {
 
     console.log(`scaling factor length: ${await tokenFactory.getScallingFactorLength()}`)
     console.log(`get first scalling factor: ${await tokenFactory.getScallingFactor(0)}`)
-    console.log(`get second scalling factor: ${await tokenFactory.getScallingFactor(1)}`)
-    console.log(`get third scalling factor: ${await tokenFactory.getScallingFactor(2)}`)
+    // console.log(`get second scalling factor: ${await tokenFactory.getScallingFactor(1)}`)
+    // console.log(`get third scalling factor: ${await tokenFactory.getScallingFactor(2)}`)
 
     console.log(`balance of Atoken0 after skipping rebase period: ${await tokenFactory.balanceOf(0,'0x70997970C51812dc3A010C7d01b50e0d17dc79C8')}`)
     console.log(`balance of Atoken1 after skipping rebase period: ${await tokenFactory.balanceOf(1,'0x70997970C51812dc3A010C7d01b50e0d17dc79C8')}`)
 
-    console.log(`calling transfer function:`)
+    // console.log(`calling transfer function:`)
     await tokenFactory.transfer(0,'0xdD2FD4581271e230360230F9337D5c0430Bf44C0',ethers.utils.parseEther('1'))
-    console.log(`balance of token0 after transfer function has been called: ${await tokenFactory.balanceOf(0,'0x70997970C51812dc3A010C7d01b50e0d17dc79C8')}`)
-    console.log(`balance of token1 after transfer: ${await tokenFactory.balanceOf(1,'0x70997970C51812dc3A010C7d01b50e0d17dc79C8')}`)
+    console.log(`user rebase count: ${await tokenFactory.getUserLastRebaseCount('0x70997970C51812dc3A010C7d01b50e0d17dc79C8')}`)
+    // console.log(`balance of token0 after transfer function has been called: ${await tokenFactory.balanceOf(0,'0x70997970C51812dc3A010C7d01b50e0d17dc79C8')}`)
+    // console.log(`balance of token1 after transfer: ${await tokenFactory.balanceOf(1,'0x70997970C51812dc3A010C7d01b50e0d17dc79C8')}`)
     // // console.log(`balance of Btoken0 after rebase: ${await tokenFactory1.balanceOf(0,'0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266')}`)
     // // console.log(`balance of Btoken1 after rebase: ${await tokenFactory1.balanceOf(1,'0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266')}`)
 

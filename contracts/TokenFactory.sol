@@ -117,29 +117,28 @@ contract TokenFactory is ReentrancyGuard {
         );
     }
 
-    function applyRebase() public {
+    function applyRebase(address owner) public {
         uint256 asset1ValueEth = s_devTokenArray[0].unScaledbalanceOf(
-            msg.sender
+           owner
         );
         uint256 asset2ValueEth = s_devTokenArray[1].unScaledbalanceOf(
-            msg.sender
+            owner
         );
 
-        uint256 rollOverValue = calculateRollOverValue(msg.sender);
+        uint256 rollOverValue = calculateRollOverValue(owner);
 
         if (rollOverValue > asset1ValueEth) {
-            mint(0, msg.sender, (rollOverValue - asset1ValueEth));
+            mint(0, owner, (rollOverValue - asset1ValueEth));
         } else {
-            burn(0, msg.sender, (asset1ValueEth - rollOverValue));
+            burn(0, owner, (asset1ValueEth - rollOverValue));
         }
 
         if (rollOverValue > asset2ValueEth) {
-            mint(1, msg.sender, (rollOverValue - asset2ValueEth));
+            mint(1, owner, (rollOverValue - asset2ValueEth));
         } else {
-            burn(1, msg.sender, (asset2ValueEth - rollOverValue));
-        }
-
-        s_lastRebaseCount[msg.sender] = getScallingFactorLength();
+            burn(1, owner, (asset2ValueEth - rollOverValue));
+        }       
+        s_lastRebaseCount[owner] = getScallingFactorLength();
     }
 
     function calculateRollOverValue(
@@ -165,7 +164,7 @@ contract TokenFactory is ReentrancyGuard {
 
     function withdrawAsset(uint256 _amount) public nonReentrant {
         if (s_lastRebaseCount[msg.sender] != getScallingFactorLength()) {
-            applyRebase();
+            applyRebase(msg.sender);
         }
         if (_amount > balanceOf(0, msg.sender))
             revert TokenFactory__InsufficientFund();
@@ -195,5 +194,9 @@ contract TokenFactory is ReentrancyGuard {
         address userAddress
     ) public view returns (uint256) {
         return s_lastRebaseCount[userAddress];
+    }
+
+    function getDevTokenAddress(uint256 index) public view returns (DevToken) {
+        return s_devTokenArray[index];
     }
 }
