@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "./DevToken.sol";
 import "./library/PriceFeed.sol";
 import "hardhat/console.sol";
@@ -20,7 +21,7 @@ error TokenFactory__InsufficientFund();
  * The asset will be burned in exactly the same proportion when asked to redeem/withdrawal the underlying asset.
  * The contract will implement periodic rebalancing
  */
-contract TokenFactory is ReentrancyGuard {
+contract TokenFactory is ReentrancyGuard, Ownable {
     using PriceFeed for AggregatorV3Interface;
     using Math for uint256;
     using SafeMath for uint256;
@@ -104,7 +105,7 @@ contract TokenFactory is ReentrancyGuard {
         return s_devTokenArray[_devTokenIndex].transfer(to, value);
     }
 
-    function rebase() public {
+    function rebase() public onlyOwner{
         uint256 rebasePrice = i_priceFeed.getPrice() /
             10 ** i_baseTokenDecimals;
         uint256 asset1Price = rebasePrice.ceilDiv(3); // this should be gotten from the oracle
