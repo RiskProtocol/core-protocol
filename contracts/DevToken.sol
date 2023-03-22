@@ -5,12 +5,13 @@ pragma solidity ^0.8.9;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/draft-ERC20Permit.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "./TokenFactory.sol";
 import "hardhat/console.sol";
 
 
-contract DevToken is ERC20, Ownable, ERC20Permit  {
-    TokenFactory private tokenFactory;
+contract DevToken is ERC20, Ownable, ERC20Permit, ReentrancyGuard  {
+    TokenFactory private immutable tokenFactory;
 
     constructor(
         string memory tokenName,
@@ -32,20 +33,20 @@ contract DevToken is ERC20, Ownable, ERC20Permit  {
         address to,
         uint256 amount
     ) public override returns (bool) {
-        address owner = tx.origin;
+        address owner_ = tx.origin;
         if (
-            tokenFactory.getUserLastRebaseCount(msg.sender) !=
+            tokenFactory.getUserLastRebaseCount(owner_) !=
             tokenFactory.getScallingFactorLength()
         ) {
-            tokenFactory.applyRebase(owner);
+            tokenFactory.applyRebase(owner_);
         }        
-        _transfer(owner, to, amount);
+        _transfer(owner_, to, amount);
         return true;
     }
 
-    function balanceOf(address account) public view override returns (uint256) {       
-        if (
-            tokenFactory.getUserLastRebaseCount(msg.sender) !=
+    function balanceOf(address account) public view override returns (uint256) {             
+        if (           
+            tokenFactory.getUserLastRebaseCount(tx.origin) !=
             tokenFactory.getScallingFactorLength()
         ) {
             return tokenFactory.calculateRollOverValue(account);

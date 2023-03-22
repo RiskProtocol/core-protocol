@@ -27,21 +27,21 @@ contract TokenFactory is ReentrancyGuard, Ownable {
     using SafeMath for uint256;
 
     // State variables
-    uint256[] private s_scallingFactorX;
-    DevToken[] private s_devTokenArray;
-    AggregatorV3Interface private immutable i_priceFeed;
-    mapping(address => uint256) private s_lastRebaseCount;
-    uint8 private i_baseTokenDecimals;
-    ERC20 private immutable i_baseToken;
+    uint256[] private scallingFactorX;
+    DevToken[] private devTokenArray;
+    AggregatorV3Interface private immutable priceFeed;
+    mapping(address => uint256) private lastRebaseCount;
+    uint8 private immutable baseTokenDecimals;
+    ERC20 private immutable baseToken;
 
     // Events
     event AssetBought(address indexed recipient, uint256 amount);
     event AssetWithdrawn(address indexed owner, uint256 amount);
 
     constructor(address baseTokenAddress, address priceFeedAddress) {
-        i_baseToken = ERC20(baseTokenAddress);
-        i_priceFeed = AggregatorV3Interface(priceFeedAddress);
-        i_baseTokenDecimals = i_baseToken.decimals();
+        baseToken = ERC20(baseTokenAddress);
+        priceFeed = AggregatorV3Interface(priceFeedAddress);
+        baseTokenDecimals = baseToken.decimals();
     }
 
     function initialize(
@@ -56,145 +56,141 @@ contract TokenFactory is ReentrancyGuard, Ownable {
             token1Symbol,
             tokenFactoryAddress
         );
-        s_devTokenArray.push(devToken1);
+        devTokenArray.push(devToken1);
 
         DevToken devToken2 = new DevToken(
             token2Name,
             token2Symbol,
             tokenFactoryAddress
         );
-        s_devTokenArray.push(devToken2);
+        devTokenArray.push(devToken2);
     }
 
     function mint(
-        uint256 _devTokenIndex,
-        address _receiver,
-        uint256 _amount
-    ) private {
-        s_devTokenArray[_devTokenIndex].mint(_receiver, _amount);
+        uint256 devTokenIndex,
+        address receiver,
+        uint256 amount
+    ) private nonReentrant {
+        devTokenArray[devTokenIndex].mint(receiver, amount);
     }
 
     function burn(
-        uint256 _devTokenIndex,
-        address _owner,
-        uint256 _amount
-    ) private {
-        s_devTokenArray[_devTokenIndex].burn(_owner, _amount);
+        uint256 devTokenIndex,
+        address owner_,
+        uint256 amount
+    ) private nonReentrant {
+        devTokenArray[devTokenIndex].burn(owner_, amount);
     }
 
     function subUnchecked(
-        uint256 scallingFactorX
+        uint256 scallingFactorX_
     ) public view returns (uint256) {
         unchecked {
-            return 10 ** i_baseTokenDecimals - scallingFactorX;
+            return (10 ** baseTokenDecimals) - scallingFactorX_;
         }
     }
 
     function balanceOf(
-        uint256 _devTokenIndex,
-        address _owner
+        uint256 devTokenIndex,
+        address owner_
     ) public view returns (uint256) {
-        return s_devTokenArray[_devTokenIndex].balanceOf(_owner);
+        return devTokenArray[devTokenIndex].balanceOf(owner_);
     }
 
     function transfer(
-        uint256 _devTokenIndex,
+        uint256 devTokenIndex,
         address to,
         uint256 value
     ) public returns (bool) {
-        return s_devTokenArray[_devTokenIndex].transfer(to, value);
+        return devTokenArray[devTokenIndex].transfer(to, value);
     }
 
-    function rebase() public onlyOwner{
-        uint256 rebasePrice = i_priceFeed.getPrice() /
-            10 ** i_baseTokenDecimals;
+    function rebase() public onlyOwner {
+        uint256 rebasePrice = priceFeed.getPrice() / 10 ** baseTokenDecimals;
         uint256 asset1Price = rebasePrice.ceilDiv(3); // this should be gotten from the oracle
         uint256 divisor = rebasePrice.ceilDiv(2);
-        s_scallingFactorX.push(
-            ((asset1Price * 10 ** i_baseTokenDecimals) / 2) / divisor
+        scallingFactorX.push(
+            ((asset1Price * 10 ** baseTokenDecimals) / 2) / divisor
         );
     }
 
-    function applyRebase(address owner) public {
-        uint256 asset1ValueEth = s_devTokenArray[0].unScaledbalanceOf(
-           owner
-        );
-        uint256 asset2ValueEth = s_devTokenArray[1].unScaledbalanceOf(
-            owner
-        );
+    function applyRebase(address owner_) public {   
+        uint256 asset1ValueEth = devTokenArray[0].unScaledbalanceOf(owner_);
+        uint256 asset2ValueEth = devTokenArray[1].unScaledbalanceOf(owner_);
 
-        uint256 rollOverValue = calculateRollOverValue(owner);
+        uint256 rollOverValue = calculateRollOverValue(owner_);
+        lastRebaseCount[owner_] = getScallingFactorLength();
 
         if (rollOverValue > asset1ValueEth) {
-            mint(0, owner, (rollOverValue - asset1ValueEth));
+            mint(0, owner_, (rollOverValue - asset1ValueEth));
         } else {
-            burn(0, owner, (asset1ValueEth - rollOverValue));
+            burn(0, owner_, (asset1ValueEth - rollOverValue));
         }
 
         if (rollOverValue > asset2ValueEth) {
-            mint(1, owner, (rollOverValue - asset2ValueEth));
+            mint(1, owner_, (rollOverValue - asset2ValueEth));
         } else {
-            burn(1, owner, (asset2ValueEth - rollOverValue));
-        }       
-        s_lastRebaseCount[owner] = getScallingFactorLength();
+            burn(1, owner_, (asset2ValueEth - rollOverValue));
+        }
     }
 
     function calculateRollOverValue(
-        address _owner
-    ) public view returns (uint256) {
-        uint256 scallingFactorX = s_scallingFactorX[s_lastRebaseCount[_owner]];
-        uint256 scallingFactorY = subUnchecked(scallingFactorX);
-
-        uint256 asset1Balance = s_devTokenArray[0].unScaledbalanceOf(_owner) /
-            10 ** i_baseTokenDecimals;
-        uint256 asset2Balance = s_devTokenArray[1].unScaledbalanceOf(_owner) /
-            10 ** i_baseTokenDecimals;
-        uint256 rollOverValue = (asset1Balance * scallingFactorX) +
+        address owner_
+    ) public view returns (uint256) {      
+        uint256 scallingFactorX_ = scallingFactorX[lastRebaseCount[owner_]];
+        uint256 scallingFactorY = subUnchecked(scallingFactorX_);
+        uint256 denominator = 10 ** baseTokenDecimals;
+              
+        uint256 asset1Balance = devTokenArray[0].unScaledbalanceOf(owner_) /
+             denominator;
+        uint256 asset2Balance = devTokenArray[1].unScaledbalanceOf(owner_) /
+             denominator;
+        uint256 rollOverValue = (asset1Balance * scallingFactorX_) +
             (asset2Balance * scallingFactorY);
         return rollOverValue;
     }
 
-    function buyAsset() public payable nonReentrant {
+    function buyAsset() public payable  {
         mint(0, msg.sender, msg.value);
         mint(1, msg.sender, msg.value);
         emit AssetBought(msg.sender, msg.value);
     }
 
-    function withdrawAsset(uint256 _amount) public nonReentrant {
-        if (s_lastRebaseCount[msg.sender] != getScallingFactorLength()) {
+    function withdrawAsset(uint256 amount) public nonReentrant {
+        if (lastRebaseCount[msg.sender] != getScallingFactorLength()) {
             applyRebase(msg.sender);
         }
-        if (_amount > balanceOf(0, msg.sender))
+        if (amount > balanceOf(0, msg.sender))
             revert TokenFactory__InsufficientFund();
-        burn(0, msg.sender, _amount);
-        burn(1, msg.sender, _amount);
-        payable(msg.sender).transfer(_amount);
-        emit AssetWithdrawn(msg.sender, _amount);
+        burn(0, msg.sender, amount);
+        burn(1, msg.sender, amount);
+        emit AssetWithdrawn(msg.sender, amount);
+        payable(msg.sender).transfer(amount);
     }
 
     function getBaseTokenAddress() public view returns (ERC20) {
-        return i_baseToken;
+        return baseToken;
     }
 
     function getPriceFeedAddress() public view returns (AggregatorV3Interface) {
-        return i_priceFeed;
+        return priceFeed;
     }
 
     function getScallingFactor(uint256 index) public view returns (uint256) {
-        return s_scallingFactorX[index];
+        return scallingFactorX[index];
     }
 
     function getScallingFactorLength() public view returns (uint256) {
-        return s_scallingFactorX.length;
+        return scallingFactorX.length;
     }
 
     function getUserLastRebaseCount(
         address userAddress
     ) public view returns (uint256) {
-        return s_lastRebaseCount[userAddress];
+        return lastRebaseCount[userAddress];
     }
 
     function getDevTokenAddress(uint256 index) public view returns (DevToken) {
-        return s_devTokenArray[index];
+        return devTokenArray[index];
     }
 }
