@@ -151,20 +151,20 @@ contract TokenFactory is ReentrancyGuard, Ownable {
     }
 
     function buyAsset() public payable  {
-        mint(0, msg.sender, msg.value);
-        mint(1, msg.sender, msg.value);
         emit AssetBought(msg.sender, msg.value);
+        mint(0, msg.sender, msg.value);
+        mint(1, msg.sender, msg.value);       
     }
 
     function withdrawAsset(uint256 amount) public {
+        emit AssetWithdrawn(msg.sender, amount);
         if (lastRebaseCount[msg.sender] != getScallingFactorLength()) {
             applyRebase(msg.sender);
         }
         if (amount > balanceOf(0, msg.sender))
             revert TokenFactory__InsufficientFund();
         burn(0, msg.sender, amount);
-        burn(1, msg.sender, amount);
-        emit AssetWithdrawn(msg.sender, amount);
+        burn(1, msg.sender, amount);        
         payable(msg.sender).transfer(amount);
     }
 
