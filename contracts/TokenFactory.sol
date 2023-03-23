@@ -156,7 +156,7 @@ contract TokenFactory is ReentrancyGuard, Ownable {
         emit AssetBought(msg.sender, msg.value);
     }
 
-    function withdrawAsset(uint256 amount) public nonReentrant {
+    function withdrawAsset(uint256 amount) public {
         if (lastRebaseCount[msg.sender] != getScallingFactorLength()) {
             applyRebase(msg.sender);
         }

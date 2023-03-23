@@ -6,7 +6,7 @@ import {tokenFactoryAddress, devTokenXAddress, devTokenYAddress, tokenFactoryAbi
 function App() {
   const [depositAmount, setDepositAmount] = useState()
   const [withdrawalAmount, setWithdrawalAmount] = useState()
-  const [transferAddress, setTransferAddress] = useState()
+  const [transferAddress, setTransferAddress] = useState('0x70997970C51812dc3A010C7d01b50e0d17dc79C8')
 
   async function requestAccounts() {
     return await window.ethereum.request({ method: 'eth_requestAccounts' });
@@ -161,8 +161,8 @@ function App() {
         <button style={buttonStyle} onClick={buy}>Buy Tokens</button>
         <input style={inputStyle} onChange={e => setWithdrawalAmount(e.target.value)} placeholder="Amount to Withdraw" />
         <button style={buttonStyle} onClick={withdraw}>Withdraw Token</button>
-        <input style={inputStyle} onChange={e => setTransferAddress(e.target.value)} placeholder="Address to transfer to" />
-        <button style={buttonStyle} onClick={transfer}>Trade 1 of Token X</button>
+        <input style={inputStyle} value = {transferAddress} onChange={e => setTransferAddress(e.target.value)} placeholder="Address to transfer to" />
+        <button style={buttonStyle} onClick={transfer}>Trade 1 of Token X to abv address</button>
         <button style={buttonStyle} onClick={rebaseCount}>Current Rebase Count</button>
         <button style={buttonStyle} onClick={rebase}>Trigger Rebase</button>
         <button style={buttonStyle} onClick={userLastRebase}>Last User Rebase Participation</button>
