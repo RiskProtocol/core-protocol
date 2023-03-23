@@ -51,8 +51,8 @@ async function main() {
 
     console.log(`calling rebase function:`)
     await tokenFactory.rebase()
-    await tokenFactory.rebase()
-    await tokenFactory.rebase()  
+    // await tokenFactory.rebase()
+    // await tokenFactory.rebase()  
 
 
     console.log(`scaling factor length: ${await tokenFactory.getScallingFactorLength()}`)
@@ -72,7 +72,10 @@ async function main() {
     // console.log(`balance of token1 after transfer: ${await tokenFactory.balanceOf(1,'0x70997970C51812dc3A010C7d01b50e0d17dc79C8')}`)
     // // console.log(`balance of Btoken0 after rebase: ${await tokenFactory1.balanceOf(0,'0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266')}`)
     // // console.log(`balance of Btoken1 after rebase: ${await tokenFactory1.balanceOf(1,'0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266')}`)
-
+    console.log(`calling 2nd rebase:`)
+    await tokenFactory.rebase()
+    console.log(`balance of Atoken0 after second rebase period: ${await tokenFactory.balanceOf(0,'0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266')}`)
+    console.log(`balance of Atoken1 after second rebase period: ${await tokenFactory.balanceOf(1,'0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266')}`)
     
 }
 

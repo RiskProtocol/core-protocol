@@ -136,17 +136,16 @@ contract TokenFactory is ReentrancyGuard, Ownable {
 
     function calculateRollOverValue(
         address owner_
-    ) public view returns (uint256) {      
+    ) public view returns (uint256) { 
         uint256 scallingFactorX_ = scallingFactorX[lastRebaseCount[owner_]];
         uint256 scallingFactorY = subUnchecked(scallingFactorX_);
-        uint256 denominator = 10 ** baseTokenDecimals;
+        uint256 denominator = 10 ** baseTokenDecimals;       
               
-        uint256 asset1Balance = devTokenArray[0].unScaledbalanceOf(owner_) /
-             denominator;
-        uint256 asset2Balance = devTokenArray[1].unScaledbalanceOf(owner_) /
-             denominator;
-        uint256 rollOverValue = (asset1Balance * scallingFactorX_) +
-            (asset2Balance * scallingFactorY);
+        uint256 asset1Balance = devTokenArray[0].unScaledbalanceOf(owner_); 
+        uint256 asset2Balance = devTokenArray[1].unScaledbalanceOf(owner_); 
+        uint256 rollOverValue = ((asset1Balance * scallingFactorX_) +
+            (asset2Balance * scallingFactorY))/denominator;
+
         return rollOverValue;
     }
 
