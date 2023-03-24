@@ -5,12 +5,11 @@ pragma solidity ^0.8.9;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/draft-ERC20Permit.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "./TokenFactory.sol";
 import "hardhat/console.sol";
 
 
-contract DevToken is ERC20, Ownable, ERC20Permit, ReentrancyGuard  {
+contract DevToken is ERC20, Ownable, ERC20Permit  {
     TokenFactory private immutable tokenFactory;
 
     constructor(
