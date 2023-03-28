@@ -160,7 +160,7 @@ contract TokenFactory is ReentrancyGuard, Ownable {
         if (lastRebaseCount[msg.sender] != getScallingFactorLength()) {
             applyRebase(msg.sender);
         }
-        if (amount > balanceOf(0, msg.sender))
+        if (amount > balanceOf(0, msg.sender) || amount > balanceOf(1, msg.sender))
             revert TokenFactory__InsufficientFund();        
         burn(0, msg.sender, amount);
         burn(1, msg.sender, amount);        
