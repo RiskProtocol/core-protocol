@@ -4,9 +4,9 @@ pragma solidity ^0.8.9;
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./DevToken.sol";
+import "./ERC4626Modified.sol";
 import "./library/PriceFeed.sol";
 import "hardhat/console.sol";
 
@@ -21,7 +21,7 @@ error TokenFactory__InsufficientFund();
  * The asset will be burned in exactly the same proportion when asked to redeem/withdrawal the underlying asset.
  * The contract will implement periodic rebalancing
  */
-contract TokenFactory is ReentrancyGuard, Ownable {
+contract TokenFactory is ERC4626Modified, ReentrancyGuard, Ownable {
     using PriceFeed for AggregatorV3Interface;
     using Math for uint256;
     using SafeMath for uint256;
@@ -31,17 +31,13 @@ contract TokenFactory is ReentrancyGuard, Ownable {
     DevToken[] private devTokenArray;
     AggregatorV3Interface private immutable priceFeed;
     mapping(address => uint256) private lastRebaseCount;
-    uint8 private immutable baseTokenDecimals;
-    ERC20 private immutable baseToken;
-
+      
     // Events
     event AssetBought(address indexed recipient, uint256 amount);
     event AssetWithdrawn(address indexed owner, uint256 amount);
 
-    constructor(address baseTokenAddress, address priceFeedAddress) {
-        baseToken = ERC20(baseTokenAddress);
-        priceFeed = AggregatorV3Interface(priceFeedAddress);
-        baseTokenDecimals = baseToken.decimals();
+    constructor(ERC20 baseTokenAddress, address priceFeedAddress) ERC4626Modified(baseTokenAddress){      
+        priceFeed = AggregatorV3Interface(priceFeedAddress);            
     }
 
     function initialize(
@@ -70,7 +66,7 @@ contract TokenFactory is ReentrancyGuard, Ownable {
         uint256 devTokenIndex,
         address receiver,
         uint256 amount
-    ) private nonReentrant {
+    ) internal nonReentrant {
         devTokenArray[devTokenIndex].mint(receiver, amount);
     }
 
@@ -78,7 +74,7 @@ contract TokenFactory is ReentrancyGuard, Ownable {
         uint256 devTokenIndex,
         address owner_,
         uint256 amount
-    ) private nonReentrant {
+    ) internal nonReentrant {
         devTokenArray[devTokenIndex].burn(owner_, amount);
     }
 
@@ -86,7 +82,7 @@ contract TokenFactory is ReentrancyGuard, Ownable {
         uint256 scallingFactorX_
     ) public view returns (uint256) {
         unchecked {
-            return (10 ** baseTokenDecimals) - scallingFactorX_;
+            return (10 ** decimals()) - scallingFactorX_;
         }
     }
 
@@ -96,7 +92,8 @@ contract TokenFactory is ReentrancyGuard, Ownable {
     ) public view returns (uint256) {
         return devTokenArray[devTokenIndex].balanceOf(owner_);
     }
-
+    
+    // this can be taken out after testing
     function transfer(
         uint256 devTokenIndex,
         address to,
@@ -106,11 +103,11 @@ contract TokenFactory is ReentrancyGuard, Ownable {
     }
 
     function rebase() public onlyOwner {
-        uint256 rebasePrice = priceFeed.getPrice() / 10 ** baseTokenDecimals;
+        uint256 rebasePrice = priceFeed.getPrice() / 10 ** decimals();
         uint256 asset1Price = rebasePrice.ceilDiv(3); // this should be gotten from the oracle
         uint256 divisor = rebasePrice.ceilDiv(2);
         scallingFactorX.push(
-            ((asset1Price * 10 ** baseTokenDecimals) / 2) / divisor
+            ((asset1Price * 10 ** decimals()) / 2) / divisor
         );
     }
 
@@ -139,7 +136,7 @@ contract TokenFactory is ReentrancyGuard, Ownable {
     ) public view returns (uint256) { 
         uint256 scallingFactorX_ = scallingFactorX[lastRebaseCount[owner_]];
         uint256 scallingFactorY = subUnchecked(scallingFactorX_);
-        uint256 denominator = 10 ** baseTokenDecimals;       
+        uint256 denominator = 10 ** decimals();       
               
         uint256 asset1Balance = devTokenArray[0].unScaledbalanceOf(owner_); 
         uint256 asset2Balance = devTokenArray[1].unScaledbalanceOf(owner_); 
@@ -165,11 +162,7 @@ contract TokenFactory is ReentrancyGuard, Ownable {
         burn(0, msg.sender, amount);
         burn(1, msg.sender, amount);        
         payable(msg.sender).transfer(amount);
-    }
-
-    function getBaseTokenAddress() public view returns (ERC20) {
-        return baseToken;
-    }
+    }   
 
     function getPriceFeedAddress() public view returns (AggregatorV3Interface) {
         return priceFeed;

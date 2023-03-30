@@ -7,6 +7,7 @@ import "solidity-coverage"
 import "@typechain/hardhat"
 import "hardhat-deploy";
 import "@nomiclabs/hardhat-ethers"
+import "hardhat-contract-sizer";
 
 const config: HardhatUserConfig = {
   solidity: {
@@ -18,6 +19,13 @@ const config: HardhatUserConfig = {
         version: "0.6.6",
       },
     ],
+    settings: {
+      optimizer: {
+        enabled: true,
+        runs: 1,
+      },
+      "viaIR": true,
+    }
   },
   defaultNetwork:"hardhat",
   networks:{
@@ -60,6 +68,13 @@ const config: HardhatUserConfig = {
       5: 1, // on goerli it will take second account
     }
   },
+  contractSizer: {
+    alphaSort: true,
+    disambiguatePaths: false,
+    runOnCompile: true,
+    strict: true,
+    only: [':ERC20$'],
+  }    
 };
 
 export default config;
