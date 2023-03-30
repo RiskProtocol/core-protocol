@@ -45,7 +45,7 @@ contract DevToken is ERC20, Ownable, ERC20Permit  {
 
     function balanceOf(address account) public view override returns (uint256) {             
         if (           
-            tokenFactory.getUserLastRebaseCount(tx.origin) !=
+            tokenFactory.getUserLastRebaseCount(account) !=
             tokenFactory.getScallingFactorLength()
         ) {
             return tokenFactory.calculateRollOverValue(account);
