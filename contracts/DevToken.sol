@@ -32,7 +32,7 @@ contract DevToken is ERC20, Ownable, ERC20Permit  {
         address to,
         uint256 amount
     ) public override returns (bool) {
-        address owner_ = tx.origin;
+        address owner_ = msg.sender;
         if (
             tokenFactory.getUserLastRebaseCount(owner_) !=
             tokenFactory.getScallingFactorLength()
