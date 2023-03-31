@@ -1,25 +1,54 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "./DevToken.sol";
+import "./../libraries/PriceFeed.sol";
 import "hardhat/console.sol";
 
-contract ERC4626Modified is  ERC20, IERC4626 {
+error TokenFactory__InsufficientFund();
+
+/**
+ * @title ERC-20 Rebase Tokens
+ * @author Okwuosa Chijioke
+ * @notice Still under development
+ * @dev This implements 2 ERC-20 tokens that will be minted in exactly the same proportion as the
+ * underlying ERC-20 token transferred into the Factory contract.
+ * The asset will be burned in exactly the same proportion when asked to redeem/withdrawal the underlying asset.
+ * The contract will implement periodic rebalancing
+ */
+contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
+    using PriceFeed for AggregatorV3Interface;
     using Math for uint256;
+    using SafeMath for uint256;
 
     // State variables
-    ERC20 private immutable baseToken;
+    uint256[] private scallingFactorX;
+    DevToken[] private devTokenArray;
+    AggregatorV3Interface private immutable priceFeed;
+    mapping(address => uint256) private lastRebaseCount;
+    IERC20 private immutable baseToken;
     uint8 private immutable baseTokenDecimals;
 
     constructor(
-        ERC20 baseTokenAddress       
-    ) ERC20("RiskProtocol", "RK") {
-        baseToken = baseTokenAddress;      
+        IERC20 baseTokenAddress,
+        address priceFeedAddress
+    ) ERC20("RiskProtocolVault", "RPK") {
+        baseToken = IERC20(baseTokenAddress);
+        priceFeed = AggregatorV3Interface(priceFeedAddress);
         (bool success, uint8 assetDecimals) = _tryGetAssetDecimals(baseToken);
         baseTokenDecimals = success ? assetDecimals : super.decimals();
+    }
+
+    function initialize(DevToken token1, DevToken token2) public {
+        devTokenArray.push(token1);
+        devTokenArray.push(token2);
     }
 
     /**
@@ -47,7 +76,13 @@ contract ERC4626Modified is  ERC20, IERC4626 {
      * inheritance but is most likely 18). Override this function in order to set a guaranteed hardcoded value.
      * See {IERC20Metadata-decimals}.
      */
-    function decimals() public view virtual override(IERC20Metadata, ERC20) returns (uint8) {
+    function decimals()
+        public
+        view
+        virtual
+        override(IERC20Metadata, ERC20)
+        returns (uint8)
+    {
         return baseTokenDecimals;
     }
 
@@ -98,9 +133,11 @@ contract ERC4626Modified is  ERC20, IERC4626 {
             assets <= maxDeposit(receiver),
             "ERC4626: deposit more than max"
         );
-
-        uint256 shares = previewDeposit(assets);
-        _deposit(_msgSender(), receiver, assets, shares);
+       
+        uint256 shares = previewDeposit(assets);    
+        SafeERC20.safeTransferFrom(baseToken, receiver, address(this), assets);
+        mint(assets, receiver);      
+        emit Deposit(msg.sender, receiver, assets, shares);
 
         return shares;
     }
@@ -129,8 +166,8 @@ contract ERC4626Modified is  ERC20, IERC4626 {
         require(shares <= maxMint(receiver), "ERC4626: mint more than max");
 
         uint256 assets = previewMint(shares);
-        _deposit(_msgSender(), receiver, assets, shares);
-
+        devTokenArray[0].mint(receiver, assets);
+        devTokenArray[1].mint(receiver, assets);
         return assets;
     }
 
@@ -160,7 +197,11 @@ contract ERC4626Modified is  ERC20, IERC4626 {
         );
 
         uint256 shares = previewWithdraw(assets);
-        _withdraw(_msgSender(), receiver, owner, assets, shares);
+
+        burn_(0, owner, assets);
+        burn_(1, owner, assets);
+        SafeERC20.safeTransfer(baseToken, receiver, assets);
+        emit Withdraw(_msgSender(), receiver, owner, assets, shares);
 
         return shares;
     }
@@ -188,74 +229,21 @@ contract ERC4626Modified is  ERC20, IERC4626 {
         require(shares <= maxRedeem(owner), "ERC4626: redeem more than max");
 
         uint256 assets = previewRedeem(shares);
-        _withdraw(_msgSender(), receiver, owner, assets, shares);
+        withdraw(assets, receiver, owner);
 
         return assets;
     }
 
-    // internal functions starts
-
-    /**
-     * @dev Deposit/mint common workflow.
-     */
-    function _deposit(
-        address caller,
-        address receiver,
-        uint256 assets,
-        uint256 shares
-    ) internal virtual {
-        // If _asset is ERC777, `transferFrom` can trigger a reenterancy BEFORE the transfer happens through the
-        // `tokensToSend` hook. On the other hand, the `tokenReceived` hook, that is triggered after the transfer,
-        // calls the vault, which is assumed not malicious.
-        //
-        // Conclusion: we need to do the transfer before we mint so that any reentrancy would happen before the
-        // assets are transferred and before the shares are minted, which is a valid state.
-        // slither-disable-next-line reentrancy-no-eth
-        SafeERC20.safeTransferFrom(baseToken, caller, address(this), assets);
-        _mint(receiver, shares);
-
-        emit Deposit(caller, receiver, assets, shares);
-    }
-
-    /**
-     * @dev Withdraw/redeem common workflow.
-     */
-    function _withdraw(
-        address caller,
-        address receiver,
-        address owner,
-        uint256 assets,
-        uint256 shares
-    ) internal virtual {
-        if (caller != owner) {
-            _spendAllowance(owner, caller, shares);
-        }
-
-        // If _asset is ERC777, `transfer` can trigger a reentrancy AFTER the transfer happens through the
-        // `tokensReceived` hook. On the other hand, the `tokensToSend` hook, that is triggered before the transfer,
-        // calls the vault, which is assumed not malicious.
-        //
-        // Conclusion: we need to do the transfer after the burn so that any reentrancy would happen after the
-        // shares are burned and after the assets are transferred, which is a valid state.
-        _burn(owner, shares);
-        SafeERC20.safeTransfer(baseToken, receiver, assets);
-
-        emit Withdraw(caller, receiver, owner, assets, shares);
-    }
-
-    // internal functions end
-
     function maxAmountToWithdraw(
         address owner
     ) public view virtual returns (uint256) {
-        // if (balanceOf(0, owner) > balanceOf(1, owner)) {
-        //     return balanceOf(0, owner);
-        // } else {
-        //     return balanceOf(1, owner);
-        // }
+        if (devTokenArray[0].balanceOf(owner) > devTokenArray[1].balanceOf(owner)) {
+            return devTokenArray[1].balanceOf(owner);
+        } else {
+            return devTokenArray[0].balanceOf(owner);
+        }
     }
 
-    
     /**
      * @dev Checks if vault is "healthy" in the sense of having assets backing the circulating shares.
      */
@@ -263,5 +251,87 @@ contract ERC4626Modified is  ERC20, IERC4626 {
         return totalAssets() > 0 || totalSupply() == 0;
     }
 
+    function mint_(
+        uint256 devTokenIndex,
+        address receiver,
+        uint256 amount
+    ) private nonReentrant {
+        devTokenArray[devTokenIndex].mint(receiver, amount);
+    }
+
+    function burn_(
+        uint256 devTokenIndex,
+        address owner_,
+        uint256 amount
+    ) private nonReentrant {
+        devTokenArray[devTokenIndex].burn(owner_, amount);
+    }
+
+    function subUnchecked(
+        uint256 scallingFactorX_
+    ) public view returns (uint256) {
+        unchecked {
+            return (10 ** decimals()) - scallingFactorX_;
+        }
+    }
   
+    function rebase() public onlyOwner {
+        uint256 rebasePrice = priceFeed.getPrice() / 10 ** decimals();
+        uint256 asset1Price = rebasePrice.ceilDiv(3); // this should be gotten from the oracle
+        uint256 divisor = rebasePrice.ceilDiv(2);
+        scallingFactorX.push(((asset1Price * 10 ** decimals()) / 2) / divisor);
+    }
+
+    function applyRebase(address owner_) public {
+        uint256 asset1ValueEth = devTokenArray[0].unScaledbalanceOf(owner_);
+        uint256 asset2ValueEth = devTokenArray[1].unScaledbalanceOf(owner_);
+
+        uint256 rollOverValue = calculateRollOverValue(owner_);
+        lastRebaseCount[owner_] = getScallingFactorLength();
+
+        if (rollOverValue > asset1ValueEth) {
+            mint_(0, owner_, (rollOverValue - asset1ValueEth));
+        } else {
+            burn_(0, owner_, (asset1ValueEth - rollOverValue));
+        }
+
+        if (rollOverValue > asset2ValueEth) {
+            mint_(1, owner_, (rollOverValue - asset2ValueEth));
+        } else {
+            burn_(1, owner_, (asset2ValueEth - rollOverValue));
+        }
+    }
+
+    function calculateRollOverValue(
+        address owner_
+    ) public view returns (uint256) {
+        uint256 scallingFactorX_ = scallingFactorX[lastRebaseCount[owner_]];
+        uint256 scallingFactorY = subUnchecked(scallingFactorX_);
+        uint256 denominator = 10 ** decimals();
+
+        uint256 asset1Balance = devTokenArray[0].unScaledbalanceOf(owner_);
+        uint256 asset2Balance = devTokenArray[1].unScaledbalanceOf(owner_);
+        uint256 rollOverValue = ((asset1Balance * scallingFactorX_) +
+            (asset2Balance * scallingFactorY)) / denominator;
+
+        return rollOverValue;
+    }
+
+    function getPriceFeedAddress() public view returns (AggregatorV3Interface) {
+        return priceFeed;
+    }
+
+    function getScallingFactorLength() public view returns (uint256) {
+        return scallingFactorX.length;
+    }
+
+    function getUserLastRebaseCount(
+        address userAddress
+    ) public view returns (uint256) {
+        return lastRebaseCount[userAddress];
+    }
+
+    function getDevTokenAddress(uint256 index) public view returns (DevToken) {
+        return devTokenArray[index];
+    }
 }

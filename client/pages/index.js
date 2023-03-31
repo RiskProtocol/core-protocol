@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { ethers } from 'ethers'
 import { Biconomy } from "@biconomy/mexa";
-import {tokenFactoryAddress, devTokenXAddress, devTokenYAddress, tokenFactoryAbi, devTokenAbi} from './../contants'
+import {tokenFactoryAddress, devTokenXAddress, devTokenYAddress, tokenFactoryAbi, devTokenAbi, underlyingTokenAddress} from './../contants'
 
 function App() {
   const [depositAmount, setDepositAmount] = useState()
@@ -36,8 +36,14 @@ function App() {
       const provider = new ethers.providers.Web3Provider(window.ethereum)
       const signer = provider.getSigner();
       const contract = new ethers.Contract(tokenFactoryAddress, tokenFactoryAbi, signer)
-      try {
-        const data = await contract.buyAsset({value: ethers.utils.parseEther(depositAmount)})
+      const underlyingToken = new ethers.Contract(underlyingTokenAddress, devTokenAbi, signer)
+      try {       
+        const allowance = await underlyingToken.allowance('0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266', tokenFactoryAddress)  
+        console.log(`allowance : ${allowance}`) 
+        if(allowance<+ethers.utils.parseEther(depositAmount)){
+          await underlyingToken.approve(tokenFactoryAddress,ethers.constants.MaxUint256) 
+        }    
+        await contract.deposit(`${ethers.utils.parseEther(depositAmount)}`,'0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266')
         console.log('Buying asset...')
       } catch (err) {
         console.log("Error: ", err)
@@ -51,7 +57,7 @@ function App() {
       const signer = provider.getSigner();
       const contract = new ethers.Contract(tokenFactoryAddress, tokenFactoryAbi, signer)
       try {
-        const data = await contract.withdrawAsset(ethers.utils.parseEther(withdrawalAmount))
+        const data = await contract.withdraw(`${ethers.utils.parseEther(withdrawalAmount)}`,'0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266','0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266')
         console.log('withdrawing asset...')
       } catch (err) {
         console.log("Error: ", err)
@@ -116,41 +122,6 @@ function App() {
       }
     }    
   }
-
-  
-  // async function setGreeting() {
-  //   if (!greeting) return
-  //   if (typeof window.ethereum !== 'undefined') {
-  //     const accounts = await requestAccounts()
-  //     const biconomy = new Biconomy(
-  //       window.ethereum,
-  //       {
-  //         apiKey: process.env.NEXT_PUBLIC_BICONOMY_API_KEY,
-  //         debug: true,
-  //         contractAddresses: [greeterAddress]
-  //       }
-  //     );
-  //     const provider = await biconomy.provider;
-
-  //     const contractInstance = new ethers.Contract(
-  //       greeterAddress,
-  //       Greeter.abi,
-  //       biconomy.ethersProvider
-  //     );
-  //     await biconomy.init();
-
-  //     const { data } = await contractInstance.populateTransaction.setGreeting(greeting)
-
-  //     let txParams = {
-  //       data: data,
-  //       to: greeterAddress,
-  //       from: accounts[0],
-  //       signatureType: "EIP712_SIGN",
-  //     };
-
-  //     await provider.send("eth_sendTransaction", [txParams]);
-  //   }
-  // }
 
   return (
     <div className="App">

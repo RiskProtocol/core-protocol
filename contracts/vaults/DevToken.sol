@@ -6,7 +6,6 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/draft-ERC20Permit.sol";
 import "./TokenFactory.sol";
-import "hardhat/console.sol";
 
 
 contract DevToken is ERC20, Ownable, ERC20Permit  {
@@ -20,11 +19,11 @@ contract DevToken is ERC20, Ownable, ERC20Permit  {
         tokenFactory = TokenFactory(tokenFactoryAddress);
     }
 
-    function mint(address receiver, uint256 amount) public onlyOwner {
+    function mint(address receiver, uint256 amount) public {
         _mint(receiver, amount);
     }
 
-    function burn(address account, uint256 amount) public onlyOwner {
+    function burn(address account, uint256 amount) public {
         _burn(account, amount);
     }
 
@@ -45,7 +44,7 @@ contract DevToken is ERC20, Ownable, ERC20Permit  {
 
     function balanceOf(address account) public view override returns (uint256) {             
         if (           
-            tokenFactory.getUserLastRebaseCount(tx.origin) !=
+            tokenFactory.getUserLastRebaseCount(account) !=
             tokenFactory.getScallingFactorLength()
         ) {
             return tokenFactory.calculateRollOverValue(account);

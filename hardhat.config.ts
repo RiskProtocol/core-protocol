@@ -24,8 +24,7 @@ const config: HardhatUserConfig = {
         enabled: true,
         runs: 1,
       },
-      "viaIR": true,
-    }
+    },
   },
   defaultNetwork:"hardhat",
   networks:{
@@ -71,9 +70,8 @@ const config: HardhatUserConfig = {
   contractSizer: {
     alphaSort: true,
     disambiguatePaths: false,
-    runOnCompile: true,
-    strict: true,
-    only: [':ERC20$'],
+    runOnCompile: false,
+    strict: true   
   }    
 };
 
