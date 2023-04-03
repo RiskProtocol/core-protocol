@@ -1,7 +1,7 @@
-export const tokenFactoryAddress = "0x01c1DeF3b91672704716159C9041Aeca392DdFfb";
-export const devTokenXAddress = "0x02b0B4EFd909240FCB2Eb5FAe060dC60D112E3a4";
-export const devTokenYAddress = "0x638A246F0Ec8883eF68280293FFE8Cfbabe61B44";
-export const underlyingTokenAddress = "0x32EEce76C2C2e8758584A83Ee2F522D4788feA0f";
+export const tokenFactoryAddress = "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0";
+export const devTokenXAddress = "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9";
+export const devTokenYAddress = "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9";
+export const underlyingTokenAddress = "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512";
 
 export const tokenFactoryAbi = [
   {
