@@ -12,7 +12,10 @@ import "./DevToken.sol";
 import "./../libraries/PriceFeed.sol";
 import "hardhat/console.sol";
 
-error TokenFactory__InsufficientFund();
+error TokenFactory__DepositMoreThanMax();
+error TokenFactory__MintMoreThanMax();
+error TokenFactory__WithdrawMoreThanMax();
+error TokenFactory__RedeemMoreThanMax();
 
 /**
  * @title ERC-20 Rebase Tokens
@@ -129,11 +132,7 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
         uint256 assets,
         address receiver
     ) public virtual override returns (uint256) {
-        require(
-            assets <= maxDeposit(receiver),
-            "ERC4626: deposit more than max"
-        );
-       
+        if(assets > maxDeposit(receiver)) revert TokenFactory__DepositMoreThanMax(); 
         uint256 shares = previewDeposit(assets);    
         SafeERC20.safeTransferFrom(baseToken, receiver, address(this), assets);
         mint(assets, receiver);      
@@ -163,8 +162,7 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
         uint256 shares,
         address receiver
     ) public virtual override returns (uint256) {
-        require(shares <= maxMint(receiver), "ERC4626: mint more than max");
-
+        if(shares > maxMint(receiver)) revert TokenFactory__MintMoreThanMax();
         uint256 assets = previewMint(shares);
         devTokenArray[0].mint(receiver, assets);
         devTokenArray[1].mint(receiver, assets);
@@ -191,13 +189,8 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
         address receiver,
         address owner
     ) public virtual override returns (uint256) {
-        require(
-            assets <= maxWithdraw(owner),
-            "ERC4626: withdraw more than max"
-        );
-
+        if(assets > maxWithdraw(owner)) revert TokenFactory__WithdrawMoreThanMax(); 
         uint256 shares = previewWithdraw(assets);
-
         burn_(0, owner, assets);
         burn_(1, owner, assets);
         SafeERC20.safeTransfer(baseToken, receiver, assets);
@@ -225,9 +218,8 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
         uint256 shares,
         address receiver,
         address owner
-    ) public virtual override returns (uint256) {
-        require(shares <= maxRedeem(owner), "ERC4626: redeem more than max");
-
+    ) public virtual override returns (uint256) {        
+        if(shares > maxRedeem(owner)) revert TokenFactory__RedeemMoreThanMax();
         uint256 assets = previewRedeem(shares);
         withdraw(assets, receiver, owner);
 
