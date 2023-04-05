@@ -39,6 +39,7 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
     IERC20 private immutable baseToken;
     uint8 private immutable baseTokenDecimals;
     uint256 private immutable interval;
+    uint256 private lastTimeStamp;
 
     constructor(
         IERC20 baseTokenAddress,
@@ -50,6 +51,7 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
         (bool success, uint8 assetDecimals) = _tryGetAssetDecimals(baseToken);
         baseTokenDecimals = success ? assetDecimals : super.decimals();
         interval = rebaseInterval;
+        lastTimeStamp = block.timestamp;
     }
 
     function initialize(DevToken token1, DevToken token2) public {
