@@ -28,6 +28,12 @@ const config: HardhatUserConfig = {
   },
   defaultNetwork:"hardhat",
   networks:{
+    hardhat: {
+      chainId: 31337,
+      forking: {
+        url: process.env.MAINNET_RPC_URL! // https://eth-mainnet.g.alchemy.com/v2/MY_KEY
+      },
+    },
     goerli:{
       url:process.env.GOERLI_RPC_URL,
       accounts:[process.env.PRIVATE_KEY!],

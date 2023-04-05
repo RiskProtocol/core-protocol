@@ -275,7 +275,7 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
         }
     }
   
-    function rebase() public onlyOwner {
+    function rebase() external onlyOwner {
         uint256 rebasePrice = priceFeed.getPrice() / 10 ** decimals();
         uint256 asset1Price = rebasePrice.ceilDiv(3); // this should be gotten from the oracle
         uint256 divisor = rebasePrice.ceilDiv(2);
