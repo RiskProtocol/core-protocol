@@ -38,15 +38,18 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
     mapping(address => uint256) private lastRebaseCount;
     IERC20 private immutable baseToken;
     uint8 private immutable baseTokenDecimals;
+    uint256 private immutable interval;
 
     constructor(
         IERC20 baseTokenAddress,
-        address priceFeedAddress
+        address priceFeedAddress,
+        uint256 rebaseInterval // in seconds
     ) ERC20("RiskProtocolVault", "RPK") {
         baseToken = IERC20(baseTokenAddress);
         priceFeed = AggregatorV3Interface(priceFeedAddress);
         (bool success, uint8 assetDecimals) = _tryGetAssetDecimals(baseToken);
         baseTokenDecimals = success ? assetDecimals : super.decimals();
+        interval = rebaseInterval;
     }
 
     function initialize(DevToken token1, DevToken token2) public {
