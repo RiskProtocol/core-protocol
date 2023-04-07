@@ -54,7 +54,7 @@ function App() {
         contract = new ethers.Contract(devTokenYAddress, devTokenAbi, provider);
       }
       try {
-        const data = await contract.balanceOf('0xCf50A3812076fDfd31DfB3b6174040103Ccb3b1b');
+        const data = await contract.balanceOf(testAccountAddress);
         console.log(
           `balance of ${
             devToken == "x" ? "tokenX" : "tokenY"

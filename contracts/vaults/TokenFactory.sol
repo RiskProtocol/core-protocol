@@ -148,7 +148,8 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
         uint256 shares = previewDeposit(assets);
         SafeERC20.safeTransferFrom(baseToken, receiver, address(this), assets);
         updateUserLastRebaseCount(receiver);
-        mint(assets, receiver);
+        mint_(0, receiver, assets);
+        mint_(1, receiver, assets);
         emit Deposit(msg.sender, receiver, assets, shares);
 
         return shares;
@@ -174,11 +175,10 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
     function mint(
         uint256 shares,
         address receiver
-    ) public override virtual nonReentrant returns (uint256) {           
+    ) public virtual override nonReentrant returns (uint256) {
         if (shares > maxMint(receiver)) revert TokenFactory__MintMoreThanMax();
         uint256 assets = previewMint(shares);
-        devTokenArray[0].mint(receiver, assets);
-        devTokenArray[1].mint(receiver, assets);
+        _mint(receiver, assets);
         return assets;
     }
 
@@ -269,7 +269,9 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
         address receiver,
         uint256 amount
     ) private nonReentrant {
-        devTokenArray[devTokenIndex].mint(receiver, amount);
+        uint256 assets = previewMint(amount);
+        if (assets > maxMint(receiver)) revert TokenFactory__MintMoreThanMax();
+        devTokenArray[devTokenIndex].mint(receiver, assets);
     }
 
     function burn_(
