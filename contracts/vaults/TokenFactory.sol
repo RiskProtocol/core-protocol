@@ -16,7 +16,7 @@ error TokenFactory__DepositMoreThanMax();
 error TokenFactory__MintMoreThanMax();
 error TokenFactory__WithdrawMoreThanMax();
 error TokenFactory__RedeemMoreThanMax();
-error TokenFactory__OnlyFundOwner();
+error TokenFactory__OnlyAssetOwner();
 
 /**
  * @title ERC-20 Rebase Tokens
@@ -42,8 +42,8 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
     uint256 private immutable interval;
     uint256 private lastTimeStamp;
 
-    modifier AssetOwner(address owner) {
-        if (owner != msg.sender) revert TokenFactory__OnlyFundOwner();
+    modifier OnlyAssetOwner(address assetOwner) {
+        if (assetOwner != msg.sender) revert TokenFactory__OnlyAssetOwner();
         _;
     }
 
@@ -201,7 +201,7 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
         uint256 assets,
         address receiver,
         address owner
-    ) public virtual override AssetOwner(owner) returns (uint256) {
+    ) public virtual override OnlyAssetOwner(owner) returns (uint256) {
         // apply user pending rebase
         if (getUserLastRebaseCount(receiver) != getScallingFactorLength()) {
             applyRebase(receiver);
