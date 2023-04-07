@@ -42,7 +42,7 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
     uint256 private immutable interval;
     uint256 private lastTimeStamp;
 
-    modifier onlyAssetOwner(address owner) {
+    modifier AssetOwner(address owner) {
         if (owner != msg.sender) revert TokenFactory__OnlyFundOwner();
         _;
     }
@@ -201,7 +201,7 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
         uint256 assets,
         address receiver,
         address owner
-    ) public virtual override onlyAssetOwner(owner) returns (uint256) {
+    ) public virtual override AssetOwner(owner) returns (uint256) {
         // apply user pending rebase
         if (getUserLastRebaseCount(receiver) != getScallingFactorLength()) {
             applyRebase(receiver);
