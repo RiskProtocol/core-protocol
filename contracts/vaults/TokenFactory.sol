@@ -16,6 +16,7 @@ error TokenFactory__DepositMoreThanMax();
 error TokenFactory__MintMoreThanMax();
 error TokenFactory__WithdrawMoreThanMax();
 error TokenFactory__RedeemMoreThanMax();
+error TokenFactory__OnlyFundOwner();
 
 /**
  * @title ERC-20 Rebase Tokens
@@ -41,6 +42,11 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
     uint256 private immutable interval;
     uint256 private lastTimeStamp;
 
+    modifier onlyAssetOwner(address owner) {
+        if (owner != msg.sender) revert TokenFactory__OnlyFundOwner();
+        _;
+    }
+
     constructor(
         IERC20 baseTokenAddress,
         address priceFeedAddress,
@@ -54,7 +60,7 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
         lastTimeStamp = block.timestamp;
     }
 
-    function initialize(DevToken token1, DevToken token2) public {
+    function initialize(DevToken token1, DevToken token2) external onlyOwner {
         devTokenArray.push(token1);
         devTokenArray.push(token2);
     }
@@ -137,10 +143,12 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
         uint256 assets,
         address receiver
     ) public virtual override returns (uint256) {
-        if(assets > maxDeposit(receiver)) revert TokenFactory__DepositMoreThanMax(); 
-        uint256 shares = previewDeposit(assets);    
+        if (assets > maxDeposit(receiver))
+            revert TokenFactory__DepositMoreThanMax();
+        uint256 shares = previewDeposit(assets);
         SafeERC20.safeTransferFrom(baseToken, receiver, address(this), assets);
-        mint(assets, receiver);      
+        updateUserLastRebaseCount(receiver);
+        mint(assets, receiver);
         emit Deposit(msg.sender, receiver, assets, shares);
 
         return shares;
@@ -166,8 +174,8 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
     function mint(
         uint256 shares,
         address receiver
-    ) public virtual override returns (uint256) {
-        if(shares > maxMint(receiver)) revert TokenFactory__MintMoreThanMax();
+    ) public override virtual nonReentrant returns (uint256) {           
+        if (shares > maxMint(receiver)) revert TokenFactory__MintMoreThanMax();
         uint256 assets = previewMint(shares);
         devTokenArray[0].mint(receiver, assets);
         devTokenArray[1].mint(receiver, assets);
@@ -193,8 +201,13 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
         uint256 assets,
         address receiver,
         address owner
-    ) public virtual override returns (uint256) {
-        if(assets > maxWithdraw(owner)) revert TokenFactory__WithdrawMoreThanMax(); 
+    ) public virtual override onlyAssetOwner(owner) returns (uint256) {
+        // apply user pending rebase
+        if (getUserLastRebaseCount(receiver) != getScallingFactorLength()) {
+            applyRebase(receiver);
+        }
+        if (assets > maxWithdraw(owner))
+            revert TokenFactory__WithdrawMoreThanMax();
         uint256 shares = previewWithdraw(assets);
         burn_(0, owner, assets);
         burn_(1, owner, assets);
@@ -223,8 +236,8 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
         uint256 shares,
         address receiver,
         address owner
-    ) public virtual override returns (uint256) {        
-        if(shares > maxRedeem(owner)) revert TokenFactory__RedeemMoreThanMax();
+    ) public virtual override returns (uint256) {
+        if (shares > maxRedeem(owner)) revert TokenFactory__RedeemMoreThanMax();
         uint256 assets = previewRedeem(shares);
         withdraw(assets, receiver, owner);
 
@@ -234,7 +247,10 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
     function maxAmountToWithdraw(
         address owner
     ) public view virtual returns (uint256) {
-        if (devTokenArray[0].balanceOf(owner) > devTokenArray[1].balanceOf(owner)) {
+        if (
+            devTokenArray[0].balanceOf(owner) >
+            devTokenArray[1].balanceOf(owner)
+        ) {
             return devTokenArray[1].balanceOf(owner);
         } else {
             return devTokenArray[0].balanceOf(owner);
@@ -271,7 +287,7 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
             return (10 ** decimals()) - scallingFactorX_;
         }
     }
-  
+
     function rebase() external onlyOwner {
         uint256 rebasePrice = priceFeed.getPrice() / 10 ** decimals();
         uint256 asset1Price = rebasePrice.ceilDiv(3); // this should be gotten from the oracle
@@ -312,6 +328,15 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
             (asset2Balance * scallingFactorY)) / denominator;
 
         return rollOverValue;
+    }
+
+    function updateUserLastRebaseCount(address owner_) public {
+        if (
+            devTokenArray[0].unScaledbalanceOf(owner_) == 0 &&
+            devTokenArray[0].unScaledbalanceOf(owner_) == 0
+        ) {
+            lastRebaseCount[owner_] = getScallingFactorLength();
+        }
     }
 
     function getPriceFeedAddress() public view returns (AggregatorV3Interface) {
