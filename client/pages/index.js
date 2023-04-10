@@ -15,19 +15,32 @@ import {
 } from "./../contants";
 
 function App() {
-  // const testProvider = new ethers.providers.getDefaultProvider('https://127.0.0.1:8545/');
-  // const wallet = new ethers.Wallet('0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80');
-  // const connectedWallet = wallet.connect(testProvider);
 
+  const testAccountAddress = '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266'
+  const test1AccountAddress = '0x70997970C51812dc3A010C7d01b50e0d17dc79C8'
   const [depositAmount, setDepositAmount] = useState();
   const [withdrawalAmount, setWithdrawalAmount] = useState();
-  const [transferAddress, setTransferAddress] = useState(
-    "0x70997970C51812dc3A010C7d01b50e0d17dc79C8"
-  );
+  const [transferAddress, setTransferAddress] = useState('0x70997970C51812dc3A010C7d01b50e0d17dc79C8');
   const [tokenPairAddress, setTokenPairAddress] = useState();
 
+  
   async function requestAccounts() {
     return await window.ethereum.request({ method: "eth_requestAccounts" });
+  }
+
+  async function test() {
+    if (typeof window.ethereum !== "undefined") {
+      let contract;
+      const provider = new ethers.providers.Web3Provider(window.ethereum);
+      const signer = provider.getSigner();
+      const accounts = await requestAccounts();
+      contract = new ethers.Contract(tokenFactoryAddress, tokenFactoryAbi, signer);
+      try {
+        const data = await contract.mint(devTokenXAddress, devTokenYAddress);        
+      } catch (err) {
+        console.log("Error: ", err);
+      }
+    }
   }
 
   async function tokenBalance(devToken = "x") {
@@ -41,7 +54,7 @@ function App() {
         contract = new ethers.Contract(devTokenYAddress, devTokenAbi, provider);
       }
       try {
-        const data = await contract.balanceOf(accounts[0]);
+        const data = await contract.balanceOf(testAccountAddress);
         console.log(
           `balance of ${
             devToken == "x" ? "tokenX" : "tokenY"
@@ -69,19 +82,19 @@ function App() {
       );
       try {
         const allowance = await underlyingToken.allowance(
-          "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+          testAccountAddress,
           tokenFactoryAddress
-        );
+        );        
         console.log(`allowance : ${allowance}`);
-        if (allowance < +ethers.utils.parseEther(depositAmount)) {
-          await underlyingToken.approve(
-            tokenFactoryAddress,
-            ethers.constants.MaxUint256
-          );
-        }
+
+        await underlyingToken.approve(
+          tokenFactoryAddress,
+          ethers.utils.parseEther(depositAmount)
+        );
+
         await contract.deposit(
           `${ethers.utils.parseEther(depositAmount)}`,
-          "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"
+          testAccountAddress
         );
         console.log("Buying asset...");
       } catch (err) {
@@ -102,8 +115,8 @@ function App() {
       try {
         const data = await contract.withdraw(
           `${ethers.utils.parseEther(withdrawalAmount)}`,
-          "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266",
-          "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"
+          testAccountAddress,
+          testAccountAddress
         );
         console.log("withdrawing asset...");
       } catch (err) {
@@ -220,7 +233,7 @@ function App() {
       try {
         const data = await contract.createPair(
           devTokenXAddress,
-          devTokenYAddress
+          underlyingTokenAddress
         );
         const receipt = await data.wait();
         console.log(`Response block number is  ${receipt.blockNumber}`);
@@ -241,7 +254,7 @@ function App() {
       try {
         const data = await contract.getPair(
           devTokenXAddress,
-          devTokenYAddress
+          underlyingTokenAddress
         );
         console.log(`tradingPair address is  ${data}`);
         setTokenPairAddress(data);
@@ -253,8 +266,8 @@ function App() {
 
   async function addLiquidity() {
     if (typeof window.ethereum !== "undefined") {
-      const amount = 10;
-      const ethAmount = `${ethers.utils.parseEther("10")}`;
+      const amount = 20;
+      const ethAmount = `${ethers.utils.parseEther("20")}`;
       const provider = new ethers.providers.Web3Provider(window.ethereum);
       const signer = provider.getSigner();
       const contract = new ethers.Contract(
@@ -268,18 +281,18 @@ function App() {
         signer
       );
       const devTokenY = new ethers.Contract(
-        devTokenYAddress,
+        underlyingTokenAddress,
         devTokenAbi,
         signer
       );
 
       try {
         const allowance1 = await devTokenX.allowance(
-          "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+          testAccountAddress,
           uniswapV2RouterAddress
         );
         const allowance2 = await devTokenY.allowance(
-          "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+          testAccountAddress,
           uniswapV2RouterAddress
         );
         console.log(`allowance1 : ${allowance1}`);
@@ -294,12 +307,12 @@ function App() {
 
         const data = await contract.addLiquidity(
           devTokenXAddress,
-          devTokenYAddress,
+          underlyingTokenAddress,
           ethAmount,
           ethAmount,
           0,
           0,
-          "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+          testAccountAddress,
           Math.floor(Date.now() / 1000) + 300
         );
         const receipt = await data.wait();
@@ -339,7 +352,7 @@ function App() {
       );
       try {
         const data = await contract.balanceOf(
-          "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+          testAccountAddress
         );
         console.log(`user tradingPair balance is  ${data}`);
       } catch (err) {
@@ -359,9 +372,9 @@ function App() {
       );
       try {
         const fromTokenAddress = devTokenXAddress; // Token X
-        const toTokenAddress = devTokenYAddress; // Token Y
+        const toTokenAddress = underlyingTokenAddress; // Token Y
         const amountIn = ethers.utils.parseEther("1"); // 1 Token X
-        const amountOutMin = 0; // minimum acceptable amount of Token Y
+        const amountOutMin = "0"; // minimum acceptable amount of Token Y
         const deadline = Math.floor(Date.now() / 1000) + 60 * 20; // 20 minutes from now
         const path = [fromTokenAddress, toTokenAddress];
         const options = {
@@ -485,6 +498,10 @@ function App() {
         <button style={buttonStyle} onClick={tokenSupply.bind(this, "y")}>
           Total Supply of Token Y
         </button>
+        <button style={buttonStyle} onClick={test}>
+          Test
+        </button>
+        
       </div>
     </div>
   );
