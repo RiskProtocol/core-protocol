@@ -7,6 +7,7 @@ import "solidity-coverage"
 import "@typechain/hardhat"
 import "hardhat-deploy";
 import "@nomiclabs/hardhat-ethers"
+import "hardhat-contract-sizer";
 
 const config: HardhatUserConfig = {
   solidity: {
@@ -18,9 +19,21 @@ const config: HardhatUserConfig = {
         version: "0.6.6",
       },
     ],
+    settings: {
+      optimizer: {
+        enabled: true,
+        runs: 1,
+      },
+    },
   },
   defaultNetwork:"hardhat",
   networks:{
+    hardhat: {
+      chainId: 31337,
+      forking: {
+        url: process.env.MAINNET_RPC_URL! // https://eth-mainnet.g.alchemy.com/v2/MY_KEY
+      },
+    },
     goerli:{
       url:process.env.GOERLI_RPC_URL,
       accounts:[process.env.PRIVATE_KEY!],
@@ -60,6 +73,12 @@ const config: HardhatUserConfig = {
       5: 1, // on goerli it will take second account
     }
   },
+  contractSizer: {
+    alphaSort: true,
+    disambiguatePaths: false,
+    runOnCompile: false,
+    strict: true   
+  }    
 };
 
 export default config;

@@ -1,7 +1,6 @@
 import { DeployFunction } from 'hardhat-deploy/types';
-import { developmentChains, networkConfig } from '../helper-hardhat-config';
+import { developmentChains, networkConfig, BASE_TOKEN_ADDRESS, REBASE_INTERVAL} from '../helper-hardhat-config';
 import { verify } from '../utils/verify';
-import { BASE_TOKEN_ADDRESS } from '../helper-hardhat-config';
 
 const func: DeployFunction = async ({ getNamedAccounts, deployments, network }) => {
     const { deploy, log } = deployments
@@ -11,24 +10,24 @@ const func: DeployFunction = async ({ getNamedAccounts, deployments, network }) 
       because they don't exist on those chains, we would equally want to deploy the price feed
       with the correct contract address for different chains
     */
-
-    let ethUsdPriceFeedAddress: string
+   
+    let priceFeedAddress: string
     let baseTokenAddress: string
 
     if (developmentChains.includes(network.name)) {
         const ethUsdAggregator = await deployments.get('MockV3Aggregator');
-        ethUsdPriceFeedAddress = ethUsdAggregator.address
+        priceFeedAddress = ethUsdAggregator.address
 
         const mockERC20Token = await deployments.get('MockERC20Token');
         baseTokenAddress = mockERC20Token.address
     } else {
-        ethUsdPriceFeedAddress = networkConfig[network.name].ethUsdPriceFeed!
+        priceFeedAddress = networkConfig[network.name].priceFeed!
         baseTokenAddress = BASE_TOKEN_ADDRESS
     }
 
     const TokenFactory = await deploy("TokenFactory", {
         from: deployer,
-        args: [baseTokenAddress, ethUsdPriceFeedAddress],
+        args: [baseTokenAddress, priceFeedAddress, REBASE_INTERVAL],
         log: true,
         // we need to wait if on a live network so we can verify properly
         waitConfirmations: networkConfig[network.name].blockConfirmations || 1,
@@ -38,8 +37,8 @@ const func: DeployFunction = async ({ getNamedAccounts, deployments, network }) 
     log("----------------------------------")
 
     if (!developmentChains.includes(network.name) && process.env.ETHERSCAN_API_KEY) {
-        await verify(TokenFactory.address, [baseTokenAddress, ethUsdPriceFeedAddress])
-    }
+        await verify(TokenFactory.address, [baseTokenAddress, priceFeedAddress, REBASE_INTERVAL])
+    }     
 };
 export default func;
 func.tags = ["all"]; 
