@@ -4,10 +4,11 @@ pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/token/ERC777/ERC777.sol";
 import "./TokenFactory.sol";
+import "../external/ERC20Permit.sol";
 
 error DevToken__NotTokenFactory();
 
-contract DevToken is ERC777 {
+contract DevToken is ERC777, ERC20Permit {
     TokenFactory private immutable tokenFactory;
 
     modifier onlyTokenFactory() {
@@ -21,7 +22,7 @@ contract DevToken is ERC777 {
         string memory tokenSymbol,
         address factoryAddress,
         address[] memory defaultOperators
-    ) ERC777(tokenName, tokenSymbol, defaultOperators) {
+    ) ERC777(tokenName, tokenSymbol, defaultOperators)  ERC20Permit(tokenName) {
         tokenFactory = TokenFactory(factoryAddress);
     }
 
@@ -62,7 +63,7 @@ contract DevToken is ERC777 {
             tokenFactory.applyRebase(owner_);
         }
         tokenFactory.updateUserLastRebaseCount(recipient);
-        _send(_msgSender(), recipient, amount, data, "", true);
+        super.send(recipient, amount, data);
     }
     
     /** @dev See {IERC777-balanceOf}. */
