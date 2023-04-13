@@ -7,6 +7,7 @@ import "./TokenFactory.sol";
 import "../external/ERC20Permit.sol";
 
 error DevToken__NotTokenFactory();
+error DevToken__MethodNotAllowed();
 
 contract DevToken is ERC777, ERC20Permit {
     TokenFactory private immutable tokenFactory;
@@ -22,12 +23,30 @@ contract DevToken is ERC777, ERC20Permit {
         string memory tokenSymbol,
         address factoryAddress,
         address[] memory defaultOperators
-    ) ERC777(tokenName, tokenSymbol, defaultOperators)  ERC20Permit(tokenName) {
+    ) ERC777(tokenName, tokenSymbol, defaultOperators) ERC20Permit(tokenName) {
         tokenFactory = TokenFactory(factoryAddress);
     }
 
     function mint(address receiver, uint256 amount) public onlyTokenFactory {
         _mint(receiver, amount, "", "");
+    }
+
+    /** @dev See {IERC777-burn}. */
+    function burn(
+        uint256 /*amount*/,
+        bytes memory /*data*/
+    ) public pure override {
+        revert DevToken__MethodNotAllowed();
+    }
+
+    /** @dev See {IERC777-operatorBurn}. */
+    function operatorBurn(
+        address /*account */,
+        uint256 /*amount */,
+        bytes memory /*data */,
+        bytes memory /* operatorData */
+    ) public pure override {
+        revert DevToken__MethodNotAllowed();
     }
 
     function burn(address account, uint256 amount) public onlyTokenFactory {
@@ -65,7 +84,7 @@ contract DevToken is ERC777, ERC20Permit {
         tokenFactory.updateUserLastRebaseCount(recipient);
         super.send(recipient, amount, data);
     }
-    
+
     /** @dev See {IERC777-balanceOf}. */
     function balanceOf(address account) public view override returns (uint256) {
         if (hasPendingRebase(account)) {
