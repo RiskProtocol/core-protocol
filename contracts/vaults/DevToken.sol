@@ -33,17 +33,17 @@ contract DevToken is ERC777, ERC20Permit {
 
     /** @dev See {IERC777-burn}. */
     function burn(
-        uint256 /*amount*/,
-        bytes memory /*data*/
+        uint256 /* amount */,
+        bytes memory /* data */
     ) public pure override {
         revert DevToken__MethodNotAllowed();
     }
 
     /** @dev See {IERC777-operatorBurn}. */
     function operatorBurn(
-        address /*account */,
-        uint256 /*amount */,
-        bytes memory /*data */,
+        address /* account */,
+        uint256 /* amount */,
+        bytes memory /* data */,
         bytes memory /* operatorData */
     ) public pure override {
         revert DevToken__MethodNotAllowed();
