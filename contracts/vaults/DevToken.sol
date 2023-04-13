@@ -2,14 +2,13 @@
 
 pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts/token/ERC777/ERC777.sol";
 import "./TokenFactory.sol";
 import "../external/ERC20Permit.sol";
 
 error DevToken__NotTokenFactory();
 error DevToken__MethodNotAllowed();
 
-contract DevToken is ERC777, ERC20Permit {
+contract DevToken is ERC20Permit {
     TokenFactory private immutable tokenFactory;
 
     modifier onlyTokenFactory() {
