@@ -3,13 +3,11 @@
 
 pragma solidity ^0.8.0;
 
-
-import "./IERC20PermitUpdate.sol";
 import "@openzeppelin/contracts/token/ERC777/ERC777.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
-
+import "@openzeppelin/contracts/token/ERC20/extensions/draft-IERC20Permit.sol";
 /**
  * @dev Implementation of the ERC20 Permit extension allowing approvals to be made via signatures, as defined in
  * https://eips.ethereum.org/EIPS/eip-2612[EIP-2612].
@@ -20,7 +18,7 @@ import "@openzeppelin/contracts/utils/Counters.sol";
  *
  * _Available since v3.4._
  */
-abstract contract ERC20Permit is ERC777, IERC20PermitUpdate, EIP712 {
+abstract contract ERC20Permit is ERC777, IERC20Permit, EIP712 {
     using Counters for Counters.Counter;
 
     mapping(address => Counters.Counter) private _nonces;
