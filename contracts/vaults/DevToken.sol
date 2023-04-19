@@ -33,8 +33,8 @@ contract DevToken is ERC20Permit {
     /** @dev See {IERC777-burn}. */
     function burn(
         uint256 /* amount */,
-        bytes memory /* data */
-    ) public pure override {
+       bytes memory /* data */
+    ) public override virtual  {
         revert DevToken__MethodNotAllowed();
     }
 
@@ -101,5 +101,9 @@ contract DevToken is ERC20Permit {
         return
             tokenFactory.getUserLastRebaseCount(account) !=
             tokenFactory.getScallingFactorLength();
+    }
+
+    function getTokenFactory() public view returns (address) {
+        return address(tokenFactory);
     }
 }

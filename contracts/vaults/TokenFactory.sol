@@ -11,13 +11,13 @@ import "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./DevToken.sol";
 import "./../libraries/PriceFeed.sol";
-import "hardhat/console.sol";
 
 error TokenFactory__DepositMoreThanMax();
 error TokenFactory__MintMoreThanMax();
 error TokenFactory__WithdrawMoreThanMax();
 error TokenFactory__RedeemMoreThanMax();
 error TokenFactory__OnlyAssetOwner();
+error TokenFactory__ZeroDeposit();
 
 /**
  * @title ERC-20 Rebase Tokens
@@ -47,6 +47,10 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
         if (assetOwner != msg.sender) revert TokenFactory__OnlyAssetOwner();
         _;
     }
+
+    // Events
+    event RebaseApplied(address userAddress, uint256 rebaseCount);
+    event Rebase(uint256 rebaseCount);
 
     constructor(
         IERC20 baseTokenAddress,
@@ -129,7 +133,7 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
     function maxDeposit(
         address
     ) public view virtual override returns (uint256) {
-        return _isVaultCollateralized() ? type(uint256).max : 0;
+        return _isVaultCollateralized() ? (type(uint256).max) - 1 : 0;
     }
 
     /** @dev See {IERC4626-previewDeposit}. */
@@ -144,6 +148,7 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
         uint256 assets,
         address receiver
     ) public virtual override returns (uint256) {
+        if (assets == 0) revert TokenFactory__ZeroDeposit();
         if (assets > maxDeposit(receiver))
             revert TokenFactory__DepositMoreThanMax();
         uint256 shares = previewDeposit(assets);
@@ -158,7 +163,7 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
 
     /** @dev See {IERC4626-maxMint}. */
     function maxMint(address) public view virtual override returns (uint256) {
-        return type(uint256).max;
+        return (type(uint256).max) - 1;
     }
 
     /** @dev See {IERC4626-previewMint}. */
@@ -296,6 +301,8 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
         uint256 asset1Price = rebasePrice.ceilDiv(3); // this should be gotten from the oracle
         uint256 divisor = rebasePrice.ceilDiv(2);
         scallingFactorX.push(((asset1Price * 10 ** decimals()) / 2) / divisor);
+        
+        emit Rebase(getScallingFactorLength());
     }
 
     function applyRebase(address owner_) public {
@@ -316,6 +323,8 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
         } else {
             burn_(1, owner_, (asset2ValueEth - rollOverValue));
         }
+
+        emit RebaseApplied(owner_, getScallingFactorLength());
     }
 
     function calculateRollOverValue(
@@ -358,5 +367,9 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
 
     function getDevTokenAddress(uint256 index) public view returns (DevToken) {
         return devTokenArray[index];
+    }
+
+    function getInterval() public view returns (uint256) {
+        return interval;
     }
 }
