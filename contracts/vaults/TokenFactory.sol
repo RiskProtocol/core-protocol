@@ -285,7 +285,7 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
         address owner_,
         uint256 amount
     ) private nonReentrant {
-        devTokenArray[devTokenIndex].burn(owner_, amount);
+        devTokenArray[devTokenIndex].burn_(owner_, amount);
     }
 
     function subUnchecked(

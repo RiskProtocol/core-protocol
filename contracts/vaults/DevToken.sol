@@ -31,10 +31,8 @@ contract DevToken is ERC20Permit {
     }
 
     /** @dev See {IERC777-burn}. */
-    function burn(
-        uint256 /* amount */,
-       bytes memory /* data */
-    ) public override virtual  {
+    function burn(uint256 /* amount */, bytes memory /* data */
+    ) public pure override(ERC777) {
         revert DevToken__MethodNotAllowed();
     }
 
@@ -48,7 +46,7 @@ contract DevToken is ERC20Permit {
         revert DevToken__MethodNotAllowed();
     }
 
-    function burn(address account, uint256 amount) public onlyTokenFactory {
+    function burn_(address account, uint256 amount) public onlyTokenFactory {
         _burn(account, amount, "", "");
     }
 

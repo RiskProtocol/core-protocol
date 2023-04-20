@@ -63,16 +63,16 @@ developmentChains.includes(network.name) ?
 
                 await expect(devToken1.operatorBurn(deployer.address, amount, bytes, bytes)).to.be.revertedWithCustomError(devToken1, 'DevToken__MethodNotAllowed')
                 await expect(devToken2.operatorBurn(deployer.address, amount, bytes, bytes)).to.be.revertedWithCustomError(devToken2, 'DevToken__MethodNotAllowed')
-            })
+            })  
+            
+            it("should not allow users to call the burn function", async function () {
+                const { devToken1, devToken2, deployer } = await loadFixture(deployTokenFixture);
+                const amount = ethers.utils.parseEther('1')
+                const bytes = new Uint8Array([0x01, 0x02, 0x03, 0x04]);
 
-            // it("should not allow users to call the burn function", async function () {
-            //     const { devToken1, devToken2, deployer } = await loadFixture(deployTokenFixture);
-            //     const amount = ethers.utils.parseEther('1')
-            //     const bytes = new Uint8Array([0x01, 0x02, 0x03, 0x04]);
-
-            //     await expect(devToken2.burn(amount, bytes)).to.be.revertedWithCustomError(devToken1, 'DevToken__MethodNotAllowed')
-            //     // await expect(devToken2.burn(amount, amount)).to.be.revertedWithCustomError(devToken2, 'DevToken__MethodNotAllowed')
-            // })
+                await expect(devToken1.burn(amount, bytes)).to.be.revertedWithCustomError(devToken1, 'DevToken__MethodNotAllowed')
+                await expect(devToken2.burn(amount, bytes)).to.be.revertedWithCustomError(devToken2, 'DevToken__MethodNotAllowed')
+            })  
         })
 
         describe("Send", async function () {
@@ -121,7 +121,5 @@ developmentChains.includes(network.name) ?
                 await expect(devToken1.connect(tester).mint(deployer.address, amount)).to.be.revertedWithCustomError(devToken1, 'DevToken__NotTokenFactory')                
             })              
         })
-
-
     })
     : describe.skip
