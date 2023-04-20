@@ -2,7 +2,6 @@ import { assert, expect } from "chai";
 import { ethers, network } from "hardhat"
 import { developmentChains, REBASE_INTERVAL, TOKEN1_NAME, TOKEN1_SYMBOL, defaultOperators, TOKEN2_NAME, TOKEN2_SYMBOL, DECIMALS, INITIAL_PRICE } from "../../helper-hardhat-config";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
-import { DevToken } from "../../typechain-types";
 
 developmentChains.includes(network.name) ?
     describe("DevToken", async function () {
@@ -66,7 +65,7 @@ developmentChains.includes(network.name) ?
             })  
             
             it("should not allow users to call the burn function", async function () {
-                const { devToken1, devToken2, deployer } = await loadFixture(deployTokenFixture);
+                const { devToken1, devToken2 } = await loadFixture(deployTokenFixture);
                 const amount = ethers.utils.parseEther('1')
                 const bytes = new Uint8Array([0x01, 0x02, 0x03, 0x04]);
 
@@ -99,7 +98,6 @@ developmentChains.includes(network.name) ?
                 const { devToken1, devToken2, deployer, tokenFactory, underlyingToken, tester } = await loadFixture(deployTokenFixture);
                 const depositAmount = ethers.utils.parseEther('6')
                 const transferAmount = ethers.utils.parseEther('1')
-                const expectedBalance = ethers.utils.parseEther('5')
                 const bytes = new Uint8Array([0x01, 0x02, 0x03, 0x04]);
 
                 await tokenFactory.initialize(devToken1.address, devToken2.address);
