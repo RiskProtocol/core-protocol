@@ -80,11 +80,9 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
             .staticcall(
                 abi.encodeWithSelector(IERC20Metadata.decimals.selector)
             );
-        if (success && encodedDecimals.length >= 32) {
+        if (success && encodedDecimals.length >= 32 && abi.decode(encodedDecimals, (uint256)) <= type(uint8).max) {
             uint256 returnedDecimals = abi.decode(encodedDecimals, (uint256));
-            if (returnedDecimals <= type(uint8).max) {
-                return (true, uint8(returnedDecimals));
-            }
+            return (true, uint8(returnedDecimals));
         }
         return (false, 0);
     }
@@ -133,7 +131,7 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
     function maxDeposit(
         address
     ) public view virtual override returns (uint256) {
-        return _isVaultCollateralized() ? (type(uint256).max) - 1 : 0;
+        return  (type(uint256).max) - 1;
     }
 
     /** @dev See {IERC4626-previewDeposit}. */
@@ -181,7 +179,7 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
     function mint(
         uint256 shares,
         address receiver
-    ) public virtual override nonReentrant returns (uint256) {
+    ) public virtual override  returns (uint256) {
         if (shares > maxMint(receiver)) revert TokenFactory__MintMoreThanMax();
         uint256 assets = previewMint(shares);
         _mint(receiver, assets);
@@ -190,9 +188,9 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
 
     /** @dev See {IERC4626-maxWithdraw}. */
     function maxWithdraw(
-        address owner
+        address owner_
     ) public view virtual override returns (uint256) {
-        return maxAmountToWithdraw(owner);
+        return maxAmountToWithdraw(owner_);
     }
 
     /** @dev See {IERC4626-previewWithdraw}. */
@@ -206,28 +204,28 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
     function withdraw(
         uint256 assets,
         address receiver,
-        address owner
-    ) public virtual override onlyAssetOwner(owner) returns (uint256) {
+        address owner_
+    ) public virtual override onlyAssetOwner(owner_) returns (uint256) {
         // apply user pending rebase
         if (getUserLastRebaseCount(receiver) != getScallingFactorLength()) {
             applyRebase(receiver);
         }
-        if (assets > maxWithdraw(owner))
+        if (assets > maxWithdraw(owner_))
             revert TokenFactory__WithdrawMoreThanMax();
         uint256 shares = previewWithdraw(assets);
-        burn_(0, owner, assets);
-        burn_(1, owner, assets);
+        burn_(0, owner_, assets);
+        burn_(1, owner_, assets);
         SafeERC20.safeTransfer(baseToken, receiver, assets);
-        emit Withdraw(_msgSender(), receiver, owner, assets, shares);
+        emit Withdraw(msg.sender, receiver, owner_, assets, shares);
 
         return shares;
     }
 
     /** @dev See {IERC4626-maxRedeem}. */
     function maxRedeem(
-        address owner
+        address owner_
     ) public view virtual override returns (uint256) {
-        return maxAmountToWithdraw(owner);
+        return maxAmountToWithdraw(owner_);
     }
 
     /** @dev See {IERC4626-previewRedeem}. */
@@ -241,40 +239,33 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
     function redeem(
         uint256 shares,
         address receiver,
-        address owner
+        address owner_
     ) public virtual override returns (uint256) {
-        if (shares > maxRedeem(owner)) revert TokenFactory__RedeemMoreThanMax();
+        if (shares > maxRedeem(owner_)) revert TokenFactory__RedeemMoreThanMax();
         uint256 assets = previewRedeem(shares);
-        withdraw(assets, receiver, owner);
+        withdraw(assets, receiver, owner_);
 
         return assets;
     }
 
     function maxAmountToWithdraw(
-        address owner
+        address owner_
     ) public view virtual returns (uint256) {
         if (
-            devTokenArray[0].balanceOf(owner) >
-            devTokenArray[1].balanceOf(owner)
+            devTokenArray[0].balanceOf(owner_) >
+            devTokenArray[1].balanceOf(owner_)
         ) {
-            return devTokenArray[1].balanceOf(owner);
+            return devTokenArray[1].balanceOf(owner_);
         } else {
-            return devTokenArray[0].balanceOf(owner);
+            return devTokenArray[0].balanceOf(owner_);
         }
-    }
-
-    /**
-     * @dev Checks if vault is "healthy" in the sense of having assets backing the circulating shares.
-     */
-    function _isVaultCollateralized() private view returns (bool) {
-        return totalAssets() > 0 || totalSupply() == 0;
-    }
+    } 
 
     function mint_(
         uint256 devTokenIndex,
         address receiver,
         uint256 amount
-    ) private nonReentrant {
+    ) private  {
         uint256 assets = previewMint(amount);
         if (assets > maxMint(receiver)) revert TokenFactory__MintMoreThanMax();
         devTokenArray[devTokenIndex].mint(receiver, assets);
@@ -284,7 +275,7 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
         uint256 devTokenIndex,
         address owner_,
         uint256 amount
-    ) private nonReentrant {
+    ) private  {
         devTokenArray[devTokenIndex].burn_(owner_, amount);
     }
 

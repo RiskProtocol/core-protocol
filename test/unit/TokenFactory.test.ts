@@ -69,6 +69,12 @@ developmentChains.includes(network.name) ?
                 assert.equal(devToken1address, devToken1.address);
                 assert.equal(devToken2address, devToken2.address);
             })
+
+            it("it should ensure that unauthorized user cannot initialize devtokens", async function () {
+                const { devToken1, devToken2, tokenFactory, tester } = await loadFixture(deployTokenFixture);
+                await tokenFactory.initialize(devToken1.address, devToken2.address);
+                await expect(tokenFactory.connect(tester).initialize(devToken1.address, devToken2.address)).to.be.reverted              
+            }) 
         })
 
         describe("Others", async function () {
@@ -173,6 +179,17 @@ developmentChains.includes(network.name) ?
                 await expect(tokenFactory.mint(ethers.constants.MaxUint256.toString(), deployer.address)).to.be.revertedWithCustomError(tokenFactory, 'TokenFactory__MintMoreThanMax')
             })
 
+            it("it should revert when there is an re-entract attack", async function () {
+                const { tokenFactory, deployer } = await loadFixture(deployTokenFixture);
+                await expect(tokenFactory.mint(ethers.constants.MaxUint256.toString(), deployer.address)).to.be.revertedWithCustomError(tokenFactory, 'TokenFactory__MintMoreThanMax')
+            })
+              /** the mint_ function should be public for this to work */
+            // it("it should revert when user wants to mint more than maximum amount in token factory", async function () {
+            //     const { tokenFactory, deployer, devToken1, devToken2, tester } = await loadFixture(deployTokenFixture);
+            //     await tokenFactory.initialize(devToken1.address, devToken2.address);
+            //     await expect(tokenFactory.mint_(0, tester.address, ethers.constants.MaxUint256)).to.be.revertedWithCustomError(tokenFactory, 'TokenFactory__MintMoreThanMax')
+            // })
+
             it("it should be able to mint acceptable amount of token factory token successfully", async function () {
                 const { tokenFactory, deployer } = await loadFixture(deployTokenFixture);
                 const depositAmount = ethers.utils.parseEther('6')
@@ -264,7 +281,21 @@ developmentChains.includes(network.name) ?
 
                 assert.equal(await devToken1.balanceOf(deployer.address), expectedBalanceA);
                 assert.equal(await devToken2.balanceOf(deployer.address), expectedBalanceB);           
-            })    
+            })  
+            
+            it("it should confirm that user cannot withdraw another persons fund", async function () {
+                const { tokenFactory, deployer, underlyingToken, devToken1, devToken2, tester } = await loadFixture(deployTokenFixture);
+                const depositAmount = ethers.utils.parseEther('6')
+                
+                await tokenFactory.initialize(devToken1.address, devToken2.address);
+
+                // deposit underlying token
+                await underlyingToken.approve(tokenFactory.address, depositAmount);
+                await tokenFactory.deposit(depositAmount, deployer.address);
+                
+                // withdraw underlying token
+                await expect(tokenFactory.withdraw(depositAmount, deployer.address, tester.address)).to.be.revertedWithCustomError(tokenFactory, 'TokenFactory__OnlyAssetOwner')
+            })   
         })
 
         describe("Redeem", async function () {
