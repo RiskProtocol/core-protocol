@@ -266,8 +266,7 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
         address receiver,
         uint256 amount
     ) private  {
-        uint256 assets = previewMint(amount);
-        if (assets > maxMint(receiver)) revert TokenFactory__MintMoreThanMax();
+        uint256 assets = previewMint(amount);        
         devTokenArray[devTokenIndex].mint(receiver, assets);
     }
 

@@ -183,13 +183,7 @@ developmentChains.includes(network.name) ?
                 const { tokenFactory, deployer } = await loadFixture(deployTokenFixture);
                 await expect(tokenFactory.mint(ethers.constants.MaxUint256.toString(), deployer.address)).to.be.revertedWithCustomError(tokenFactory, 'TokenFactory__MintMoreThanMax')
             })
-              /** the mint_ function should be public for this to work */
-            // it("it should revert when user wants to mint more than maximum amount in token factory", async function () {
-            //     const { tokenFactory, deployer, devToken1, devToken2, tester } = await loadFixture(deployTokenFixture);
-            //     await tokenFactory.initialize(devToken1.address, devToken2.address);
-            //     await expect(tokenFactory.mint_(0, tester.address, ethers.constants.MaxUint256)).to.be.revertedWithCustomError(tokenFactory, 'TokenFactory__MintMoreThanMax')
-            // })
-
+           
             it("it should be able to mint acceptable amount of token factory token successfully", async function () {
                 const { tokenFactory, deployer } = await loadFixture(deployTokenFixture);
                 const depositAmount = ethers.utils.parseEther('6')
