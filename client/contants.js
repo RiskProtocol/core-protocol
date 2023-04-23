@@ -1,10 +1,9 @@
-export const tokenFactoryAddress = "0xE7FF84Df24A9a252B6E8A5BB093aC52B1d8bEEdf";
-export const devTokenXAddress = "0x6D712CB50297b97b79dE784d10F487C00d7f8c2C";
-export const devTokenYAddress = "0x04F339eC4D75Cf2833069e6e61b60eF56461CD7C";
-export const underlyingTokenAddress = "0x0724F18B2aA7D6413D3fDcF6c0c27458a8170Dd9";
+export const tokenFactoryAddress = "0xB1c05b498Cb58568B2470369FEB98B00702063dA";
+export const devTokenXAddress = "0x92A00fc48Ad3dD4A8b5266a8F467a52Ac784fC83";
+export const devTokenYAddress = "0x2f8D338360D095a72680A943A22fE6a0d398a0B4";
+export const underlyingTokenAddress = "0x89372b32b8AF3F1272e2efb3088616318D2834cA";
 export const uniswapV2RouterAddress = "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D";
 export const uniswapV2FactoryAddress = "0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f";
-
 
 export const tokenFactoryAbi = [
   {
@@ -2504,7 +2503,6 @@ export const uniswapV2FactoryABI = [
     "type": "function"
   }
 ]
-
 export const uniswapV2PairABI = [
   {
     "anonymous": false,
