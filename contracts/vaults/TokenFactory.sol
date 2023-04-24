@@ -207,7 +207,7 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
         uint256 assets,
         address receiver,
         address owner_
-    ) public virtual override onlyAssetOwner(owner_) returns (uint256) {
+    ) public virtual override onlyAssetOwner(owner_) nonReentrant  returns (uint256) {
         // apply user pending rebase
         if (getUserLastRebaseCount(receiver) != getScallingFactorLength()) {
             applyRebase(receiver);
@@ -240,7 +240,7 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
         uint256 shares,
         address receiver,
         address owner_
-    ) public virtual override returns (uint256) {
+    ) public virtual override onlyAssetOwner(owner_) nonReentrant returns (uint256) {
         // apply user pending rebase
         if (getUserLastRebaseCount(receiver) != getScallingFactorLength()) {
             applyRebase(receiver);
