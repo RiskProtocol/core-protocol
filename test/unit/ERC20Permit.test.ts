@@ -3,6 +3,7 @@ import { ethers, network } from "hardhat"
 import { developmentChains, REBASE_INTERVAL, TOKEN1_NAME, TOKEN1_SYMBOL, defaultOperators, TOKEN2_NAME, TOKEN2_SYMBOL, DECIMALS, INITIAL_PRICE } from "../../helper-hardhat-config";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { PERMIT_TYPEHASH, getPermitDigest, getDomainSeparator, sign } from '../../utils/signatures'
+import "dotenv/config";
 
 developmentChains.includes(network.name) ?
     describe("ERC20Permit", async function () {
@@ -68,7 +69,7 @@ developmentChains.includes(network.name) ?
                 // Sign it
                 // NOTE: Using web3.eth.sign will hash the message internally again which
                 // we do not want, so we're manually signing here
-                const ownerPrivateKey = 'ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80'
+                const ownerPrivateKey = process.env.TEST_PRIVATE_KEY!
                 const privateKey1Buffer = Buffer.from(ownerPrivateKey, 'hex')
                 const { v, r, s } = sign(digest, privateKey1Buffer)
             
