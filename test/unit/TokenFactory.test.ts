@@ -2,7 +2,6 @@ import { assert, expect } from "chai";
 import { ethers, network } from "hardhat"
 import { developmentChains, REBASE_INTERVAL, TOKEN1_NAME, TOKEN1_SYMBOL, defaultOperators, TOKEN2_NAME, TOKEN2_SYMBOL, DECIMALS, INITIAL_PRICE } from "../../helper-hardhat-config";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
-import { BigNumber } from "ethers";
 
 developmentChains.includes(network.name) ?
     describe("TokenFactory", async function () {
