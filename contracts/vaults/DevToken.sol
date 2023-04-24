@@ -46,7 +46,7 @@ contract DevToken is ERC20Permit {
         revert DevToken__MethodNotAllowed();
     }
 
-    function burn_(address account, uint256 amount) public onlyTokenFactory {
+    function devBurn(address account, uint256 amount) public onlyTokenFactory {
         _burn(account, amount, "", "");
     }
 
