@@ -333,7 +333,23 @@ developmentChains.includes(network.name) ?
                 await tokenFactory.redeem(depositAmount, deployer.address, deployer.address)
 
                 assert.equal(await underlyingToken.balanceOf(deployer.address), expectedBalance);           
+            })  
+            
+            it("it should apply pending rebase if a user wants to redeem tokens", async function () {
+                const { tokenFactory, deployer, underlyingToken, devToken1, devToken2 } = await loadFixture(deployTokenFixture);
+                const depositAmount = ethers.utils.parseEther('6')
+                
+                await tokenFactory.initialize(devToken1.address, devToken2.address);
+                // deposit underlying token
+                await underlyingToken.approve(tokenFactory.address, depositAmount);
+                await tokenFactory.deposit(depositAmount, deployer.address)
+
+                // trigger rebase
+                await tokenFactory.rebase();
+
+                await expect(tokenFactory.redeem(depositAmount, deployer.address, deployer.address)).to.emit(tokenFactory,'RebaseApplied')            
             })     
+            
         })
 
         describe("Rebase", async function () {

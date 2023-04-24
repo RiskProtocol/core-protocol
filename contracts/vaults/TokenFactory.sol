@@ -241,9 +241,13 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
         address receiver,
         address owner_
     ) public virtual override returns (uint256) {
+        // apply user pending rebase
+        if (getUserLastRebaseCount(receiver) != getScallingFactorLength()) {
+            applyRebase(receiver);
+        }
         if (shares > maxRedeem(owner_))
-            revert TokenFactory__RedeemMoreThanMax();       
-        uint256 assets = previewRedeem(shares);     
+            revert TokenFactory__RedeemMoreThanMax();
+        uint256 assets = previewRedeem(shares);
         _withdraw(_msgSender(), receiver, owner_, assets, shares);
 
         return assets;
@@ -401,17 +405,18 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
 
     // override unwanted methods
 
-    /** @dev See {ERC20-totalSupply}. */  
+    /** @dev See {ERC20-totalSupply}. */
     function totalSupply()
         public
         view
-        override(ERC20, IERC20) onlyOwner
+        override(ERC20, IERC20)
+        onlyOwner
         returns (uint256)
     {
-       return super.totalSupply();
+        return super.totalSupply();
     }
 
-    /** @dev See {ERC20-balanceOf}. */ 
+    /** @dev See {ERC20-balanceOf}. */
     function balanceOf(
         address account
     ) public view virtual override(ERC20, IERC20) onlyOwner returns (uint256) {
@@ -420,8 +425,8 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
 
     /** @dev See {ERC20-transfer}. */
     function transfer(
-        address  to,
-        uint256 amount 
+        address to,
+        uint256 amount
     ) public virtual override(ERC20, IERC20) onlyOwner returns (bool) {
         return super.transfer(to, amount);
     }
@@ -437,7 +442,7 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
     /** @dev See {ERC20-approve}. */
     function approve(
         address spender,
-        uint256 amount 
+        uint256 amount
     ) public virtual override(ERC20, IERC20) onlyOwner returns (bool) {
         return super.approve(spender, amount);
     }
@@ -446,8 +451,8 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
     function transferFrom(
         address from,
         address to,
-        uint256 amount 
+        uint256 amount
     ) public virtual override(ERC20, IERC20) onlyOwner returns (bool) {
-        return super.transferFrom(from, to, amount);      
+        return super.transferFrom(from, to, amount);
     }
 }
