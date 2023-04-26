@@ -288,6 +288,18 @@ developmentChains.includes(network.name) ?
                 // withdraw underlying token
                 await expect(tokenFactory.withdraw(depositAmount, deployer.address, tester.address)).to.be.revertedWithCustomError(tokenFactory, 'TokenFactory__OnlyAssetOwner')
             })   
+
+            it("it should test for nonReentrant in withdraw function", async function () {
+                const { tokenFactory, deployer, underlyingToken, devToken1, devToken2 } = await loadFixture(deployTokenFixture);
+                const depositAmount = ethers.utils.parseEther('6')
+                
+                await tokenFactory.initialize(devToken1.address, devToken2.address);
+                // deposit underlying token
+                await underlyingToken.approve(tokenFactory.address, depositAmount);
+                await tokenFactory.deposit(depositAmount, deployer.address)               
+                await tokenFactory.withdraw(depositAmount, deployer.address, deployer.address);
+                await expect(tokenFactory.withdraw(depositAmount, deployer.address, deployer.address)).to.be.reverted           
+            })   
         })
 
         describe("Redeem", async function () {
@@ -362,6 +374,21 @@ developmentChains.includes(network.name) ?
                 
                 // withdraw underlying token
                 await expect(tokenFactory.redeem(depositAmount, deployer.address, tester.address)).to.be.revertedWithCustomError(tokenFactory, 'TokenFactory__OnlyAssetOwner')
+            })   
+
+            it("it should test for nonReentrant in redeem function", async function () {
+                const { tokenFactory, deployer, underlyingToken, devToken1, devToken2 } = await loadFixture(deployTokenFixture);
+                const depositAmount = ethers.utils.parseEther('6')
+                const withdrawAmount = ethers.utils.parseEther('1')
+
+                await tokenFactory.initialize(devToken1.address, devToken2.address);
+                // deposit underlying token
+                await underlyingToken.approve(tokenFactory.address, depositAmount);
+                await tokenFactory.deposit(depositAmount, deployer.address)               
+                await tokenFactory.redeem(withdrawAmount, deployer.address, deployer.address);
+                await tokenFactory.redeem(withdrawAmount, deployer.address, deployer.address);
+                await tokenFactory.redeem(withdrawAmount, deployer.address, deployer.address);
+                await expect(tokenFactory.redeem(depositAmount, deployer.address, deployer.address)).to.be.reverted           
             })   
             
         })
