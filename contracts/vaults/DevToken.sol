@@ -4,12 +4,15 @@ pragma solidity ^0.8.9;
 
 import "./TokenFactory.sol";
 import "../external/ERC20Permit.sol";
+import "./OrderBook.sol";
 
 error DevToken__NotTokenFactory();
 error DevToken__MethodNotAllowed();
 
 contract DevToken is ERC20Permit {
     TokenFactory private immutable tokenFactory;
+    OrderBook private immutable orderBook;
+
 
     modifier onlyTokenFactory() {
         if (msg.sender != address(tokenFactory))
@@ -21,9 +24,11 @@ contract DevToken is ERC20Permit {
         string memory tokenName,
         string memory tokenSymbol,
         address factoryAddress,
-        address[] memory defaultOperators
+        address[] memory defaultOperators,
+        address orderBookAddress
     ) ERC777(tokenName, tokenSymbol, defaultOperators) ERC20Permit(tokenName) {
         tokenFactory = TokenFactory(factoryAddress);
+        orderBook = OrderBook(orderBookAddress);
     }
 
     function mint(address receiver, uint256 amount) public onlyTokenFactory {
@@ -60,6 +65,7 @@ contract DevToken is ERC20Permit {
         address owner_ = msg.sender;
         if (hasPendingRebase(owner_)) {
             tokenFactory.applyRebase(owner_);
+            orderBook.handleMatchedAfterRebase(owner_);
         }
         tokenFactory.updateUserLastRebaseCount(to);
         super.transfer(to, amount);
