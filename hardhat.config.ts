@@ -47,7 +47,13 @@ const config: HardhatUserConfig = {
         before you use localhost  to deploy, the terminal will be showing logs as you work */
       chainId:31337,
       allowUnlimitedContractSize: true
-    }
+    },
+    sepolia:{
+      url:process.env.SEPOLIA_RPC_URL,
+      accounts:[process.env.PRIVATE_KEY!],
+      chainId:11155111,
+      allowUnlimitedContractSize: true      
+    },
   },
   etherscan: {
     // Your API key for Etherscan

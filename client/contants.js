@@ -1,7 +1,27 @@
-export const tokenFactoryAddress = "0x0c03eCB91Cb50835e560a7D52190EB1a5ffba797";
-export const devTokenXAddress = "0x1c39BA375faB6a9f6E0c01B9F49d488e101C2011";
-export const devTokenYAddress = "0xb04CB6c52E73CF3e2753776030CE85a36549c9C2";
-export const underlyingTokenAddress = "0x44863F234b137A395e5c98359d16057A9A1fAc55";
+const isLocal = false
+
+const testAccountAddressLocal = '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266'
+const test1AccountAddressLocal = '0x70997970C51812dc3A010C7d01b50e0d17dc79C8'
+const tokenFactoryAddressLocal = "0x1c39BA375faB6a9f6E0c01B9F49d488e101C2011"
+const devTokenXAddressLocal = "0xb04CB6c52E73CF3e2753776030CE85a36549c9C2"
+const devTokenYAddressLocal = "0xc0c5618f0F3Fa66b496F2940f373DC366d765BAe"
+const underlyingTokenAddressLocal = "0x0c03eCB91Cb50835e560a7D52190EB1a5ffba797"
+
+
+const testAccountAddressTestnet = '0x3194682c2c9b0cdfFED9cAa2C21f0d875362db86'
+const test1AccountAddressTestnet= '0xF0bbcA4964935d2056CA78fFec590548caCc3336'
+const tokenFactoryAddressTestnet = "0xCF98e5bEFf0D256EEc49b591613293724d70042F"
+const devTokenXAddressTestnet = "0x9887356b1D68620398cE699aa18b83C9B2f6E483"
+const devTokenYAddressTestnet = "0x47181826012506CCc3492e275Af28054a825dC0E"
+const underlyingTokenAddressTestnet = "0x8c6796982150cbE296dd3DE132C478269065f959"
+
+export const testAccountAddress = isLocal? testAccountAddressLocal : testAccountAddressTestnet;
+export const test1AccountAddress = isLocal? test1AccountAddressLocal : test1AccountAddressTestnet;
+export const tokenFactoryAddress = isLocal? tokenFactoryAddressLocal : tokenFactoryAddressTestnet;
+export const devTokenXAddress = isLocal? devTokenXAddressLocal : devTokenXAddressTestnet;
+export const devTokenYAddress = isLocal? devTokenYAddressLocal : devTokenYAddressTestnet;
+export const underlyingTokenAddress = isLocal? underlyingTokenAddressLocal : underlyingTokenAddressTestnet;
+
 export const uniswapV2RouterAddress = "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D";
 export const uniswapV2FactoryAddress = "0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f";
 

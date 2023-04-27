@@ -12,12 +12,12 @@ import {
   uniswapV2FactoryAddress,
   uniswapV2FactoryABI,
   uniswapV2PairABI,
+  testAccountAddress,
+  test1AccountAddress
 } from "./../contants";
 
 function App() {
 
-  const testAccountAddress = '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266'
-  const test1AccountAddress = '0x70997970C51812dc3A010C7d01b50e0d17dc79C8'
   const [depositAmount, setDepositAmount] = useState();
   const [withdrawalAmount, setWithdrawalAmount] = useState();
   const [transferAddress, setTransferAddress] = useState('0x70997970C51812dc3A010C7d01b50e0d17dc79C8');
@@ -427,31 +427,6 @@ function App() {
   return (
     <div className="App">
       <div style={containerStyle}>
-        <button style={buttonStyle} onClick={createPair}>
-          Create Trading Pair
-        </button>
-        <button style={buttonStyle} onClick={getPair}>
-          Get Trading Pair Address
-        </button>
-        <button style={buttonStyle} onClick={addLiquidity}>
-          Add Liquidity
-        </button>
-        <button style={buttonStyle} onClick={checkTokenPairBalance}>
-          Check Trading pair reserve
-        </button>
-        <button style={buttonStyle} onClick={checkUserTokenPairBalance}>
-          Check User Balance in Trading Pair
-        </button>
-        <button style={buttonStyle} onClick={performTrade}>
-          Perform a Trade
-        </button>
-        <button style={buttonStyle} onClick={callSync}>
-          Trigger the Sync function
-        </button>
-
-        <br />
-        <br />
-        <br />
         <button style={buttonStyle} onClick={tokenBalance.bind(this, "x")}>
           Balance of Token X
         </button>
@@ -498,8 +473,31 @@ function App() {
         <button style={buttonStyle} onClick={tokenSupply.bind(this, "y")}>
           Total Supply of Token Y
         </button>
-        <button style={buttonStyle} onClick={test}>
-          Test
+        <br />
+        <br />
+        <br />
+        <br />
+        <br />
+        <button style={buttonStyle} onClick={createPair}>
+          Create Trading Pair
+        </button>
+        <button style={buttonStyle} onClick={getPair}>
+          Get Trading Pair Address
+        </button>
+        <button style={buttonStyle} onClick={addLiquidity}>
+          Add Liquidity
+        </button>
+        <button style={buttonStyle} onClick={checkTokenPairBalance}>
+          Check Trading pair reserve
+        </button>
+        <button style={buttonStyle} onClick={checkUserTokenPairBalance}>
+          Check User Balance in Trading Pair
+        </button>
+        <button style={buttonStyle} onClick={performTrade}>
+          Perform a Trade
+        </button>
+        <button style={buttonStyle} onClick={callSync}>
+          Trigger the Sync function
         </button>
         
       </div>
