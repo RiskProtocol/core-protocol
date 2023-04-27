@@ -8,7 +8,6 @@ contract OrderBook {
         address trader;
         uint256 amount;
         bool isBuy;
-        bool isFilled;
         bool isMatched;
     }
 
@@ -18,7 +17,7 @@ contract OrderBook {
 
     mapping(uint256 => mapping(bytes32 => Order)) private orders;
     bytes32[] private orderQueue;
-    mapping(bytes32 => bytes32) public matchedOrders;
+    mapping(uint256 => mapping(bytes32 => bytes32)) public matchedOrders;
 
     event OrderSubmitted(address indexed trader, uint256 amount, bool isBuy, bytes32 orderId);
     event OrderMatched(bytes32 indexed buyOrderId, bytes32 indexed sellOrderId, uint256 amount);
@@ -36,16 +35,29 @@ contract OrderBook {
         require(rebaseNonce.length > 0, "No rebase cycles set yet");
         uint256 currentRebaseNonce = rebaseNonce[rebaseNonce.length - 1];
 
-        bytes32 orderId = keccak256(abi.encodePacked(msg.sender, amount));
+        bytes32 orderId = keccak256(abi.encodePacked(msg.sender, currentRebaseNonce));
         Order storage order;
 
         order = orders[currentRebaseNonce][orderId];
 
-        require(!order.isFilled, "Order already filled");
+        // stop user from submitting same order twice
+        require(amount != order.amount, "Order already exists");
+
+        if (order.trader != address(0)) {
+          // check if it's matched and if so, remove it from the matched orders add it back to the queue
+          // update the amount information
+          if (order.isMatched) {
+            (bytes32 selectedOrderId, bytes32 partnerOrderId) =  deleteMatchedOrder(orderId, currentRebaseNonce);
+            orderQueue.push(selectedOrderId);
+            orderQueue.push(partnerOrderId);
+          }
+          order.amount = amount;
+          emit OrderSubmitted(msg.sender, amount, order.isBuy, orderId);
+          return;
+        }
 
         order.trader = msg.sender;
         order.amount = amount;
-        order.isFilled = false;
 
         if (orderQueue.length == 0) {
             orderQueue.push(orderId);
@@ -68,8 +80,8 @@ contract OrderBook {
                 order.isMatched = true;
                 order.isBuy = true;
 
-                matchedOrders[queuedOrderId] = orderId;
-                matchedOrders[orderId] = queuedOrderId;
+                matchedOrders[currentRebaseNonce][queuedOrderId] = orderId;
+                matchedOrders[currentRebaseNonce][orderId] = queuedOrderId;
 
                 emit OrderMatched(queuedOrderId, orderId, order.amount);
 
@@ -117,11 +129,13 @@ contract OrderBook {
         return index;
     }
 
-    function deleteMatchedOrder(bytes32 orderId) private {
-        bytes32 partner = matchedOrders[orderId];
-        delete matchedOrders[orderId];
-        delete matchedOrders[partner];
+    function deleteMatchedOrder(bytes32 orderId, uint256 orderRebaseNonce)
+      private returns (bytes32 selectedOrderId, bytes32 partnerOrderId) {
+        bytes32 partner = matchedOrders[orderRebaseNonce][orderId];
+        delete matchedOrders[orderRebaseNonce][orderId];
+        delete matchedOrders[orderRebaseNonce][partner];
         emit MatchedOrderDeleted(orderId, partner);
+        return (orderId, partner);
     }
 
     function setRebaseNonce(uint256 nonce) external {
