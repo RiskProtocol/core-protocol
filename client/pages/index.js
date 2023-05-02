@@ -19,6 +19,7 @@ import {
 function App() {
 
   const [depositAmount, setDepositAmount] = useState();
+  const [approvalAmount, setApprovalAmount] = useState();  
   const [withdrawalAmount, setWithdrawalAmount] = useState();
   const [transferAddress, setTransferAddress] = useState('0x70997970C51812dc3A010C7d01b50e0d17dc79C8');
   const [tokenPairAddress, setTokenPairAddress] = useState();
@@ -66,7 +67,7 @@ function App() {
     }
   }
 
-  async function buy() {
+  async function approve() {
     if (typeof window.ethereum !== "undefined") {
       const provider = new ethers.providers.Web3Provider(window.ethereum);
       const signer = provider.getSigner();
@@ -89,9 +90,25 @@ function App() {
 
         await underlyingToken.approve(
           tokenFactoryAddress,
-          ethers.utils.parseEther(depositAmount)
-        );
+          ethers.utils.parseEther(approvalAmount)
+        );        
+        console.log("Approval...");
+      } catch (err) {
+        console.log("Error: ", err);
+      }
+    }
+  }
 
+  async function buy() {
+    if (typeof window.ethereum !== "undefined") {
+      const provider = new ethers.providers.Web3Provider(window.ethereum);
+      const signer = provider.getSigner();
+      const contract = new ethers.Contract(
+        tokenFactoryAddress,
+        tokenFactoryAbi,
+        signer
+      );     
+      try { 
         await contract.deposit(
           `${ethers.utils.parseEther(depositAmount)}`,
           testAccountAddress
@@ -432,6 +449,14 @@ function App() {
         </button>
         <button style={buttonStyle} onClick={tokenBalance.bind(this, "y")}>
           Balance of Token Y
+        </button>
+        <input
+          style={inputStyle}
+          onChange={(e) => setApprovalAmount(e.target.value)}
+          placeholder="Amount to Approve"
+        />
+        <button style={buttonStyle} onClick={approve}>
+          Seek Approval
         </button>
         <input
           style={inputStyle}
