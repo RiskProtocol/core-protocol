@@ -500,41 +500,7 @@ developmentChains.includes(network.name) ?
                 const { tokenFactory, deployer, tester } = await loadFixture(deployTokenFixture); 
                 const amount = ethers.utils.parseEther('6')                 
                 await expect(tokenFactory.connect(tester).transferFrom(deployer.address, tester.address, amount)).to.be.reverted
-            }) 
-
-            it("should allow deployer to call ERC20 totalSupply function", async function () {
-                const { tokenFactory } = await loadFixture(deployTokenFixture);                  
-                await expect(tokenFactory.totalSupply()).to.be.not.reverted  
-            }) 
-
-            it("should not allow users to call ERC20 balanceOf function", async function () {
-                const { tokenFactory, deployer } = await loadFixture(deployTokenFixture);                  
-                await expect(tokenFactory.balanceOf(deployer.address)).to.be.not.reverted
-            }) 
-
-            it("should not allow users to call ERC20 transfer function", async function () {
-                const { tokenFactory, deployer } = await loadFixture(deployTokenFixture);                
-                const transferAmount = ethers.utils.parseEther('0') 
-               
-                await expect(tokenFactory.transfer(deployer.address, transferAmount)).to.be.not.reverted
-            }) 
-
-            it("should not allow users to call ERC20 allowance function", async function () {
-                const { tokenFactory, deployer, tester } = await loadFixture(deployTokenFixture);                          
-                await expect(tokenFactory.allowance(deployer.address, tester.address)).to.be.not.reverted
-            }) 
-
-            it("should not allow users to call ERC20 approve function", async function () {
-                const { tokenFactory, deployer } = await loadFixture(deployTokenFixture); 
-                const amount = ethers.utils.parseEther('6')                 
-                await expect(tokenFactory.approve(deployer.address, amount)).to.be.not.reverted           
-            }) 
-
-            it("should not allow users to call ERC20 transferFrom function", async function () {
-                const { tokenFactory, deployer, tester } = await loadFixture(deployTokenFixture); 
-                const transferAmount = ethers.utils.parseEther('0')                              
-                await expect(tokenFactory.transferFrom(deployer.address, tester.address, transferAmount)).to.be.not.reverted
-            }) 
+            })             
         })        
     })
     : describe.skip

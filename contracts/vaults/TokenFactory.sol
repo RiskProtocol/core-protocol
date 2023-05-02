@@ -295,7 +295,7 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
         factoryMint(0, receiver, shares);
         factoryMint(1, receiver, shares);
 
-        emit Deposit(msg.sender, receiver, assets, shares);
+        emit Deposit(caller, receiver, assets, shares);
     }
 
     /**
@@ -449,7 +449,7 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
     function allowance(
         address /* owner */,
         address /* spender */
-    ) public view virtual override(ERC20, IERC20) onlyOwner returns (uint256) {       
+    ) public view virtual override(ERC20, IERC20) returns (uint256) {       
         revert TokenFactory__MethodNotAllowed();
     }
 
