@@ -10,6 +10,8 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@chainlink/contracts/src/v0.8/AutomationCompatible.sol";
+import "@chainlink/contracts/src/v0.8/ChainlinkClient.sol";
+import "@chainlink/contracts/src/v0.8/ConfirmedOwner.sol";
 import "./DevToken.sol";
 import "./../libraries/PriceFeed.sol";
 
@@ -36,7 +38,8 @@ contract TokenFactory is
     IERC4626,
     ReentrancyGuard,
     Ownable,
-    AutomationCompatible
+    AutomationCompatible,
+    ChainlinkClient
 {
     /* Type declarations */
     enum TokenFactoryState {
@@ -47,6 +50,7 @@ contract TokenFactory is
     using PriceFeed for AggregatorV3Interface;
     using Math for uint256;
     using SafeMath for uint256;
+    using Chainlink for Chainlink.Request;
 
     // State variables
     uint256[] private scallingFactorX;
@@ -58,6 +62,12 @@ contract TokenFactory is
     uint256 private immutable interval;
     uint256 private lastTimeStamp;
     TokenFactoryState private tokenFactoryState;
+    bytes32 private jobId;
+    uint256 private fee;
+    // multiple params returned in a single oracle response
+    // uint256 public underlyingTokenAmount;
+    // uint256 public navAmount; // one of the dev tokens
+    // uint256 public calculationTimestamp;
 
     modifier onlyAssetOwner(address assetOwner) {
         if (assetOwner != msg.sender) revert TokenFactory__OnlyAssetOwner();
@@ -66,7 +76,13 @@ contract TokenFactory is
 
     // Events
     event RebaseApplied(address userAddress, uint256 rebaseCount);
-    event Rebase(uint256 rebaseCount);
+    event Rebase(uint256 rebaseCount, uint256 newScallingFactorX);
+    event RequestMultipleFulfilled(
+        bytes32 indexed requestId,
+        uint256 undResponse,
+        uint256 navResponse,
+        uint256 timResponse
+    );
 
     constructor(
         IERC20 baseTokenAddress,
@@ -80,6 +96,11 @@ contract TokenFactory is
         interval = rebaseInterval;
         lastTimeStamp = block.timestamp;
         tokenFactoryState = TokenFactoryState.OPEN;
+
+        setChainlinkToken(0x779877A7B0D9E8603169DdbD7836e478b4624789);
+        setChainlinkOracle(0x6090149792dAAeE9D1D568c9f9a6F6B46AA29eFD);
+        jobId = "53f9755920cd451a8fe46f5087468395";
+        fee = (1 * LINK_DIVISIBILITY) / 10; // 0,1 * 10**18 (Varies by network and job)
     }
 
     function initialize(DevToken token1, DevToken token2) external onlyOwner {
@@ -356,16 +377,119 @@ contract TokenFactory is
         }
     }
 
-    function rebase() internal {
-        uint256 rebasePrice = priceFeed.getPrice() / 10 ** decimals();
-        uint256 asset1Price = rebasePrice.ceilDiv(3); // this should be gotten from the oracle
+    // chainlink automation
+    function readyForUpkeep() private view returns (bool ready) {
+        bool isOpen = TokenFactoryState.OPEN == tokenFactoryState;
+        bool timePassed = (block.timestamp - lastTimeStamp) > interval;
+        bool hasDeposits = totalAssets() > 0;
+
+        ready = (isOpen && timePassed && hasDeposits);
+    }
+
+    /**
+     * @dev This is the function that the Chainlink Keeper nodes call
+     * they look for `upkeepNeeded` to return True.
+     * the following should be true for this to return true:
+     * 1. The time interval has passed between rebase period.
+     * 2. Trading is in open state.
+     * 3. Implicity, your subscription is funded with LINK.
+     * 4. The contract has some deposits
+     */
+    function checkUpkeep(
+        bytes calldata /* checkData */
+    )
+        public
+        view
+        override
+        returns (bool upkeepNeeded, bytes memory performData)
+    {
+        upkeepNeeded = readyForUpkeep();
+        return (upkeepNeeded, performData);
+        // We don't use the checkData here, The checkData is defined when the Upkeep was registered.
+    }
+
+    /**
+     * @dev Once `checkUpkeep` is returning `true`, this function is called
+     */
+    function performUpkeep(bytes calldata /* performData */) external override {
+        // It is highly recommended revalidating the upkeep
+        bool upkeepNeeded = readyForUpkeep();
+        if (!upkeepNeeded) {
+            revert TokenFactory__UpkeepNotNeeded();
+        }
+        tokenFactoryState = TokenFactoryState.CALCULATING;
+        requestMultipleParameters();
+    }
+
+    // chainlink Any API
+    function requestMultipleParameters() public {
+        Chainlink.Request memory req = buildChainlinkRequest(
+            jobId,
+            address(this),
+            this.fulfillMultipleParameters.selector
+        );
+        req.add(
+            "urlBTC",
+            "https://jiokeokwuosa.github.io/risk-page/response.json"
+        );
+        req.add("pathBTC", "UND");
+        req.add(
+            "urlUSD",
+            "https://jiokeokwuosa.github.io/risk-page/response.json"
+        );
+        req.add("pathUSD", "NAV");
+        req.add(
+            "urlEUR",
+            "https://jiokeokwuosa.github.io/risk-page/response.json"
+        );
+        req.add("pathEUR", "TIM");
+
+        //send the request
+        sendChainlinkRequest(req, fee); // MWR API.
+    }
+
+    /**
+     * @notice Fulfillment function for multiple parameters in a single request
+     * @dev This is called by the oracle. recordChainlinkFulfillment must be used.
+     */
+    function fulfillMultipleParameters(
+        bytes32 requestId,
+        uint256 undResponse,
+        uint256 navResponse,
+        uint256 timResponse
+    ) public recordChainlinkFulfillment(requestId) {
+        emit RequestMultipleFulfilled(
+            requestId,
+            undResponse,
+            navResponse,
+            timResponse
+        );
+        uint256 chainlinkDivisor = 100000;
+        uint256 underlyingTokenAmount = undResponse / chainlinkDivisor;
+        uint256 navAmount = navResponse / chainlinkDivisor;       
+        rebase(underlyingTokenAmount, navAmount);
+    }
+
+    /**
+     * Allow withdraw of Link tokens from the contract
+     */
+    function withdrawLink() public onlyOwner {
+        LinkTokenInterface link = LinkTokenInterface(chainlinkTokenAddress());
+        require(
+            link.transfer(msg.sender, link.balanceOf(address(this))),
+            "Unable to transfer"
+        );
+    }
+
+    function rebase(uint256 rebasePrice, uint256 asset1Price) internal {      
         uint256 divisor = rebasePrice.ceilDiv(2);
-        scallingFactorX.push(((asset1Price * 10 ** decimals()) / 2) / divisor);
-
+        uint256 newScallingFactorX = ((asset1Price * 10 ** decimals()) / 2) / divisor;
+        scallingFactorX.push(newScallingFactorX);
+        
+        lastTimeStamp = lastTimeStamp + interval;
         tokenFactoryState = TokenFactoryState.OPEN;
-        lastTimeStamp = block.timestamp;
 
-        emit Rebase(getScallingFactorLength());
+        emit Rebase(getScallingFactorLength(), newScallingFactorX);
     }
 
     function applyRebase(address owner_) public {
@@ -412,51 +536,6 @@ contract TokenFactory is
         ) {
             lastRebaseCount[owner_] = getScallingFactorLength();
         }
-    }
-
-    // chainlink automation
-
-    function readyForUpkeep() private view returns (bool ready) {
-        bool isOpen = TokenFactoryState.OPEN == tokenFactoryState;
-        bool timePassed = (block.timestamp - lastTimeStamp) > interval;
-        bool hasDeposits = totalAssets() > 0;
-
-        ready = (isOpen && timePassed && hasDeposits);
-    }
-
-    /**
-     * @dev This is the function that the Chainlink Keeper nodes call
-     * they look for `upkeepNeeded` to return True.
-     * the following should be true for this to return true:
-     * 1. The time interval has passed between rebase period.
-     * 2. Trading is in open state.
-     * 3. Implicity, your subscription is funded with LINK.
-     * 4. The contract has some deposits
-     */
-    function checkUpkeep(
-        bytes calldata /* checkData */
-    )
-        public
-        view
-        override
-        returns (bool upkeepNeeded, bytes memory performData)
-    {
-        upkeepNeeded = readyForUpkeep();
-        return (upkeepNeeded, performData);
-        // We don't use the checkData here, The checkData is defined when the Upkeep was registered.
-    }
-
-    /**
-     * @dev Once `checkUpkeep` is returning `true`, this function is called
-     */
-    function performUpkeep(bytes calldata /* performData */) external override {
-        // It is highly recommended revalidating the upkeep
-        bool upkeepNeeded = readyForUpkeep();
-        if (!upkeepNeeded) {
-            revert TokenFactory__UpkeepNotNeeded();
-        }
-        tokenFactoryState = TokenFactoryState.CALCULATING;
-        rebase();
     }
 
     //  other getter methods

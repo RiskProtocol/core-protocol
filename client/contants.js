@@ -10,10 +10,10 @@ const underlyingTokenAddressLocal = "0x0c03eCB91Cb50835e560a7D52190EB1a5ffba797"
 
 const testAccountAddressTestnet = '0x3194682c2c9b0cdfFED9cAa2C21f0d875362db86'
 const test1AccountAddressTestnet= '0xF0bbcA4964935d2056CA78fFec590548caCc3336'
-const tokenFactoryAddressTestnet = "0xCF98e5bEFf0D256EEc49b591613293724d70042F"
-const devTokenXAddressTestnet = "0x9887356b1D68620398cE699aa18b83C9B2f6E483"
-const devTokenYAddressTestnet = "0x47181826012506CCc3492e275Af28054a825dC0E"
-const underlyingTokenAddressTestnet = "0x8c6796982150cbE296dd3DE132C478269065f959"
+const tokenFactoryAddressTestnet = "0x76dC00a278D5d08Af8a4B14F8b84054E487A09c9"
+const devTokenXAddressTestnet = "0x6eAdA90a184b559702B4322cBb3053f02114b2DE"
+const devTokenYAddressTestnet = "0x36D4d1A929805951cdD7a87bE37E0731A2853420"
+const underlyingTokenAddressTestnet = "0xb98B5c3DB3728fEff9Da93Bd53270009A67d8708"
 
 export const testAccountAddress = isLocal? testAccountAddressLocal : testAccountAddressTestnet;
 export const test1AccountAddress = isLocal? test1AccountAddressLocal : test1AccountAddressTestnet;
