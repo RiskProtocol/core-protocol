@@ -8,8 +8,9 @@ import "@typechain/hardhat"
 import "hardhat-deploy";
 import "@nomiclabs/hardhat-ethers"
 import "hardhat-contract-sizer";
+import "hardhat-ignore-warnings"
 
-const config: HardhatUserConfig = {
+const config: HardhatUserConfig = {  
   solidity: {
     compilers: [
       {
@@ -84,7 +85,12 @@ const config: HardhatUserConfig = {
     disambiguatePaths: false,
     runOnCompile: false,
     strict: true   
-  }    
+  },
+  warnings: {
+    '*': {
+      unreachable: 'off',
+    }
+  } 
 };
 
 export default config;

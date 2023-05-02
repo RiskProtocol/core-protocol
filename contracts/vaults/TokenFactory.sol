@@ -22,6 +22,8 @@ error TokenFactory__RedeemMoreThanMax();
 error TokenFactory__OnlyAssetOwner();
 error TokenFactory__ZeroDeposit();
 error TokenFactory__UpkeepNotNeeded();
+error TokenFactory__MethodNotAllowed();
+
 
 /**
  * @title ERC-20 Rebase Tokens
@@ -329,7 +331,7 @@ contract TokenFactory is
         factoryMint(0, receiver, shares);
         factoryMint(1, receiver, shares);
 
-        emit Deposit(msg.sender, receiver, assets, shares);
+        emit Deposit(caller, receiver, assets, shares);
     }
 
     /**
@@ -566,56 +568,55 @@ contract TokenFactory is
         return interval;
     }
 
-    // override unwanted methods
+    // unwanted methods
 
     /** @dev See {ERC20-totalSupply}. */
     function totalSupply()
         public
-        view
-        override(ERC20, IERC20)
-        onlyOwner
+        pure
+        override(ERC20, IERC20)        
         returns (uint256)
     {
-        return super.totalSupply();
+        revert TokenFactory__MethodNotAllowed();
     }
 
     /** @dev See {ERC20-balanceOf}. */
     function balanceOf(
-        address account
-    ) public view virtual override(ERC20, IERC20) onlyOwner returns (uint256) {
-        return super.balanceOf(account);
+        address /* account */
+    ) public view virtual override(ERC20, IERC20) returns (uint256) {
+        revert TokenFactory__MethodNotAllowed();
     }
 
     /** @dev See {ERC20-transfer}. */
     function transfer(
-        address to,
-        uint256 amount
-    ) public virtual override(ERC20, IERC20) onlyOwner returns (bool) {
-        return super.transfer(to, amount);
+        address /* to */,
+        uint256 /* amount */
+    ) public virtual override(ERC20, IERC20) returns (bool) {
+        revert TokenFactory__MethodNotAllowed();
     }
 
     /** @dev See {ERC20-allowance}. */
     function allowance(
-        address owner,
-        address spender
-    ) public view virtual override(ERC20, IERC20) onlyOwner returns (uint256) {
-        return super.allowance(owner, spender);
+        address /* owner */,
+        address /* spender */
+    ) public view virtual override(ERC20, IERC20) returns (uint256) {       
+        revert TokenFactory__MethodNotAllowed();
     }
 
     /** @dev See {ERC20-approve}. */
     function approve(
-        address spender,
-        uint256 amount
-    ) public virtual override(ERC20, IERC20) onlyOwner returns (bool) {
-        return super.approve(spender, amount);
+        address /* spender */,
+        uint256 /* amount */
+    ) public virtual override(ERC20, IERC20) returns (bool) {
+        revert TokenFactory__MethodNotAllowed();
     }
 
     /** @dev See {ERC20-transferFrom}. */
     function transferFrom(
-        address from,
-        address to,
-        uint256 amount
-    ) public virtual override(ERC20, IERC20) onlyOwner returns (bool) {
-        return super.transferFrom(from, to, amount);
+        address /* from */,
+        address /* to */,
+        uint256 /* amount  */
+    ) public virtual override(ERC20, IERC20) returns (bool) {
+        revert TokenFactory__MethodNotAllowed();
     }
 }
