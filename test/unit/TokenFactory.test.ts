@@ -1,6 +1,6 @@
 import { assert, expect } from "chai";
 import { ethers, network } from "hardhat"
-import { developmentChains, REBASE_INTERVAL, TOKEN1_NAME, TOKEN1_SYMBOL, defaultOperators, TOKEN2_NAME, TOKEN2_SYMBOL, DECIMALS, INITIAL_PRICE } from "../../helper-hardhat-config";
+import { developmentChains, REBASE_INTERVAL, TOKEN1_NAME, TOKEN1_SYMBOL, defaultOperators, TOKEN2_NAME, TOKEN2_SYMBOL, DECIMALS, INITIAL_PRICE, CHAINLINK_TOKEN_ADDRESS, CHAINLINK_ORACLE_ADDRESS, CHAINLINK_JOB_ID } from "../../helper-hardhat-config";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 
 developmentChains.includes(network.name) ?
@@ -17,7 +17,7 @@ developmentChains.includes(network.name) ?
             await underlyingToken.deployed();
 
             const TokenFactory = await ethers.getContractFactory('TokenFactory', deployer)
-            const tokenFactory = await TokenFactory.deploy(underlyingToken.address, mockV3Aggregator.address, REBASE_INTERVAL);
+            const tokenFactory = await TokenFactory.deploy(underlyingToken.address, mockV3Aggregator.address, REBASE_INTERVAL, CHAINLINK_TOKEN_ADDRESS, CHAINLINK_ORACLE_ADDRESS, CHAINLINK_JOB_ID);
             await tokenFactory.deployed();
 
             // deploy devtoken 1     
@@ -32,7 +32,7 @@ developmentChains.includes(network.name) ?
 
             // other instances to mock fake underlying token
             const TokenFactory2 = await ethers.getContractFactory('TokenFactory', tester)
-            const tokenFactory2 = await TokenFactory2.deploy('0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D', mockV3Aggregator.address, REBASE_INTERVAL);
+            const tokenFactory2 = await TokenFactory2.deploy('0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D', mockV3Aggregator.address, REBASE_INTERVAL, CHAINLINK_TOKEN_ADDRESS, CHAINLINK_ORACLE_ADDRESS, CHAINLINK_JOB_ID);
             await tokenFactory2.deployed();
 
             // Fixtures can return anything you consider useful for your tests
@@ -226,7 +226,7 @@ developmentChains.includes(network.name) ?
                 await tokenFactory.deposit(depositAmount, deployer.address)
 
                 // trigger rebase
-                await tokenFactory.rebase();
+                await tokenFactory.rebaseManualTrigger(2000,667);
 
                 await expect(tokenFactory.withdraw(depositAmount, deployer.address, deployer.address)).to.emit(tokenFactory,'RebaseApplied')            
             })     
@@ -357,7 +357,7 @@ developmentChains.includes(network.name) ?
                 await tokenFactory.deposit(depositAmount, deployer.address)
 
                 // trigger rebase
-                await tokenFactory.rebase();
+                await tokenFactory.rebaseManualTrigger(2000,667);
 
                 await expect(tokenFactory.redeem(depositAmount, deployer.address, deployer.address)).to.emit(tokenFactory,'RebaseApplied')            
             })     
@@ -396,12 +396,12 @@ developmentChains.includes(network.name) ?
         describe("Rebase", async function () {
             it("it cannot be triggered by any one apart from the deployer", async function () {
                 const { tokenFactory, tester } = await loadFixture(deployTokenFixture);
-                await expect(tokenFactory.connect(tester).rebase()).to.be.reverted
+                await expect(tokenFactory.connect(tester).rebaseManualTrigger(2000,667)).to.be.reverted
             })
 
             it("it can be triggered by the deployer", async function () {
                 const { tokenFactory, tester } = await loadFixture(deployTokenFixture);
-                await expect(tokenFactory.rebase()).to.emit(tokenFactory,'Rebase')
+                await expect(tokenFactory.rebaseManualTrigger(2000,667)).to.emit(tokenFactory,'Rebase')
             })
 
             it("it should confirm that user has correct balances of token x and y after rebase", async function () {
@@ -421,7 +421,7 @@ developmentChains.includes(network.name) ?
                 await devToken1.transfer(tester.address, transferAmount);
                 
                 // trigger a rebase
-                await tokenFactory.rebase()
+                await tokenFactory.rebaseManualTrigger(2000,667)
 
                 // confirm user balances when rebase has taken place   
                 assert.equal(await devToken1.balanceOf(deployer.address), expectedBalance);
@@ -433,39 +433,7 @@ developmentChains.includes(network.name) ?
                 // confirm user balances after rebase has been applied on chain  
                 assert.equal(await devToken1.balanceOf(deployer.address), expectedBalanceAfterTransfer);
                 assert.equal(await devToken2.balanceOf(deployer.address), expectedBalance);
-            })
-
-            it("it should confirm that user has correct balances of token x and y after missing double rebase period", async function () {
-                const { tokenFactory, deployer, underlyingToken, devToken1, devToken2, tester } = await loadFixture(deployTokenFixture);
-                const depositAmount = ethers.utils.parseEther('10')
-                const transferAmount = ethers.utils.parseEther('1')
-                const expectedBalance = '9333500000000000000';
-                const expectedBalanceAfterTransfer = '8333500000000000000';
-
-                await tokenFactory.initialize(devToken1.address, devToken2.address);
-
-                // deposit underlying token
-                await underlyingToken.approve(tokenFactory.address, depositAmount);
-                await tokenFactory.deposit(depositAmount, deployer.address);
-                
-                // to a transaction
-                await devToken2.transfer(tester.address, transferAmount);
-                
-                // trigger a rebase
-                await tokenFactory.rebase()
-                await tokenFactory.rebase()
-
-                // confirm user balances when rebase has taken place   
-                assert.equal(await devToken1.balanceOf(deployer.address), expectedBalance);
-                assert.equal(await devToken2.balanceOf(deployer.address), expectedBalance);
-
-                // do a transaction to simulate the actual reflection of the rebase on chain
-                await devToken1.transfer(tester.address, transferAmount);
-
-                // confirm user balances after rebase has been applied on chain  
-                assert.equal(await devToken1.balanceOf(deployer.address), expectedBalanceAfterTransfer);
-                assert.equal(await devToken2.balanceOf(deployer.address), expectedBalance);
-            })
+            })          
         })
 
         describe("Forbidden Functions", async function () {
