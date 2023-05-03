@@ -1,6 +1,6 @@
 import { assert } from "chai";
 import { ethers, network } from "hardhat"
-import { developmentChains, REBASE_INTERVAL, TOKEN1_NAME, TOKEN1_SYMBOL, defaultOperators, TOKEN2_NAME, TOKEN2_SYMBOL, DECIMALS, INITIAL_PRICE } from "../../helper-hardhat-config";
+import { developmentChains, REBASE_INTERVAL, TOKEN1_NAME, TOKEN1_SYMBOL, defaultOperators, TOKEN2_NAME, TOKEN2_SYMBOL, DECIMALS, INITIAL_PRICE, CHAINLINK_TOKEN_ADDRESS, CHAINLINK_ORACLE_ADDRESS, CHAINLINK_JOB_ID } from "../../helper-hardhat-config";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 
 const rebaseTable = [
@@ -44,7 +44,7 @@ developmentChains.includes(network.name) ?
             await underlyingToken.deployed();
 
             const TokenFactory = await ethers.getContractFactory('TokenFactory', deployer)
-            const tokenFactory = await TokenFactory.deploy(underlyingToken.address, mockV3Aggregator.address, REBASE_INTERVAL);
+            const tokenFactory = await TokenFactory.deploy(underlyingToken.address, mockV3Aggregator.address, REBASE_INTERVAL, CHAINLINK_TOKEN_ADDRESS, CHAINLINK_ORACLE_ADDRESS, CHAINLINK_JOB_ID);
             await tokenFactory.deployed();
 
             // deploy devtoken 1     
@@ -59,7 +59,7 @@ developmentChains.includes(network.name) ?
 
             // other instances to mock fake underlying token
             const TokenFactory2 = await ethers.getContractFactory('TokenFactory', tester)
-            const tokenFactory2 = await TokenFactory2.deploy('0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D', mockV3Aggregator.address, REBASE_INTERVAL);
+            const tokenFactory2 = await TokenFactory2.deploy('0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D', mockV3Aggregator.address, REBASE_INTERVAL, CHAINLINK_TOKEN_ADDRESS, CHAINLINK_ORACLE_ADDRESS, CHAINLINK_JOB_ID);
             await tokenFactory2.deployed();
 
             // Fixtures can return anything you consider useful for your tests
@@ -83,7 +83,7 @@ developmentChains.includes(network.name) ?
                     await devToken1.transfer(tester.address, transferAmount);
     
                     // trigger a rebase
-                    await tokenFactory.rebase()
+                    await tokenFactory.rebaseManualTrigger(2000,667)
     
                     // confirm user balances when rebase has taken place                   
                     assert.equal(await devToken1.balanceOf(deployer.address), item.afterRebase);

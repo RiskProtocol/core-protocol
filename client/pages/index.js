@@ -14,10 +14,9 @@ import {
   uniswapV2PairABI,
   testAccountAddress,
   test1AccountAddress
-} from "./../contants";
+} from "./../constants";
 
 function App() {
-
   const [depositAmount, setDepositAmount] = useState();
   const [approvalAmount, setApprovalAmount] = useState();  
   const [withdrawalAmount, setWithdrawalAmount] = useState();
