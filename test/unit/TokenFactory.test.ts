@@ -500,7 +500,12 @@ developmentChains.includes(network.name) ?
                 const { tokenFactory, deployer, tester } = await loadFixture(deployTokenFixture); 
                 const amount = ethers.utils.parseEther('6')                 
                 await expect(tokenFactory.connect(tester).transferFrom(deployer.address, tester.address, amount)).to.be.reverted
-            })             
+            }) 
+            
+            it("should allow only deployer to call ERC20 allowance function", async function () {
+                const { tokenFactory, deployer, tester } = await loadFixture(deployTokenFixture);                          
+                await expect(tokenFactory.allowance(deployer.address, tester.address)).to.not.be.reverted
+            }) 
         })        
     })
     : describe.skip
