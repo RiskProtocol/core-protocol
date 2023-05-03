@@ -9,7 +9,7 @@ import "hardhat-deploy";
 import "@nomiclabs/hardhat-ethers"
 import "hardhat-contract-sizer";
 
-const config: HardhatUserConfig = {
+const config: HardhatUserConfig = {  
   solidity: {
     compilers: [
       {
@@ -78,7 +78,7 @@ const config: HardhatUserConfig = {
     disambiguatePaths: false,
     runOnCompile: false,
     strict: true   
-  }    
+  } 
 };
 
 export default config;
