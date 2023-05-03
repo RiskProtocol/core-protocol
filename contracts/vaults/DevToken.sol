@@ -61,7 +61,7 @@ contract DevToken is ERC20Permit {
         }
         tokenFactory.updateUserLastRebaseCount(to);
         super.transfer(to, amount);
-        return true;
+        return true;  
     }
 
     /**
