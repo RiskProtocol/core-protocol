@@ -1,12 +1,11 @@
 import { DeployFunction } from 'hardhat-deploy/types';
-import { developmentChains, networkConfig, TOKEN1_NAME, TOKEN1_SYMBOL, TOKEN2_NAME, TOKEN2_SYMBOL } from '../helper-hardhat-config';
+import { developmentChains, networkConfig, TOKEN1_NAME, TOKEN1_SYMBOL, TOKEN2_NAME, TOKEN2_SYMBOL, defaultOperators } from '../helper-hardhat-config';
 import { verify } from '../utils/verify';
 import { ethers } from "hardhat"
 
 const func: DeployFunction = async ({ getNamedAccounts, deployments, network }) => {
     const { deploy, log } = deployments
     const { deployer } = await getNamedAccounts()   
-    const defaultOperators: string[] = []
     const tokenFactory = await ethers.getContract("TokenFactory", deployer)
     
     log("Deploying DevToken 1...")   
