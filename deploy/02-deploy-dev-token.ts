@@ -1,5 +1,14 @@
 import { DeployFunction } from 'hardhat-deploy/types';
-import { developmentChains, networkConfig, TOKEN1_NAME, TOKEN1_SYMBOL, TOKEN2_NAME, TOKEN2_SYMBOL, defaultOperators } from '../helper-hardhat-config';
+import {
+    developmentChains,
+    networkConfig,
+    TOKEN1_NAME,
+    TOKEN1_SYMBOL,
+    TOKEN2_NAME,
+    TOKEN2_SYMBOL,
+    defaultOperators,
+    sanctionsContractAddress
+} from '../helper-hardhat-config';
 import { verify } from '../utils/verify';
 import { ethers } from "hardhat"
 
@@ -11,31 +20,31 @@ const func: DeployFunction = async ({ getNamedAccounts, deployments, network }) 
     log("Deploying DevToken 1...")   
     const DevToken1 = await deploy("DevToken", {
         from: deployer,
-        args: [TOKEN1_NAME, TOKEN1_SYMBOL, tokenFactory.address, defaultOperators],
+        args: [TOKEN1_NAME, TOKEN1_SYMBOL, tokenFactory.address, defaultOperators, sanctionsContractAddress],
         log: true,
         // we need to wait if on a live network so we can verify properly
         waitConfirmations: networkConfig[network.name].blockConfirmations || 1,
     })
     log("DevToken 1 Deployed")
     if (!developmentChains.includes(network.name) && process.env.ETHERSCAN_API_KEY) {
-        await verify(DevToken1.address, [TOKEN1_NAME, TOKEN1_SYMBOL, tokenFactory.address, defaultOperators])
+        await verify(DevToken1.address, [TOKEN1_NAME, TOKEN1_SYMBOL, tokenFactory.address, defaultOperators, sanctionsContractAddress])
     }  
 
     log("----------------------------------")
 
-    log("Deploying DevToken 2...")   
+    log("Deploying DevToken 2...")
     const DevToken2 = await deploy("DevToken", {
         from: deployer,
-        args: [TOKEN2_NAME, TOKEN2_SYMBOL, tokenFactory.address, defaultOperators],
+        args: [TOKEN2_NAME, TOKEN2_SYMBOL, tokenFactory.address, defaultOperators, sanctionsContractAddress],
         log: true,
         // we need to wait if on a live network so we can verify properly
         waitConfirmations: networkConfig[network.name].blockConfirmations || 1,
     })
     log("DevToken 2 Deployed") 
     if (!developmentChains.includes(network.name) && process.env.ETHERSCAN_API_KEY) {
-        await verify(DevToken2.address, [TOKEN2_NAME, TOKEN2_SYMBOL, tokenFactory.address, defaultOperators])
+        await verify(DevToken2.address, [TOKEN2_NAME, TOKEN2_SYMBOL, tokenFactory.address, defaultOperators, sanctionsContractAddress])
     }  
-    log("----------------------------------")   
+    log("----------------------------------")
 
     log("Intializing Tokens in Token Factory...")
     // initialize tokens  

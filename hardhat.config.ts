@@ -40,6 +40,12 @@ const config: HardhatUserConfig = {
       chainId:5,
       allowUnlimitedContractSize: true      
     },
+    polygon:{
+      url:process.env.POLYGON_RPC_URL,
+      accounts:[process.env.PRIVATE_KEY!],
+      chainId:137,
+      allowUnlimitedContractSize: true
+    },
     localhost:{
       url: 'http://127.0.0.1:8545/',  
       /* you get the url abv when you run "yarn hardhat node" it comes with several address

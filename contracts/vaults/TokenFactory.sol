@@ -11,6 +11,7 @@ import "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./DevToken.sol";
 import "./../libraries/PriceFeed.sol";
+import "./BaseContract.sol";
 
 error TokenFactory__DepositMoreThanMax();
 error TokenFactory__MintMoreThanMax();
@@ -19,6 +20,7 @@ error TokenFactory__RedeemMoreThanMax();
 error TokenFactory__OnlyAssetOwner();
 error TokenFactory__ZeroDeposit();
 error TokenFactory__MethodNotAllowed();
+
 
 /**
  * @title ERC-20 Rebase Tokens
@@ -29,7 +31,7 @@ error TokenFactory__MethodNotAllowed();
  * The asset will be burned in exactly the same proportion when asked to redeem/withdrawal the underlying asset.
  * The contract will implement periodic rebalancing
  */
-contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
+contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable, BaseContract {
     using PriceFeed for AggregatorV3Interface;
     using Math for uint256;
     using SafeMath for uint256;
@@ -56,8 +58,10 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
     constructor(
         IERC20 baseTokenAddress,
         address priceFeedAddress,
-        uint256 rebaseInterval // in seconds
-    ) ERC20("RiskProtocolVault", "RPK") {
+        uint256 rebaseInterval, // in seconds
+        address sanctionsContract_
+    ) ERC20("RiskProtocolVault", "RPK")
+      BaseContract(sanctionsContract_) {
         baseToken = IERC20(baseTokenAddress);
         priceFeed = AggregatorV3Interface(priceFeedAddress);
         (bool success, uint8 assetDecimals) = _tryGetAssetDecimals(baseToken);
@@ -289,7 +293,7 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
         address receiver,
         uint256 assets,
         uint256 shares
-    ) internal virtual {
+    ) internal virtual onlyNotSanctioned(caller) {
         SafeERC20.safeTransferFrom(baseToken, caller, address(this), assets);
         updateUserLastRebaseCount(receiver);
         factoryMint(0, receiver, shares);
@@ -307,7 +311,7 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
         address owner,
         uint256 assets,
         uint256 shares
-    ) internal virtual {
+    ) internal virtual onlyNotSanctioned(caller) {
         factoryBurn(0, caller, assets);
         factoryBurn(1, caller, assets);
         SafeERC20.safeTransfer(baseToken, receiver, assets);
