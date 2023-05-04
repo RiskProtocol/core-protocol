@@ -1,5 +1,5 @@
 import { DeployFunction } from 'hardhat-deploy/types';
-import { developmentChains, networkConfig, BASE_TOKEN_ADDRESS, REBASE_INTERVAL, CHAINLINK_TOKEN_ADDRESS, CHAINLINK_ORACLE_ADDRESS, CHAINLINK_JOB_ID} from '../helper-hardhat-config';
+import { developmentChains, networkConfig, BASE_TOKEN_ADDRESS, REBASE_INTERVAL, CHAINLINK_TOKEN_ADDRESS, CHAINLINK_ORACLE_ADDRESS, CHAINLINK_JOB_ID, LINK_FEE} from '../helper-hardhat-config';
 import { verify } from '../utils/verify';
 
 const func: DeployFunction = async ({ getNamedAccounts, deployments, network }) => {
@@ -27,7 +27,7 @@ const func: DeployFunction = async ({ getNamedAccounts, deployments, network }) 
 
     const TokenFactory = await deploy("TokenFactory", {
         from: deployer,
-        args: [baseTokenAddress, priceFeedAddress, REBASE_INTERVAL, CHAINLINK_TOKEN_ADDRESS, CHAINLINK_ORACLE_ADDRESS, CHAINLINK_JOB_ID],
+        args: [baseTokenAddress, priceFeedAddress, REBASE_INTERVAL, CHAINLINK_TOKEN_ADDRESS, CHAINLINK_ORACLE_ADDRESS, CHAINLINK_JOB_ID, LINK_FEE],
         log: true,
         // we need to wait if on a live network so we can verify properly
         waitConfirmations: networkConfig[network.name].blockConfirmations || 1,

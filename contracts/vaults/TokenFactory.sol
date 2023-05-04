@@ -24,7 +24,6 @@ error TokenFactory__ZeroDeposit();
 error TokenFactory__UpkeepNotNeeded();
 error TokenFactory__MethodNotAllowed();
 
-
 /**
  * @title ERC-20 Rebase Tokens
  * @author Okwuosa Chijioke
@@ -87,7 +86,8 @@ contract TokenFactory is
         uint256 rebaseInterval, // in seconds
         address chainlinkTokenAddress,
         address chainlinkOracleAddress,
-        bytes32 chainlinkJobId
+        bytes32 chainlinkJobId,
+        uint256 linkFee
     ) ERC20("RiskProtocolVault", "RPK") {
         baseToken = IERC20(baseTokenAddress);
         priceFeed = AggregatorV3Interface(priceFeedAddress);
@@ -99,7 +99,7 @@ contract TokenFactory is
         setChainlinkToken(chainlinkTokenAddress);
         setChainlinkOracle(chainlinkOracleAddress);
         jobId = chainlinkJobId;
-        fee = (1 * LINK_DIVISIBILITY) / 10; // 0,1 * 10**18 (Varies by network and job)
+        fee = (1 * LINK_DIVISIBILITY) / linkFee;
     }
 
     function initialize(DevToken token1, DevToken token2) external onlyOwner {
@@ -470,14 +470,16 @@ contract TokenFactory is
     }
 
     /**
-     * Allow withdraw of Link tokens from the contract
-     */
-    function withdrawLink() public onlyOwner {
-        LinkTokenInterface link = LinkTokenInterface(chainlinkTokenAddress());
-        require(
-            link.transfer(msg.sender, link.balanceOf(address(this))),
-            "Unable to transfer"
-        );
+     * Allow withdraw of Link tokens / base tokens from the contract
+     */  
+
+    function rescueTokens(     
+        address tokenAddress,
+        address to,
+        uint256 amount
+    ) external onlyOwner {
+        IERC20 token = IERC20(tokenAddress);
+        SafeERC20.safeTransfer(token, to, amount);
     }
 
     function rebase(uint256 rebasePrice, uint256 asset1Price) internal {
@@ -486,7 +488,7 @@ contract TokenFactory is
             divisor;
         scallingFactorX.push(newScallingFactorX);
 
-        lastTimeStamp += (interval * 2);
+        lastTimeStamp += interval * 2;
         tokenFactoryState = TokenFactoryState.OPEN;
 
         emit Rebase(getScallingFactorLength(), newScallingFactorX);
@@ -574,7 +576,7 @@ contract TokenFactory is
     function totalSupply()
         public
         pure
-        override(ERC20, IERC20)        
+        override(ERC20, IERC20)
         returns (uint256)
     {
         revert TokenFactory__MethodNotAllowed();
@@ -599,7 +601,7 @@ contract TokenFactory is
     function allowance(
         address /* owner */,
         address /* spender */
-    ) public view virtual override(ERC20, IERC20) returns (uint256) {       
+    ) public view virtual override(ERC20, IERC20) returns (uint256) {
         revert TokenFactory__MethodNotAllowed();
     }
 
