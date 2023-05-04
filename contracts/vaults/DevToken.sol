@@ -9,6 +9,7 @@ error DevToken__NotTokenFactory();
 error DevToken__MethodNotAllowed();
 error DevToken__SanctionedAddress();
 
+// Link to Sanction List https://go.chainalysis.com/chainalysis-oracle-docs.html
 interface SanctionsList {
     function isSanctioned(address addr) external view returns (bool);
 }
@@ -70,7 +71,7 @@ contract DevToken is ERC20Permit {
     function transfer(
         address to,
         uint256 amount
-    ) public override returns (bool) {
+    ) public isSanctioned(to) override returns (bool) {
         address owner_ = msg.sender;
         if (hasPendingRebase(owner_)) {
             tokenFactory.applyRebase(owner_);

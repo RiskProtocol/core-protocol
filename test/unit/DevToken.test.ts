@@ -135,7 +135,7 @@ developmentChains.includes(network.name) ?
                 await expect(devToken1.send(tester.address, transferAmount, bytes)).to.emit(tokenFactory,'RebaseApplied') 
             })
 
-            it("should not allow users to transfer tokens to addresses in sanctions list", async function () {
+            it("should not allow users to send tokens to addresses in sanctions list", async function () {
                 const { devToken1, devToken2, deployer, tokenFactory, underlyingToken, tester, sanctionsContract } = await loadFixture(deployTokenFixture);
                 const depositAmount = ethers.utils.parseEther('6')
                 const transferAmount = ethers.utils.parseEther('1')
@@ -151,6 +151,27 @@ developmentChains.includes(network.name) ?
                 expect(sanctioned).to.equal(true)
                 // transfer token using send function
                 await expect(devToken1.send(tester.address, transferAmount, bytes)).to.be.revertedWithCustomError(devToken1, 'DevToken__SanctionedAddress')
+
+                // remove tester from sanctions list
+                await sanctionsContract.setSanction(tester.address, false)
+                const notSanctioned = await sanctionsContract.isSanctioned(tester.address)
+                expect(notSanctioned).to.equal(false)
+            })
+
+            it("should not allow transfer of tokens to addresses in sanctions list", async function () {
+                const { tokenFactory, deployer, underlyingToken, devToken1, devToken2, tester, sanctionsContract } = await loadFixture(deployTokenFixture);
+                const depositAmount = ethers.utils.parseEther('6')
+                await tokenFactory.initialize(devToken1.address, devToken2.address);
+                await underlyingToken.approve(tokenFactory.address, depositAmount);
+                await tokenFactory.deposit(depositAmount, deployer.address);
+
+                // add tester to sanctions list
+                await sanctionsContract.setSanction(tester.address, true)
+                const sanctioned = await sanctionsContract.isSanctioned(tester.address)
+                expect(sanctioned).to.equal(true)
+
+
+                await expect(devToken1.transfer(tester.address, depositAmount)).to.be.revertedWithCustomError(devToken1, 'DevToken__SanctionedAddress');
 
                 // remove tester from sanctions list
                 await sanctionsContract.setSanction(tester.address, false)
