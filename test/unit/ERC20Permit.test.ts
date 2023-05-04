@@ -1,6 +1,16 @@
 import { assert, expect } from "chai";
 import { ethers, network } from "hardhat"
-import { developmentChains, REBASE_INTERVAL, TOKEN1_NAME, TOKEN1_SYMBOL, defaultOperators, TOKEN2_NAME, TOKEN2_SYMBOL, DECIMALS, INITIAL_PRICE } from "../../helper-hardhat-config";
+import {
+    developmentChains,
+    REBASE_INTERVAL,
+    TOKEN1_NAME,
+    TOKEN1_SYMBOL,
+    defaultOperators,
+    TOKEN2_NAME,
+    TOKEN2_SYMBOL,
+    DECIMALS,
+    INITIAL_PRICE,
+} from "../../helper-hardhat-config";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { PERMIT_TYPEHASH, getPermitDigest, getDomainSeparator, sign } from '../../utils/signatures'
 import "dotenv/config";
@@ -19,18 +29,23 @@ developmentChains.includes(network.name) ?
             const underlyingToken = await MockERC20Token.deploy();
             await underlyingToken.deployed();
 
+            // deploy sanctions list mock
+            const SanctionsList = await ethers.getContractFactory('MockSanctionContract', deployer)
+            const sanctionsContract = await SanctionsList.deploy();
+            await sanctionsContract.deployed();
+
             const TokenFactory = await ethers.getContractFactory('TokenFactory', deployer)
             const tokenFactory = await TokenFactory.deploy(underlyingToken.address, mockV3Aggregator.address, REBASE_INTERVAL);
             await tokenFactory.deployed();
 
             // deploy devtoken 1     
             const DevToken1 = await ethers.getContractFactory("DevToken", deployer);
-            const devToken1 = await DevToken1.deploy(TOKEN1_NAME, TOKEN1_SYMBOL, tokenFactory.address, defaultOperators);
+            const devToken1 = await DevToken1.deploy(TOKEN1_NAME, TOKEN1_SYMBOL, tokenFactory.address, defaultOperators, sanctionsContract.address);
             await devToken1.deployed();
 
             // deploy devtoken 2 
             const DevToken2 = await ethers.getContractFactory("DevToken", deployer);
-            const devToken2 = await DevToken2.deploy(TOKEN2_NAME, TOKEN2_SYMBOL, tokenFactory.address, defaultOperators);
+            const devToken2 = await DevToken2.deploy(TOKEN2_NAME, TOKEN2_SYMBOL, tokenFactory.address, defaultOperators, sanctionsContract.address);
             await devToken2.deployed();
 
             // Fixtures can return anything you consider useful for your tests

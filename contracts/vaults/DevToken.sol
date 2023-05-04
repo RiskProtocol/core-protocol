@@ -7,9 +7,16 @@ import "../external/ERC20Permit.sol";
 
 error DevToken__NotTokenFactory();
 error DevToken__MethodNotAllowed();
+error DevToken__SanctionedAddress();
+
+interface SanctionsList {
+    function isSanctioned(address addr) external view returns (bool);
+}
 
 contract DevToken is ERC20Permit {
     TokenFactory private immutable tokenFactory;
+
+    address public immutable sanctionsContract;
 
     modifier onlyTokenFactory() {
         if (msg.sender != address(tokenFactory))
@@ -17,13 +24,22 @@ contract DevToken is ERC20Permit {
         _;
     }
 
+    modifier isSanctioned(address recipient) {
+        SanctionsList sanctionsList = SanctionsList(sanctionsContract);
+        bool isToSanctioned = sanctionsList.isSanctioned(recipient);
+        if (isToSanctioned) revert DevToken__SanctionedAddress();
+        _;
+    }
+
     constructor(
         string memory tokenName,
         string memory tokenSymbol,
         address factoryAddress,
-        address[] memory defaultOperators
+        address[] memory defaultOperators,
+        address sanctionsContract_
     ) ERC777(tokenName, tokenSymbol, defaultOperators) ERC20Permit(tokenName) {
         tokenFactory = TokenFactory(factoryAddress);
+        sanctionsContract = sanctionsContract_;
     }
 
     function mint(address receiver, uint256 amount) public onlyTokenFactory {
@@ -61,7 +77,7 @@ contract DevToken is ERC20Permit {
         }
         tokenFactory.updateUserLastRebaseCount(to);
         super.transfer(to, amount);
-        return true;  
+        return true;
     }
 
     /**
@@ -73,7 +89,7 @@ contract DevToken is ERC20Permit {
         address recipient,
         uint256 amount,
         bytes memory data
-    ) public override {
+    ) public isSanctioned(recipient) override {
         address owner_ = msg.sender;
         if (hasPendingRebase(owner_)) {
             tokenFactory.applyRebase(owner_);
