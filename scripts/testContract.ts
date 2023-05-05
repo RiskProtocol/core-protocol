@@ -1,4 +1,5 @@
 import { ethers, getNamedAccounts } from "hardhat"
+import { token } from "../typechain-types/factories/@openzeppelin/contracts";
 
 async function main() {
     const { deployer, tester } = await getNamedAccounts();
@@ -6,41 +7,46 @@ async function main() {
     const tokenFactory = await ethers.getContract("TokenFactory", deployer)
     const UndelyingToken = await ethers.getContract("MockERC20Token", deployer)
 
-    console.log(`Underlying token Balance for deployer: ${await UndelyingToken.balanceOf('0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266')}`)
+    console.log(`LastTimeStamp: ${await tokenFactory.getLastTimeStamp()}`)
+    console.log(`Interval: ${await tokenFactory.getInterval()}`)
+    console.log(`Current blocktime: ${await tokenFactory.getCurrentBlockTimeStamp()}`)    
+    console.log(`Trigger rebase: ${await tokenFactory.rebaseManualTrigger(2000,667)}`)
+    console.log(`LastTimeStamp: ${await tokenFactory.getLastTimeStamp()}`)
+    console.log(`Current blocktime: ${await tokenFactory.getCurrentBlockTimeStamp()}`)  
  
-    console.log(`DevToken Address 1: ${await tokenFactory.getDevTokenAddress(0)}`)
-    console.log(`DevToken Address 2: ${await tokenFactory.getDevTokenAddress(1)}`)
-    console.log(`Undelying token decimals: ${await tokenFactory.decimals()}`)
-    console.log(`Factory Asset: ${await tokenFactory.asset()}`) 
-    console.log(`Factory total Asset: ${await tokenFactory.totalAssets()}`) 
-    console.log(`Convert to shares 7ether: ${await tokenFactory.convertToShares(ethers.utils.parseEther('7'))}`) 
-    console.log(`Convert to asset 7ether: ${await tokenFactory.convertToAssets(ethers.utils.parseEther('7'))}`)
-    console.log(`Maximum deposit: ${await tokenFactory.maxDeposit('0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266')}`)  
-    console.log(`Preview deposit: ${await tokenFactory.previewDeposit(ethers.utils.parseEther('5'))}`)  
-    // test deposit here
-    console.log(`maxMint: ${await tokenFactory.maxMint('0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266')}`) 
-    console.log(`previewMint 5: ${await tokenFactory.previewMint(ethers.utils.parseEther('5'))}`) 
-    console.log(`previewMint 5: ${await tokenFactory.previewMint(ethers.utils.parseEther('5'))}`)   
-    // modify mint function
+    // console.log(`DevToken Address 1: ${await tokenFactory.getDevTokenAddress(0)}`)
+    // console.log(`DevToken Address 2: ${await tokenFactory.getDevTokenAddress(1)}`)
+    // console.log(`Undelying token decimals: ${await tokenFactory.decimals()}`)
+    // console.log(`Factory Asset: ${await tokenFactory.asset()}`) 
+    // console.log(`Factory total Asset: ${await tokenFactory.totalAssets()}`) 
+    // console.log(`Convert to shares 7ether: ${await tokenFactory.convertToShares(ethers.utils.parseEther('7'))}`) 
+    // console.log(`Convert to asset 7ether: ${await tokenFactory.convertToAssets(ethers.utils.parseEther('7'))}`)
+    // console.log(`Maximum deposit: ${await tokenFactory.maxDeposit('0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266')}`)  
+    // console.log(`Preview deposit: ${await tokenFactory.previewDeposit(ethers.utils.parseEther('5'))}`)  
+    // // test deposit here
+    // console.log(`maxMint: ${await tokenFactory.maxMint('0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266')}`) 
+    // console.log(`previewMint 5: ${await tokenFactory.previewMint(ethers.utils.parseEther('5'))}`) 
+    // console.log(`previewMint 5: ${await tokenFactory.previewMint(ethers.utils.parseEther('5'))}`)   
+    // // modify mint function
 
-    console.log(`maxWithdraw : ${await tokenFactory.maxWithdraw('0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266')}`) 
-    console.log(`previewWithdraw : ${await tokenFactory.previewWithdraw(ethers.utils.parseEther('5'))}`)   
-    // test withdrawal method  
-
-
+    // console.log(`maxWithdraw : ${await tokenFactory.maxWithdraw('0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266')}`) 
+    // console.log(`previewWithdraw : ${await tokenFactory.previewWithdraw(ethers.utils.parseEther('5'))}`)   
+    // // test withdrawal method  
 
 
 
-    console.log(`balance of Atoken0 before funding: ${await tokenFactory.xbalanceOf(0,'0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266')}`)
-    console.log(`balance of Atoken1 before funding: ${await tokenFactory.xbalanceOf(1,'0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266')}`)
 
-    // // console.log(`balance of Btoken0 before funding: ${await tokenFactory1.balanceOf(0,'0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266')}`)
-    // // console.log(`balance of Btoken1 before funding: ${await tokenFactory1.balanceOf(1,'0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266')}`)
 
-    console.log('Funding Contract...')
-    const transactionResponse = await tokenFactory.deposit(ethers.utils.parseEther('6'),'0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266')
-    await transactionResponse.wait(1)
-    console.log('Funded')
+    // console.log(`balance of Atoken0 before funding: ${await tokenFactory.xbalanceOf(0,'0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266')}`)
+    // console.log(`balance of Atoken1 before funding: ${await tokenFactory.xbalanceOf(1,'0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266')}`)
+
+    // // // console.log(`balance of Btoken0 before funding: ${await tokenFactory1.balanceOf(0,'0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266')}`)
+    // // // console.log(`balance of Btoken1 before funding: ${await tokenFactory1.balanceOf(1,'0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266')}`)
+
+    // console.log('Funding Contract...')
+    // const transactionResponse = await tokenFactory.deposit(ethers.utils.parseEther('6'),'0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266')
+    // await transactionResponse.wait(1)
+    // console.log('Funded')
 
     // // console.log('Funding Contract2...')
     // // const transactionResponse1 = await tokenFactory1.buyAsset({ value: ethers.utils.parseEther('7') })
