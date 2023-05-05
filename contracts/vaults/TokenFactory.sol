@@ -604,12 +604,14 @@ contract TokenFactory is
         revert TokenFactory__MethodNotAllowed();
     }
 
-    /** @dev See {ERC20-allowance}. */
+    /** @dev See {ERC20-allowance}. We don't revert directly in this function because
+     *  it throws unreachable code warnings during compilation unlike ERC 20 approve function
+     * */
     function allowance(
-        address /* owner */,
-        address /* spender */
-    ) public view virtual override(ERC20, IERC20) returns (uint256) {
-        revert TokenFactory__MethodNotAllowed();
+        address owner,
+        address spender
+    ) public view virtual override(ERC20, IERC20) onlyOwner returns (uint256) {
+        return super.allowance(owner, spender);
     }
 
     /** @dev See {ERC20-approve}. */
