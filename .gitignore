@@ -9,4 +9,5 @@ typechain-types
 cache
 artifacts
 deployments/localhost
+gas-report.txt
 
