@@ -64,6 +64,7 @@ contract TokenFactory is
     TokenFactoryState private tokenFactoryState;
     bytes32 private jobId;
     uint256 private fee;
+    bytes private signature;
 
     modifier onlyAssetOwner(address assetOwner) {
         if (assetOwner != msg.sender) revert TokenFactory__OnlyAssetOwner();
@@ -461,11 +462,8 @@ contract TokenFactory is
             undResponse,
             navResponse,
             timResponse
-        );
-        uint256 chainlinkDivisor = 100000;
-        uint256 underlyingTokenAmount = undResponse / chainlinkDivisor;
-        uint256 navAmount = navResponse / chainlinkDivisor;
-        rebase(underlyingTokenAmount, navAmount);
+        );       
+        rebase(undResponse, navResponse, timResponse, signature);
     }
 
     /**
@@ -481,9 +479,13 @@ contract TokenFactory is
         SafeERC20.safeTransfer(token, to, amount);
     }
 
-    function rebase(uint256 rebasePrice, uint256 asset1Price) internal {
-        uint256 divisor = rebasePrice.ceilDiv(2);
-        uint256 newScallingFactorX = ((asset1Price * 10 ** decimals()) / 2) /
+    function rebase(uint256 rebasePrice, uint256 asset1Price, uint256 /* timestamp */, bytes memory  /* sig */) internal {
+        uint256 chainlinkDivisor = 100000;
+        uint256 underlyingTokenAmount = rebasePrice / chainlinkDivisor;
+        uint256 navAmount = asset1Price / chainlinkDivisor;
+
+        uint256 divisor = underlyingTokenAmount.ceilDiv(2);
+        uint256 newScallingFactorX = ((navAmount * 10 ** decimals()) / 2) /
             divisor;
         scallingFactorX.push(newScallingFactorX);
 
@@ -495,9 +497,11 @@ contract TokenFactory is
 
     function rebaseManualTrigger(
         uint256 rebasePrice,
-        uint256 asset1Price
-    ) public onlyOwner {
-        rebase(rebasePrice, asset1Price);
+        uint256 asset1Price,
+        uint256 timestamp,
+        bytes memory sig
+    ) public {
+        rebase(rebasePrice, asset1Price, timestamp, sig);
     }
 
     function applyRebase(address owner_) public {
