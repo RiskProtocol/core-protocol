@@ -13,6 +13,8 @@ import {
   uniswapV2FactoryAddress,
   uniswapV2FactoryABI,
   uniswapV2PairABI,
+  underlyingTokenAbi,
+  underlyingTokenWithPermitAbi
 } from "../contants";
 
 function App() {
@@ -160,7 +162,7 @@ function App() {
       );
       const underlyingToken = new ethers.Contract(
         underlyingTokenAddress,
-        devTokenAbi,
+        underlyingTokenAbi,
         signer
       );
       try {
@@ -213,7 +215,7 @@ function App() {
       );
       const underlyingToken = new ethers.Contract(
         underlyingTokenAddress,
-        devTokenAbi,
+        underlyingTokenWithPermitAbi,
         signer
       );
 
