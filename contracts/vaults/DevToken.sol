@@ -71,7 +71,7 @@ contract DevToken is ERC20Permit {
     function transfer(
         address to,
         uint256 amount
-    ) public isSanctioned(to) override returns (bool) {
+    ) public isSanctioned(to) isSanctioned(msg.sender) override returns (bool) {
         address owner_ = msg.sender;
         if (hasPendingRebase(owner_)) {
             tokenFactory.applyRebase(owner_);
@@ -90,7 +90,7 @@ contract DevToken is ERC20Permit {
         address recipient,
         uint256 amount,
         bytes memory data
-    ) public isSanctioned(recipient) override {
+    ) public isSanctioned(recipient) isSanctioned(msg.sender) override {
         address owner_ = msg.sender;
         if (hasPendingRebase(owner_)) {
             tokenFactory.applyRebase(owner_);
@@ -120,5 +120,13 @@ contract DevToken is ERC20Permit {
 
     function getTokenFactory() public view returns (address) {
         return address(tokenFactory);
+    }
+
+    function transferFrom(
+        address sender,
+        address recipient,
+        uint256 amount
+    ) public isSanctioned(recipient) isSanctioned(sender) override returns (bool) {
+        return super.transferFrom(sender, recipient, amount);
     }
 }
