@@ -114,7 +114,7 @@ developmentChains.includes(network.name) ?
                 await tokenFactory.deposit(depositAmount, deployer.address);
 
                 // trigger rebase
-                await tokenFactory.rebaseManualTrigger(2000,667)
+                await tokenFactory.rebaseManualTrigger(2000,667,200000000, bytes)
 
                 // confirm that pending rebase was applied
                 await expect(devToken1.send(tester.address, transferAmount, bytes)).to.emit(tokenFactory,'RebaseApplied') 

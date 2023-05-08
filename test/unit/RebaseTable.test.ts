@@ -81,9 +81,9 @@ developmentChains.includes(network.name) ?
     
                     // to a transaction
                     await devToken1.transfer(tester.address, transferAmount);
-    
+                    const sig = new Uint8Array([0x01, 0x02, 0x03, 0x04]);
                     // trigger a rebase
-                    await tokenFactory.rebaseManualTrigger(2000,667)
+                    await tokenFactory.rebaseManualTrigger(2000,667,200000000, sig)
     
                     // confirm user balances when rebase has taken place                   
                     assert.equal(await devToken1.balanceOf(deployer.address), item.afterRebase);

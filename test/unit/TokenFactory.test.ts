@@ -224,9 +224,10 @@ developmentChains.includes(network.name) ?
                 // deposit underlying token
                 await underlyingToken.approve(tokenFactory.address, depositAmount);
                 await tokenFactory.deposit(depositAmount, deployer.address)
+                const sig = new Uint8Array([0x01, 0x02, 0x03, 0x04]);
 
                 // trigger rebase
-                await tokenFactory.rebaseManualTrigger(2000,667);
+                await tokenFactory.rebaseManualTrigger(2000,667, 200000, sig);
 
                 await expect(tokenFactory.withdraw(depositAmount, deployer.address, deployer.address)).to.emit(tokenFactory,'RebaseApplied')            
             })     
@@ -355,9 +356,9 @@ developmentChains.includes(network.name) ?
                 // deposit underlying token
                 await underlyingToken.approve(tokenFactory.address, depositAmount);
                 await tokenFactory.deposit(depositAmount, deployer.address)
-
+                const sig = new Uint8Array([0x01, 0x02, 0x03, 0x04]);
                 // trigger rebase
-                await tokenFactory.rebaseManualTrigger(2000,667);
+                await tokenFactory.rebaseManualTrigger(2000,667, 20000, sig);
 
                 await expect(tokenFactory.redeem(depositAmount, deployer.address, deployer.address)).to.emit(tokenFactory,'RebaseApplied')            
             })     
@@ -396,12 +397,14 @@ developmentChains.includes(network.name) ?
         describe("Rebase", async function () {
             it("it cannot be triggered by any one apart from the deployer", async function () {
                 const { tokenFactory, tester } = await loadFixture(deployTokenFixture);
-                await expect(tokenFactory.connect(tester).rebaseManualTrigger(2000,667)).to.be.reverted
+                const sig = new Uint8Array([0x01, 0x02, 0x03, 0x04]);
+                await expect(tokenFactory.connect(tester).rebaseManualTrigger(2000,667, 20000, sig)).to.be.reverted
             })
 
             it("it can be triggered by the deployer", async function () {
                 const { tokenFactory, tester } = await loadFixture(deployTokenFixture);
-                await expect(tokenFactory.rebaseManualTrigger(2000,667)).to.emit(tokenFactory,'Rebase')
+                const sig = new Uint8Array([0x01, 0x02, 0x03, 0x04]);
+                await expect(tokenFactory.rebaseManualTrigger(2000,667, 20000, sig)).to.emit(tokenFactory,'Rebase')
             })
 
             it("it should confirm that user has correct balances of token x and y after rebase", async function () {
@@ -419,9 +422,10 @@ developmentChains.includes(network.name) ?
                 
                 // to a transaction
                 await devToken1.transfer(tester.address, transferAmount);
-                
+                const sig = new Uint8Array([0x01, 0x02, 0x03, 0x04]);
+
                 // trigger a rebase
-                await tokenFactory.rebaseManualTrigger(2000,667)
+                await tokenFactory.rebaseManualTrigger(2000,667, 20000, sig)
 
                 // confirm user balances when rebase has taken place   
                 assert.equal(await devToken1.balanceOf(deployer.address), expectedBalance);
