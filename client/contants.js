@@ -1,7 +1,7 @@
-export const tokenFactoryAddress = "0xb04CB6c52E73CF3e2753776030CE85a36549c9C2";
-export const devTokenXAddress = "0xc0c5618f0F3Fa66b496F2940f373DC366d765BAe";
-export const devTokenYAddress = "0xa195ACcEB1945163160CD5703Ed43E4f78176a54";
-export const underlyingTokenAddress = "0x1c39BA375faB6a9f6E0c01B9F49d488e101C2011";
+export const tokenFactoryAddress = "0xc0c5618f0F3Fa66b496F2940f373DC366d765BAe";
+export const devTokenXAddress = "0xa195ACcEB1945163160CD5703Ed43E4f78176a54";
+export const devTokenYAddress = "0x6212cb549De37c25071cF506aB7E115D140D9e42";
+export const underlyingTokenAddress = "0xb04CB6c52E73CF3e2753776030CE85a36549c9C2";
 export const uniswapV2RouterAddress = "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D";
 export const uniswapV2FactoryAddress = "0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f";
 

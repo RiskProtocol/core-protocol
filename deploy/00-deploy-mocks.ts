@@ -22,8 +22,8 @@ const deployMocks: DeployFunction = async ({ getNamedAccounts, deployments, netw
         log("----------------------------------")
 
         log('Deploying MockERC20Token...')
-        const mockToken = await deploy("MockERC20Token", {
-            contract: "MockERC20Token",
+        const mockToken = await deploy("MockERC20TokenWithoutPermit", {
+            contract: "MockERC20TokenWithoutPermit",
             from: deployer,
             args: [], // from github MockV3Aggragator has 2 argument for the contructors
             log: true

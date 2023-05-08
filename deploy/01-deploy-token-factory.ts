@@ -24,7 +24,7 @@ const func: DeployFunction = async ({ getNamedAccounts, deployments, network }) 
         const ethUsdAggregator = await deployments.get('MockV3Aggregator');
         priceFeedAddress = ethUsdAggregator.address
 
-        const mockERC20Token = await deployments.get('MockERC20Token');
+        const mockERC20Token = await deployments.get('MockERC20TokenWithoutPermit');
         baseTokenAddress = mockERC20Token.address
     } else {
         priceFeedAddress = networkConfig[network.name].priceFeed!

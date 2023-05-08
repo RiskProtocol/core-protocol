@@ -19,6 +19,7 @@ function App() {
   const testAccountAddress = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266";
   const test1AccountAddress = "0x70997970C51812dc3A010C7d01b50e0d17dc79C8";
   const [depositAmount, setDepositAmount] = useState();
+  const [approvalAmount, setApprovalAmount] = useState();  
   const [withdrawalAmount, setWithdrawalAmount] = useState();
   const [transferAddress, setTransferAddress] = useState(
     "0x70997970C51812dc3A010C7d01b50e0d17dc79C8"
@@ -143,6 +144,58 @@ function App() {
             devToken == "x" ? "tokenX" : "tokenY"
           } is ${data.toString()}`
         );
+      } catch (err) {
+        console.log("Error: ", err);
+      }
+    }
+  }
+  async function approve() {
+    if (typeof window.ethereum !== "undefined") {
+      const provider = new ethers.providers.Web3Provider(window.ethereum);
+      const signer = provider.getSigner();
+      const contract = new ethers.Contract(
+        tokenFactoryAddress,
+        tokenFactoryAbi,
+        signer
+      );
+      const underlyingToken = new ethers.Contract(
+        underlyingTokenAddress,
+        devTokenAbi,
+        signer
+      );
+      try {
+        const allowance = await underlyingToken.allowance(
+          testAccountAddress,
+          tokenFactoryAddress
+        );        
+        console.log(`allowance : ${allowance}`);
+
+        await underlyingToken.approve(
+          tokenFactoryAddress,
+          ethers.utils.parseEther(approvalAmount)
+        );        
+        console.log("Approval...");
+      } catch (err) {
+        console.log("Error: ", err);
+      }
+    }
+  }
+
+  async function buyWithoutPermit() {
+    if (typeof window.ethereum !== "undefined") {
+      const provider = new ethers.providers.Web3Provider(window.ethereum);
+      const signer = provider.getSigner();
+      const contract = new ethers.Contract(
+        tokenFactoryAddress,
+        tokenFactoryAbi,
+        signer
+      );     
+      try { 
+        await contract.deposit(
+          `${ethers.utils.parseEther(depositAmount)}`,
+          testAccountAddress
+        );
+        console.log("Buying asset...");
       } catch (err) {
         console.log("Error: ", err);
       }
@@ -538,6 +591,22 @@ function App() {
         </button>
         <button style={buttonStyle} onClick={tokenBalance.bind(this, "y")}>
           Balance of Token Y
+        </button>
+        <input
+          style={inputStyle}
+          onChange={(e) => setApprovalAmount(e.target.value)}
+          placeholder="Amount to Approve"
+        />
+        <button style={buttonStyle} onClick={approve}>
+          Seek Approval
+        </button>
+        <input
+          style={inputStyle}
+          onChange={(e) => setDepositAmount(e.target.value)}
+          placeholder="Amount to Deposit"
+        />
+        <button style={buttonStyle} onClick={buyWithoutPermit}>
+          Buy Tokens (without Permit)
         </button>
         <input
           style={inputStyle}
