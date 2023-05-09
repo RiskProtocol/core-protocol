@@ -1,6 +1,6 @@
 import { assert, expect } from "chai";
 import { ethers, network } from "hardhat"
-import { developmentChains, REBASE_INTERVAL, TOKEN1_NAME, TOKEN1_SYMBOL, defaultOperators, TOKEN2_NAME, TOKEN2_SYMBOL, DECIMALS, INITIAL_PRICE, CHAINLINK_TOKEN_ADDRESS, CHAINLINK_ORACLE_ADDRESS, CHAINLINK_JOB_ID, LINK_FEE, CURRENT_TIMESTAMP } from "../../helper-hardhat-config";
+import { developmentChains, REBASE_INTERVAL, TOKEN1_NAME, TOKEN1_SYMBOL, defaultOperators, TOKEN2_NAME, TOKEN2_SYMBOL, CHAINLINK_TOKEN_ADDRESS, CHAINLINK_ORACLE_ADDRESS, CHAINLINK_JOB_ID, LINK_FEE, CURRENT_TIMESTAMP, EXTERNAL_API_URL } from "../../helper-hardhat-config";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 
 developmentChains.includes(network.name) ?
@@ -8,16 +8,12 @@ developmentChains.includes(network.name) ?
         async function deployTokenFixture() {
             const [deployer, tester] = await ethers.getSigners();
 
-            const MockV3Aggregator = await ethers.getContractFactory('MockV3Aggregator', deployer)
-            const mockV3Aggregator = await MockV3Aggregator.deploy(DECIMALS, INITIAL_PRICE);
-            await mockV3Aggregator.deployed();
-
             const MockERC20Token = await ethers.getContractFactory('MockERC20Token', deployer)
             const underlyingToken = await MockERC20Token.deploy();
             await underlyingToken.deployed();
 
             const TokenFactory = await ethers.getContractFactory('TokenFactory', deployer)
-            const tokenFactory = await TokenFactory.deploy(underlyingToken.address, mockV3Aggregator.address, REBASE_INTERVAL, CHAINLINK_TOKEN_ADDRESS, CHAINLINK_ORACLE_ADDRESS, CHAINLINK_JOB_ID, LINK_FEE, CURRENT_TIMESTAMP);
+            const tokenFactory = await TokenFactory.deploy(underlyingToken.address,EXTERNAL_API_URL, REBASE_INTERVAL, CHAINLINK_TOKEN_ADDRESS, CHAINLINK_ORACLE_ADDRESS, CHAINLINK_JOB_ID, LINK_FEE, CURRENT_TIMESTAMP);
             await tokenFactory.deployed();
 
             // deploy devtoken 1     
@@ -32,11 +28,11 @@ developmentChains.includes(network.name) ?
 
             // other instances to mock fake underlying token
             const TokenFactory2 = await ethers.getContractFactory('TokenFactory', tester)
-            const tokenFactory2 = await TokenFactory2.deploy('0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D', mockV3Aggregator.address, REBASE_INTERVAL, CHAINLINK_TOKEN_ADDRESS, CHAINLINK_ORACLE_ADDRESS, CHAINLINK_JOB_ID, LINK_FEE, CURRENT_TIMESTAMP);
+            const tokenFactory2 = await TokenFactory2.deploy('0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D', EXTERNAL_API_URL, REBASE_INTERVAL, CHAINLINK_TOKEN_ADDRESS, CHAINLINK_ORACLE_ADDRESS, CHAINLINK_JOB_ID, LINK_FEE, CURRENT_TIMESTAMP);
             await tokenFactory2.deployed();
 
             // Fixtures can return anything you consider useful for your tests
-            return { devToken1, devToken2, mockV3Aggregator, underlyingToken, tokenFactory, deployer, tester, tokenFactory2 };
+            return { devToken1, devToken2, EXTERNAL_API_URL, underlyingToken, tokenFactory, deployer, tester, tokenFactory2 };
         }
 
         describe("Constructor", async function () {
@@ -46,10 +42,10 @@ developmentChains.includes(network.name) ?
                 assert.equal(result, underlyingToken.address);
             })
 
-            it("sets the address of the price aggregator correctly", async function () {
-                const { tokenFactory, mockV3Aggregator } = await loadFixture(deployTokenFixture);
-                const result = await tokenFactory.getPriceFeedAddress();
-                assert.equal(result, mockV3Aggregator.address);
+            it("sets the address of external api url correctly", async function () {
+                const { tokenFactory, EXTERNAL_API_URL } = await loadFixture(deployTokenFixture);
+                const result = await tokenFactory.getExternalApiUrl();
+                assert.equal(result, EXTERNAL_API_URL);
             })
 
             it("sets the rebase interval correctly", async function () {
