@@ -15,11 +15,15 @@ export const networkConfig: networkConfigInfo = {
     polygon: {
         priceFeed: '0xF9680D99D6C9589e2a93a78A04A279e509205945'
     },
+    sepolia: {
+        priceFeed: '0x5fb1616F78dA7aFC9FF79e0371741a747D2a7F22',
+        blockConfirmations: 6
+    },
     localhost: {},
     hardhat: {}
 }
 
-export const developmentChains = ['localhost', 'hardhat']
+export const developmentChains = ['localhost', 'hardhat', 'sepolia']
 
 export const DECIMALS = "18"
 export const INITIAL_PRICE = "2000000000000000000000" // 2000, we then add the 18 decimals which is 18 zeros
@@ -29,5 +33,5 @@ export const TOKEN1_NAME = "RistP One"
 export const TOKEN1_SYMBOL = "R1"
 export const TOKEN2_NAME = "RistP Two"
 export const TOKEN2_SYMBOL = "R2"
-export const REBASE_INTERVAL = 7890000 // 3months in seconds
+export const REBASE_INTERVAL = 300 // 5mins in seconds
 export const defaultOperators: string[] = []

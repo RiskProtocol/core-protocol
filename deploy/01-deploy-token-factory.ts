@@ -35,7 +35,7 @@ const func: DeployFunction = async ({ getNamedAccounts, deployments, network }) 
 
     log("TokenFactory Deployed!")
     log("----------------------------------")
-
+    
     if (!developmentChains.includes(network.name) && process.env.ETHERSCAN_API_KEY) {
         await verify(TokenFactory.address, [baseTokenAddress, priceFeedAddress, REBASE_INTERVAL])
     }     

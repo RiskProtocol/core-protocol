@@ -9,6 +9,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@chainlink/contracts/src/v0.8/AutomationCompatible.sol";
 import "./DevToken.sol";
 import "./../libraries/PriceFeed.sol";
 
@@ -19,6 +20,7 @@ error TokenFactory__RedeemMoreThanMax();
 error TokenFactory__OnlyAssetOwner();
 error TokenFactory__ZeroDeposit();
 error TokenFactory__MethodNotAllowed();
+error TokenFactory__UpkeepNotNeeded();
 
 /**
  * @title ERC-20 Rebase Tokens
@@ -29,7 +31,19 @@ error TokenFactory__MethodNotAllowed();
  * The asset will be burned in exactly the same proportion when asked to redeem/withdrawal the underlying asset.
  * The contract will implement periodic rebalancing
  */
-contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
+contract TokenFactory is
+    ERC20,
+    IERC4626,
+    ReentrancyGuard,
+    Ownable,
+    AutomationCompatible
+{
+    /* Type declarations */
+    enum TokenFactoryState {
+        OPEN,
+        CALCULATING
+    }
+
     using PriceFeed for AggregatorV3Interface;
     using Math for uint256;
     using SafeMath for uint256;
@@ -43,6 +57,7 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
     uint8 private immutable baseTokenDecimals;
     uint256 private immutable interval;
     uint256 private lastTimeStamp;
+    TokenFactoryState private tokenFactoryState;
 
     modifier onlyAssetOwner(address assetOwner) {
         if (assetOwner != msg.sender) revert TokenFactory__OnlyAssetOwner();
@@ -64,6 +79,7 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
         baseTokenDecimals = success ? assetDecimals : super.decimals();
         interval = rebaseInterval;
         lastTimeStamp = block.timestamp;
+        tokenFactoryState = TokenFactoryState.OPEN;
     }
 
     function initialize(DevToken token1, DevToken token2) external onlyOwner {
@@ -340,11 +356,14 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
         }
     }
 
-    function rebase() external onlyOwner {
+    function rebase() internal {
         uint256 rebasePrice = priceFeed.getPrice() / 10 ** decimals();
         uint256 asset1Price = rebasePrice.ceilDiv(3); // this should be gotten from the oracle
         uint256 divisor = rebasePrice.ceilDiv(2);
         scallingFactorX.push(((asset1Price * 10 ** decimals()) / 2) / divisor);
+
+        tokenFactoryState = TokenFactoryState.OPEN;
+        lastTimeStamp = block.timestamp;
 
         emit Rebase(getScallingFactorLength());
     }
@@ -393,6 +412,51 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
         ) {
             lastRebaseCount[owner_] = getScallingFactorLength();
         }
+    }
+
+    // chainlink automation
+
+    function readyForUpkeep() private view returns (bool ready) {
+        bool isOpen = TokenFactoryState.OPEN == tokenFactoryState;
+        bool timePassed = (block.timestamp - lastTimeStamp) > interval;
+        bool hasDeposits = totalAssets() > 0;
+
+        ready = (isOpen && timePassed && hasDeposits);
+    }
+
+    /**
+     * @dev This is the function that the Chainlink Keeper nodes call
+     * they look for `upkeepNeeded` to return True.
+     * the following should be true for this to return true:
+     * 1. The time interval has passed between rebase period.
+     * 2. Trading is in open state.
+     * 3. Implicity, your subscription is funded with LINK.
+     * 4. The contract has some deposits
+     */
+    function checkUpkeep(
+        bytes calldata /* checkData */
+    )
+        public
+        view
+        override
+        returns (bool upkeepNeeded, bytes memory performData)
+    {
+        upkeepNeeded = readyForUpkeep();
+        return (upkeepNeeded, performData);
+        // We don't use the checkData here, The checkData is defined when the Upkeep was registered.
+    }
+
+    /**
+     * @dev Once `checkUpkeep` is returning `true`, this function is called
+     */
+    function performUpkeep(bytes calldata /* performData */) external override {
+        // It is highly recommended revalidating the upkeep
+        bool upkeepNeeded = readyForUpkeep();
+        if (!upkeepNeeded) {
+            revert TokenFactory__UpkeepNotNeeded();
+        }
+        tokenFactoryState = TokenFactoryState.CALCULATING;
+        rebase();
     }
 
     //  other getter methods
