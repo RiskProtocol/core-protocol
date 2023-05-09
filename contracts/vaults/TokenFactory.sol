@@ -20,8 +20,8 @@ error TokenFactory__WithdrawMoreThanMax();
 error TokenFactory__RedeemMoreThanMax();
 error TokenFactory__OnlyAssetOwner();
 error TokenFactory__ZeroDeposit();
-error TokenFactory__MethodNotAllowed();
 error TokenFactory__UpkeepNotNeeded();
+error TokenFactory__MethodNotAllowed();
 
 /**
  * @title ERC-20 Rebase Tokens
@@ -38,8 +38,8 @@ contract TokenFactory is
     ReentrancyGuard,
     Ownable,
     AutomationCompatible,
-    ChainlinkClient {
-
+    ChainlinkClient
+{
     /* Type declarations */
     enum TokenFactoryState {
         OPEN,
