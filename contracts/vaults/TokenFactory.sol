@@ -485,7 +485,7 @@ contract TokenFactory is
             divisor;
         scallingFactorX.push(newScallingFactorX);
 
-        lastTimeStamp = block.timestamp;
+        lastTimeStamp += (interval * 2);
         tokenFactoryState = TokenFactoryState.OPEN;
 
         emit Rebase(getScallingFactorLength(), newScallingFactorX);
