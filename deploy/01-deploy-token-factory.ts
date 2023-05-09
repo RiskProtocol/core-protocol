@@ -1,33 +1,33 @@
 import { DeployFunction } from 'hardhat-deploy/types';
-import { developmentChains, networkConfig, BASE_TOKEN_ADDRESS, REBASE_INTERVAL, CHAINLINK_TOKEN_ADDRESS, CHAINLINK_ORACLE_ADDRESS, CHAINLINK_JOB_ID, LINK_FEE, CURRENT_TIMESTAMP, EXTERNAL_API_URL} from '../helper-hardhat-config';
+import { developmentChains, networkConfig, BASE_TOKEN_ADDRESS, REBASE_INTERVAL, CHAINLINK_TOKEN_ADDRESS, CHAINLINK_ORACLE_ADDRESS, CHAINLINK_UINT_JOB_ID, LINK_FEE, CURRENT_TIMESTAMP, EXTERNAL_API_URL, CHAINLINK_BYTES_JOB_ID } from '../helper-hardhat-config';
 import { verify } from '../utils/verify';
 
 const func: DeployFunction = async ({ getNamedAccounts, deployments, network }) => {
     const { deploy, log } = deployments
     const { deployer } = await getNamedAccounts()
-   
+
     let baseTokenAddress: string
 
-    if (developmentChains.includes(network.name)) { 
+    if (developmentChains.includes(network.name)) {
         const mockERC20Token = await deployments.get('MockERC20Token');
         baseTokenAddress = mockERC20Token.address
-    } else {      
+    } else {
         baseTokenAddress = BASE_TOKEN_ADDRESS
     }
 
     const TokenFactory = await deploy("TokenFactory", {
         from: deployer,
-        args: [baseTokenAddress, EXTERNAL_API_URL, REBASE_INTERVAL, CHAINLINK_TOKEN_ADDRESS, CHAINLINK_ORACLE_ADDRESS, CHAINLINK_JOB_ID, LINK_FEE, CURRENT_TIMESTAMP],
+        args: [baseTokenAddress, EXTERNAL_API_URL, REBASE_INTERVAL, CHAINLINK_TOKEN_ADDRESS, CHAINLINK_ORACLE_ADDRESS, CHAINLINK_UINT_JOB_ID, CHAINLINK_BYTES_JOB_ID, LINK_FEE, CURRENT_TIMESTAMP],
         log: true,
         // we need to wait if on a live network so we can verify properly
         waitConfirmations: networkConfig[network.name].blockConfirmations || 1,
     })
 
     log("TokenFactory Deployed!")
-    log("----------------------------------")    
+    log("----------------------------------")
     if (!developmentChains.includes(network.name) && process.env.ETHERSCAN_API_KEY || network.name == 'sepolia') {
-        await verify(TokenFactory.address, [baseTokenAddress, EXTERNAL_API_URL, REBASE_INTERVAL, CHAINLINK_TOKEN_ADDRESS, CHAINLINK_ORACLE_ADDRESS, CHAINLINK_JOB_ID, LINK_FEE, CURRENT_TIMESTAMP])
-    }     
+        await verify(TokenFactory.address, [baseTokenAddress, EXTERNAL_API_URL, REBASE_INTERVAL, CHAINLINK_TOKEN_ADDRESS, CHAINLINK_ORACLE_ADDRESS, CHAINLINK_UINT_JOB_ID, CHAINLINK_BYTES_JOB_ID, LINK_FEE, CURRENT_TIMESTAMP])
+    }
 };
 export default func;
 func.tags = ["all"]; 

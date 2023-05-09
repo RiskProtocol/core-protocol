@@ -1,6 +1,6 @@
 import { assert, expect } from "chai";
 import { ethers, network } from "hardhat"
-import { developmentChains, REBASE_INTERVAL, TOKEN1_NAME, TOKEN1_SYMBOL, defaultOperators, TOKEN2_NAME, TOKEN2_SYMBOL, CHAINLINK_TOKEN_ADDRESS, CHAINLINK_ORACLE_ADDRESS, CHAINLINK_JOB_ID, LINK_FEE, CURRENT_TIMESTAMP, EXTERNAL_API_URL } from "../../helper-hardhat-config";
+import { developmentChains, REBASE_INTERVAL, TOKEN1_NAME, TOKEN1_SYMBOL, defaultOperators, TOKEN2_NAME, TOKEN2_SYMBOL, CHAINLINK_TOKEN_ADDRESS, CHAINLINK_ORACLE_ADDRESS, CHAINLINK_UINT_JOB_ID, CHAINLINK_BYTES_JOB_ID, LINK_FEE, CURRENT_TIMESTAMP, EXTERNAL_API_URL } from "../../helper-hardhat-config";
 import { loadFixture, time } from "@nomicfoundation/hardhat-network-helpers";
 
 developmentChains.includes(network.name) ?
@@ -13,7 +13,7 @@ developmentChains.includes(network.name) ?
             await underlyingToken.deployed();
 
             const TokenFactory = await ethers.getContractFactory('TokenFactory', deployer)
-            const tokenFactory = await TokenFactory.deploy(underlyingToken.address,EXTERNAL_API_URL, REBASE_INTERVAL, CHAINLINK_TOKEN_ADDRESS, CHAINLINK_ORACLE_ADDRESS, CHAINLINK_JOB_ID, LINK_FEE, CURRENT_TIMESTAMP);
+            const tokenFactory = await TokenFactory.deploy(underlyingToken.address,EXTERNAL_API_URL, REBASE_INTERVAL, CHAINLINK_TOKEN_ADDRESS, CHAINLINK_ORACLE_ADDRESS, CHAINLINK_UINT_JOB_ID, CHAINLINK_BYTES_JOB_ID, LINK_FEE, CURRENT_TIMESTAMP);
             await tokenFactory.deployed();
 
             // deploy devtoken 1     
@@ -28,7 +28,7 @@ developmentChains.includes(network.name) ?
 
             // other instances to mock fake underlying token
             const TokenFactory2 = await ethers.getContractFactory('TokenFactory', tester)
-            const tokenFactory2 = await TokenFactory2.deploy('0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D', EXTERNAL_API_URL, REBASE_INTERVAL, CHAINLINK_TOKEN_ADDRESS, CHAINLINK_ORACLE_ADDRESS, CHAINLINK_JOB_ID, LINK_FEE, CURRENT_TIMESTAMP);
+            const tokenFactory2 = await TokenFactory2.deploy('0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D', EXTERNAL_API_URL, REBASE_INTERVAL, CHAINLINK_TOKEN_ADDRESS, CHAINLINK_ORACLE_ADDRESS, CHAINLINK_UINT_JOB_ID, CHAINLINK_BYTES_JOB_ID, LINK_FEE, CURRENT_TIMESTAMP);
             await tokenFactory2.deployed();
 
             // Fixtures can return anything you consider useful for your tests

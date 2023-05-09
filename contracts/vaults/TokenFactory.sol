@@ -60,7 +60,8 @@ contract TokenFactory is
     uint256 private immutable interval;
     uint256 private lastTimeStamp;
     TokenFactoryState private tokenFactoryState;
-    bytes32 private jobId;
+    bytes32 private uintJobId;
+    bytes32 private bytesJobId;
     uint256 private fee;
     bytes private signature;
 
@@ -78,6 +79,7 @@ contract TokenFactory is
         uint256 navResponse,
         uint256 timResponse
     );
+    event RequestFulfilled(bytes32 indexed requestId, bytes indexed data);
 
     constructor(
         IERC20 baseTokenAddress,
@@ -85,7 +87,8 @@ contract TokenFactory is
         uint256 rebaseInterval, // in seconds
         address chainlinkTokenAddress,
         address chainlinkOracleAddress,
-        bytes32 chainlinkJobId,
+        bytes32 chainlinkUintJobId,
+        bytes32 chainlinkBytesJobId,
         uint256 linkFee,
         uint256 currentTimeStamp
     ) ERC20("RiskProtocolVault", "RPK") {
@@ -98,7 +101,8 @@ contract TokenFactory is
         tokenFactoryState = TokenFactoryState.OPEN;
         setChainlinkToken(chainlinkTokenAddress);
         setChainlinkOracle(chainlinkOracleAddress);
-        jobId = chainlinkJobId;
+        uintJobId = chainlinkUintJobId;
+        bytesJobId = chainlinkBytesJobId;
         fee = (1 * LINK_DIVISIBILITY) / linkFee;
     }
 
@@ -415,13 +419,32 @@ contract TokenFactory is
             revert TokenFactory__UpkeepNotNeeded();
         }
         tokenFactoryState = TokenFactoryState.CALCULATING;
-        requestMultipleParameters();
+        requestBytes(); // gets the signature from the oracle
+        requestMultipleParameters(); // gets the asset prices and timestamp from the oracle
     }
 
     // chainlink Any API
+
+    /**
+     * @notice Request signature bytes from the oracle
+     */
+    function requestBytes() public {
+        Chainlink.Request memory req = buildChainlinkRequest(
+            bytesJobId,
+            address(this),
+            this.fulfillBytes.selector
+        );
+        req.add("get", externalApiUrl);
+        req.add("path", "SIG");
+        sendChainlinkRequest(req, fee);
+    }
+
+    /**
+     * @notice Request asset prices and timestamp from the oracle
+     */
     function requestMultipleParameters() public {
         Chainlink.Request memory req = buildChainlinkRequest(
-            jobId,
+            uintJobId,
             address(this),
             this.fulfillMultipleParameters.selector
         );
@@ -433,7 +456,19 @@ contract TokenFactory is
         req.add("pathEUR", "TIM");
 
         //send the request
-        sendChainlinkRequest(req, fee); 
+        sendChainlinkRequest(req, fee);
+    }
+
+    /**
+     * @notice Fulfillment function for signature bytes
+     * @dev This is called by the oracle. recordChainlinkFulfillment must be used.
+     */
+    function fulfillBytes(
+        bytes32 requestId,
+        bytes memory bytesData
+    ) public recordChainlinkFulfillment(requestId) {
+        emit RequestFulfilled(requestId, bytesData);
+        signature = bytesData;
     }
 
     /**

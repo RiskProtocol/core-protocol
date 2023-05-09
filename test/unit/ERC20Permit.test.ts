@@ -1,6 +1,6 @@
 import { assert, expect } from "chai";
 import { ethers, network } from "hardhat"
-import { developmentChains, REBASE_INTERVAL, TOKEN1_NAME, TOKEN1_SYMBOL, defaultOperators, TOKEN2_NAME, TOKEN2_SYMBOL, CHAINLINK_TOKEN_ADDRESS, CHAINLINK_ORACLE_ADDRESS, CHAINLINK_JOB_ID, LINK_FEE, CURRENT_TIMESTAMP, EXTERNAL_API_URL } from "../../helper-hardhat-config";
+import { developmentChains, REBASE_INTERVAL, TOKEN1_NAME, TOKEN1_SYMBOL, defaultOperators, TOKEN2_NAME, TOKEN2_SYMBOL, CHAINLINK_TOKEN_ADDRESS, CHAINLINK_ORACLE_ADDRESS, CHAINLINK_UINT_JOB_ID, CHAINLINK_BYTES_JOB_ID, LINK_FEE, CURRENT_TIMESTAMP, EXTERNAL_API_URL } from "../../helper-hardhat-config";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { PERMIT_TYPEHASH, getPermitDigest, getDomainSeparator, sign } from '../../utils/signatures'
 import "dotenv/config";
@@ -16,7 +16,7 @@ developmentChains.includes(network.name) ?
             await underlyingToken.deployed();
 
             const TokenFactory = await ethers.getContractFactory('TokenFactory', deployer)
-            const tokenFactory = await TokenFactory.deploy(underlyingToken.address, EXTERNAL_API_URL, REBASE_INTERVAL, CHAINLINK_TOKEN_ADDRESS, CHAINLINK_ORACLE_ADDRESS, CHAINLINK_JOB_ID, LINK_FEE, CURRENT_TIMESTAMP);
+            const tokenFactory = await TokenFactory.deploy(underlyingToken.address, EXTERNAL_API_URL, REBASE_INTERVAL, CHAINLINK_TOKEN_ADDRESS, CHAINLINK_ORACLE_ADDRESS, CHAINLINK_UINT_JOB_ID, CHAINLINK_BYTES_JOB_ID, LINK_FEE, CURRENT_TIMESTAMP);
             await tokenFactory.deployed();
 
             // deploy devtoken 1     
