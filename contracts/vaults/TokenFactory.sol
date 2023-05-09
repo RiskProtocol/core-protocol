@@ -64,10 +64,6 @@ contract TokenFactory is
     TokenFactoryState private tokenFactoryState;
     bytes32 private jobId;
     uint256 private fee;
-    // multiple params returned in a single oracle response
-    // uint256 public underlyingTokenAmount;
-    // uint256 public navAmount; // one of the dev tokens
-    // uint256 public calculationTimestamp;
 
     modifier onlyAssetOwner(address assetOwner) {
         if (assetOwner != msg.sender) revert TokenFactory__OnlyAssetOwner();
@@ -87,7 +83,10 @@ contract TokenFactory is
     constructor(
         IERC20 baseTokenAddress,
         address priceFeedAddress,
-        uint256 rebaseInterval // in seconds
+        uint256 rebaseInterval, // in seconds
+        address chainlinkTokenAddress,
+        address chainlinkOracleAddress,
+        bytes32 chainlinkJobId
     ) ERC20("RiskProtocolVault", "RPK") {
         baseToken = IERC20(baseTokenAddress);
         priceFeed = AggregatorV3Interface(priceFeedAddress);
@@ -96,10 +95,9 @@ contract TokenFactory is
         interval = rebaseInterval;
         lastTimeStamp = block.timestamp;
         tokenFactoryState = TokenFactoryState.OPEN;
-
-        setChainlinkToken(0x779877A7B0D9E8603169DdbD7836e478b4624789);
-        setChainlinkOracle(0x6090149792dAAeE9D1D568c9f9a6F6B46AA29eFD);
-        jobId = "53f9755920cd451a8fe46f5087468395";
+        setChainlinkToken(chainlinkTokenAddress);
+        setChainlinkOracle(chainlinkOracleAddress);
+        jobId = chainlinkJobId;
         fee = (1 * LINK_DIVISIBILITY) / 10; // 0,1 * 10**18 (Varies by network and job)
     }
 
@@ -466,7 +464,7 @@ contract TokenFactory is
         );
         uint256 chainlinkDivisor = 100000;
         uint256 underlyingTokenAmount = undResponse / chainlinkDivisor;
-        uint256 navAmount = navResponse / chainlinkDivisor;       
+        uint256 navAmount = navResponse / chainlinkDivisor;
         rebase(underlyingTokenAmount, navAmount);
     }
 
@@ -481,15 +479,23 @@ contract TokenFactory is
         );
     }
 
-    function rebase(uint256 rebasePrice, uint256 asset1Price) internal {      
+    function rebase(uint256 rebasePrice, uint256 asset1Price) internal {
         uint256 divisor = rebasePrice.ceilDiv(2);
-        uint256 newScallingFactorX = ((asset1Price * 10 ** decimals()) / 2) / divisor;
+        uint256 newScallingFactorX = ((asset1Price * 10 ** decimals()) / 2) /
+            divisor;
         scallingFactorX.push(newScallingFactorX);
-        
-        lastTimeStamp = lastTimeStamp + interval;
+
+        lastTimeStamp = block.timestamp;
         tokenFactoryState = TokenFactoryState.OPEN;
 
         emit Rebase(getScallingFactorLength(), newScallingFactorX);
+    }
+
+    function rebaseManualTrigger(
+        uint256 rebasePrice,
+        uint256 asset1Price
+    ) public onlyOwner {
+        rebase(rebasePrice, asset1Price);
     }
 
     function applyRebase(address owner_) public {
