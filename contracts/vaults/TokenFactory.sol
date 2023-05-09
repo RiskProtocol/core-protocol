@@ -433,7 +433,7 @@ contract TokenFactory is
         req.add("pathEUR", "TIM");
 
         //send the request
-        sendChainlinkRequest(req, fee); // MWR API.
+        sendChainlinkRequest(req, fee); 
     }
 
     /**
