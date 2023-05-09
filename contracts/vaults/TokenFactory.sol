@@ -52,7 +52,7 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
         _;
     }
 
-    modifier isSanctioned(address recipient) {
+    modifier onlyNotSanctioned(address recipient) {
         SanctionsList sanctionsList = SanctionsList(sanctionsContract);
         bool isToSanctioned = sanctionsList.isSanctioned(recipient);
         if (isToSanctioned) revert TokenFactory__SanctionedAddress();
@@ -162,7 +162,7 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
     function deposit(
         uint256 assets,
         address receiver
-    ) public virtual override isSanctioned(_msgSender()) returns (uint256) {
+    ) public virtual override returns (uint256) {
         if (assets == 0) revert TokenFactory__ZeroDeposit();
         if (assets > maxDeposit(receiver))
             revert TokenFactory__DepositMoreThanMax();
@@ -225,7 +225,6 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
         virtual
         override
         onlyAssetOwner(owner_)
-        isSanctioned(_msgSender())
         nonReentrant
         returns (uint256)
     {
@@ -302,7 +301,7 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
         address receiver,
         uint256 assets,
         uint256 shares
-    ) internal virtual {
+    ) internal virtual onlyNotSanctioned(caller) {
         SafeERC20.safeTransferFrom(baseToken, caller, address(this), assets);
         updateUserLastRebaseCount(receiver);
         factoryMint(0, receiver, shares);
@@ -320,7 +319,7 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
         address owner,
         uint256 assets,
         uint256 shares
-    ) internal virtual {
+    ) internal virtual onlyNotSanctioned(caller) {
         factoryBurn(0, caller, assets);
         factoryBurn(1, caller, assets);
         SafeERC20.safeTransfer(baseToken, receiver, assets);

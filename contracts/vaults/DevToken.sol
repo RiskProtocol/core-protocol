@@ -25,10 +25,10 @@ contract DevToken is ERC20Permit {
         _;
     }
 
-    modifier isSanctioned(address recipient) {
+    modifier onlyNotSanctioned(address addressToCheck) {
         SanctionsList sanctionsList = SanctionsList(sanctionsContract);
-        bool isToSanctioned = sanctionsList.isSanctioned(recipient);
-        if (isToSanctioned) revert DevToken__SanctionedAddress();
+        bool isSanctionedAddress = sanctionsList.isSanctioned(addressToCheck);
+        if (isSanctionedAddress) revert DevToken__SanctionedAddress();
         _;
     }
 
@@ -71,7 +71,7 @@ contract DevToken is ERC20Permit {
     function transfer(
         address to,
         uint256 amount
-    ) public isSanctioned(to) isSanctioned(msg.sender) override returns (bool) {
+    ) public onlyNotSanctioned(to) onlyNotSanctioned(msg.sender) override returns (bool) {
         address owner_ = msg.sender;
         if (hasPendingRebase(owner_)) {
             tokenFactory.applyRebase(owner_);
@@ -90,7 +90,7 @@ contract DevToken is ERC20Permit {
         address recipient,
         uint256 amount,
         bytes memory data
-    ) public isSanctioned(recipient) isSanctioned(msg.sender) override {
+    ) public onlyNotSanctioned(recipient) onlyNotSanctioned(msg.sender) override {
         address owner_ = msg.sender;
         if (hasPendingRebase(owner_)) {
             tokenFactory.applyRebase(owner_);
@@ -126,7 +126,11 @@ contract DevToken is ERC20Permit {
         address sender,
         address recipient,
         uint256 amount
-    ) public isSanctioned(recipient) isSanctioned(sender) override returns (bool) {
+    ) public onlyNotSanctioned(recipient) onlyNotSanctioned(sender) override returns (bool) {
+        if (hasPendingRebase(sender)) {
+            tokenFactory.applyRebase(sender);
+        }
+        tokenFactory.updateUserLastRebaseCount(recipient);
         return super.transferFrom(sender, recipient, amount);
     }
 }
