@@ -1,5 +1,5 @@
 import { DeployFunction } from 'hardhat-deploy/types';
-import { DECIMALS, developmentChains, INITIAL_PRICE } from '../helper-hardhat-config';
+import { developmentChains } from '../helper-hardhat-config';
 
 
 const deployMocks: DeployFunction = async ({ getNamedAccounts, deployments, network }) => {
@@ -10,16 +10,7 @@ const deployMocks: DeployFunction = async ({ getNamedAccounts, deployments, netw
      you'll need a local network running to interact eg yarn hardhat node
     */
     if (developmentChains.includes(network.name)) {
-        log('Local network detected! Deploying mocks...')
-        log('Deploying MockV3Aggregator...')
-        await deploy("MockV3Aggregator", {
-            contract: "MockV3Aggregator",
-            from: deployer,
-            args: [DECIMALS, INITIAL_PRICE], // from github MockV3Aggragator has 2 argument for the contructors
-            log: true
-        })
-        log("MockV3Aggregator Deployed!")
-        log("----------------------------------")
+        log('Local network detected! Deploying mocks...')       
 
         log('Deploying MockERC20Token...')
         const mockToken = await deploy("MockERC20Token", {

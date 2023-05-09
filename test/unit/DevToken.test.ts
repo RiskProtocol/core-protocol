@@ -1,23 +1,19 @@
 import { assert, expect } from "chai";
 import { ethers, network } from "hardhat"
-import { developmentChains, REBASE_INTERVAL, TOKEN1_NAME, TOKEN1_SYMBOL, defaultOperators, TOKEN2_NAME, TOKEN2_SYMBOL, DECIMALS, INITIAL_PRICE, CHAINLINK_TOKEN_ADDRESS, CHAINLINK_ORACLE_ADDRESS, CHAINLINK_JOB_ID, LINK_FEE, CURRENT_TIMESTAMP } from "../../helper-hardhat-config";
+import { developmentChains, REBASE_INTERVAL, TOKEN1_NAME, TOKEN1_SYMBOL, defaultOperators, TOKEN2_NAME, TOKEN2_SYMBOL, CHAINLINK_TOKEN_ADDRESS, CHAINLINK_ORACLE_ADDRESS, CHAINLINK_JOB_ID, LINK_FEE, CURRENT_TIMESTAMP, EXTERNAL_API_URL } from "../../helper-hardhat-config";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 
 developmentChains.includes(network.name) ?
     describe("DevToken", async function () {
         async function deployTokenFixture() {
             const [deployer, tester] = await ethers.getSigners();
-
-            const MockV3Aggregator = await ethers.getContractFactory('MockV3Aggregator', deployer)
-            const mockV3Aggregator = await MockV3Aggregator.deploy(DECIMALS, INITIAL_PRICE);
-            await mockV3Aggregator.deployed();
-
+            
             const MockERC20Token = await ethers.getContractFactory('MockERC20Token', deployer)
             const underlyingToken = await MockERC20Token.deploy();
             await underlyingToken.deployed();
 
             const TokenFactory = await ethers.getContractFactory('TokenFactory', deployer)
-            const tokenFactory = await TokenFactory.deploy(underlyingToken.address, mockV3Aggregator.address, REBASE_INTERVAL, CHAINLINK_TOKEN_ADDRESS, CHAINLINK_ORACLE_ADDRESS, CHAINLINK_JOB_ID, LINK_FEE, CURRENT_TIMESTAMP);
+            const tokenFactory = await TokenFactory.deploy(underlyingToken.address, EXTERNAL_API_URL, REBASE_INTERVAL, CHAINLINK_TOKEN_ADDRESS, CHAINLINK_ORACLE_ADDRESS, CHAINLINK_JOB_ID, LINK_FEE, CURRENT_TIMESTAMP);
             await tokenFactory.deployed();
 
             // deploy devtoken 1     
@@ -31,7 +27,7 @@ developmentChains.includes(network.name) ?
             await devToken2.deployed();
 
             // Fixtures can return anything you consider useful for your tests
-            return { devToken1, devToken2, mockV3Aggregator, underlyingToken, tokenFactory, deployer, tester };
+            return { devToken1, devToken2, EXTERNAL_API_URL, underlyingToken, tokenFactory, deployer, tester };
         }
 
         describe("Constructor", async function () {

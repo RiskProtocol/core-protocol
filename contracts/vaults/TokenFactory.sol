@@ -13,7 +13,6 @@ import "@chainlink/contracts/src/v0.8/AutomationCompatible.sol";
 import "@chainlink/contracts/src/v0.8/ChainlinkClient.sol";
 import "@chainlink/contracts/src/v0.8/ConfirmedOwner.sol";
 import "./DevToken.sol";
-import "./../libraries/PriceFeed.sol";
 
 error TokenFactory__DepositMoreThanMax();
 error TokenFactory__MintMoreThanMax();
@@ -47,7 +46,6 @@ contract TokenFactory is
         CALCULATING
     }
 
-    using PriceFeed for AggregatorV3Interface;
     using Math for uint256;
     using SafeMath for uint256;
     using Chainlink for Chainlink.Request;
@@ -55,7 +53,7 @@ contract TokenFactory is
     // State variables
     uint256[] private scallingFactorX;
     DevToken[] private devTokenArray;
-    AggregatorV3Interface private immutable priceFeed;
+    string private externalApiUrl;
     mapping(address => uint256) private lastRebaseCount;
     IERC20 private immutable baseToken;
     uint8 private immutable baseTokenDecimals;
@@ -83,7 +81,7 @@ contract TokenFactory is
 
     constructor(
         IERC20 baseTokenAddress,
-        address priceFeedAddress,
+        string memory externalApiAddress,
         uint256 rebaseInterval, // in seconds
         address chainlinkTokenAddress,
         address chainlinkOracleAddress,
@@ -92,7 +90,7 @@ contract TokenFactory is
         uint256 currentTimeStamp
     ) ERC20("RiskProtocolVault", "RPK") {
         baseToken = IERC20(baseTokenAddress);
-        priceFeed = AggregatorV3Interface(priceFeedAddress);
+        externalApiUrl = externalApiAddress;
         (bool success, uint8 assetDecimals) = _tryGetAssetDecimals(baseToken);
         baseTokenDecimals = success ? assetDecimals : super.decimals();
         interval = rebaseInterval;
@@ -381,8 +379,8 @@ contract TokenFactory is
     // chainlink automation
     function readyForUpkeep() private view returns (bool ready) {
         bool isOpen = TokenFactoryState.OPEN == tokenFactoryState;
-        bool timePassed = (block.timestamp - lastTimeStamp) > interval; 
-        ready = (isOpen && timePassed);       
+        bool timePassed = (block.timestamp - lastTimeStamp) > interval;
+        ready = (isOpen && timePassed);
     }
 
     /**
@@ -427,20 +425,11 @@ contract TokenFactory is
             address(this),
             this.fulfillMultipleParameters.selector
         );
-        req.add(
-            "urlBTC",
-            "https://jiokeokwuosa.github.io/risk-page/response.json"
-        );
+        req.add("urlBTC", externalApiUrl);
         req.add("pathBTC", "UND");
-        req.add(
-            "urlUSD",
-            "https://jiokeokwuosa.github.io/risk-page/response.json"
-        );
+        req.add("urlUSD", externalApiUrl);
         req.add("pathUSD", "NAV");
-        req.add(
-            "urlEUR",
-            "https://jiokeokwuosa.github.io/risk-page/response.json"
-        );
+        req.add("urlEUR", externalApiUrl);
         req.add("pathEUR", "TIM");
 
         //send the request
@@ -462,15 +451,15 @@ contract TokenFactory is
             undResponse,
             navResponse,
             timResponse
-        );       
+        );
         rebase(undResponse, navResponse, timResponse, signature);
     }
 
     /**
      * Allow withdraw of Link tokens / base tokens from the contract
-     */  
+     */
 
-    function rescueTokens(     
+    function rescueTokens(
         address tokenAddress,
         address to,
         uint256 amount
@@ -479,7 +468,13 @@ contract TokenFactory is
         SafeERC20.safeTransfer(token, to, amount);
     }
 
-    function rebase(uint256 rebasePrice, uint256 asset1Price, uint256 /* timestamp */, bytes memory  /* sig */) internal {
+    function rebase(
+        uint256 rebasePrice,
+        uint256 asset1Price,
+        uint256 /* timestamp */,
+        bytes memory /* sig */
+    ) internal {
+        // TODO: add validation of timestamp and sig
         uint256 chainlinkDivisor = 100000;
         uint256 underlyingTokenAmount = rebasePrice / chainlinkDivisor;
         uint256 navAmount = asset1Price / chainlinkDivisor;
@@ -551,8 +546,8 @@ contract TokenFactory is
     }
 
     //  other getter methods
-    function getPriceFeedAddress() public view returns (AggregatorV3Interface) {
-        return priceFeed;
+    function getExternalApiUrl() public view returns (string memory) {
+        return externalApiUrl;
     }
 
     function getScallingFactorLength() public view returns (uint256) {
@@ -576,7 +571,7 @@ contract TokenFactory is
     function getLastTimeStamp() public view returns (uint256) {
         return lastTimeStamp;
     }
-    
+
     function getCurrentBlockTimeStamp() public view returns (uint256) {
         return block.timestamp;
     }
