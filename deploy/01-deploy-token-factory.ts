@@ -1,5 +1,11 @@
 import { DeployFunction } from 'hardhat-deploy/types';
-import { developmentChains, networkConfig, BASE_TOKEN_ADDRESS, REBASE_INTERVAL} from '../helper-hardhat-config';
+import {
+    developmentChains,
+    networkConfig,
+    BASE_TOKEN_ADDRESS,
+    REBASE_INTERVAL,
+    sanctionsContractAddress
+} from '../helper-hardhat-config';
 import { verify } from '../utils/verify';
 
 const func: DeployFunction = async ({ getNamedAccounts, deployments, network }) => {
@@ -27,7 +33,7 @@ const func: DeployFunction = async ({ getNamedAccounts, deployments, network }) 
 
     const TokenFactory = await deploy("TokenFactory", {
         from: deployer,
-        args: [baseTokenAddress, priceFeedAddress, REBASE_INTERVAL],
+        args: [baseTokenAddress, priceFeedAddress, REBASE_INTERVAL, sanctionsContractAddress],
         log: true,
         // we need to wait if on a live network so we can verify properly
         waitConfirmations: networkConfig[network.name].blockConfirmations || 1,
@@ -37,7 +43,7 @@ const func: DeployFunction = async ({ getNamedAccounts, deployments, network }) 
     log("----------------------------------")
 
     if (!developmentChains.includes(network.name) && process.env.ETHERSCAN_API_KEY) {
-        await verify(TokenFactory.address, [baseTokenAddress, priceFeedAddress, REBASE_INTERVAL])
+        await verify(TokenFactory.address, [baseTokenAddress, priceFeedAddress, REBASE_INTERVAL, sanctionsContractAddress])
     }     
 };
 export default func;

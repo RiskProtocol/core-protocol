@@ -59,7 +59,7 @@ developmentChains.includes(network.name) ?
             await sanctionsContract.deployed();
 
             const TokenFactory = await ethers.getContractFactory('TokenFactory', deployer)
-            const tokenFactory = await TokenFactory.deploy(underlyingToken.address, mockV3Aggregator.address, REBASE_INTERVAL);
+            const tokenFactory = await TokenFactory.deploy(underlyingToken.address, mockV3Aggregator.address, REBASE_INTERVAL, sanctionsContract.address);
             await tokenFactory.deployed();
 
             // deploy devtoken 1     
@@ -74,7 +74,7 @@ developmentChains.includes(network.name) ?
 
             // other instances to mock fake underlying token
             const TokenFactory2 = await ethers.getContractFactory('TokenFactory', tester)
-            const tokenFactory2 = await TokenFactory2.deploy('0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D', mockV3Aggregator.address, REBASE_INTERVAL);
+            const tokenFactory2 = await TokenFactory2.deploy('0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D', mockV3Aggregator.address, REBASE_INTERVAL, sanctionsContract.address);
             await tokenFactory2.deployed();
 
             // Fixtures can return anything you consider useful for your tests

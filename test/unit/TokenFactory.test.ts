@@ -32,10 +32,10 @@ developmentChains.includes(network.name) ?
             await sanctionsContract.deployed();
 
             const TokenFactory = await ethers.getContractFactory('TokenFactory', deployer)
-            const tokenFactory = await TokenFactory.deploy(underlyingToken.address, mockV3Aggregator.address, REBASE_INTERVAL);
+            const tokenFactory = await TokenFactory.deploy(underlyingToken.address, mockV3Aggregator.address, REBASE_INTERVAL, sanctionsContract.address);
             await tokenFactory.deployed();
 
-            // deploy devtoken 1     
+            // deploy devtoken 1
             const DevToken1 = await ethers.getContractFactory("DevToken", deployer);
             const devToken1 = await DevToken1.deploy(TOKEN1_NAME, TOKEN1_SYMBOL, tokenFactory.address, defaultOperators, sanctionsContract.address);
             await devToken1.deployed();
@@ -47,11 +47,11 @@ developmentChains.includes(network.name) ?
 
             // other instances to mock fake underlying token
             const TokenFactory2 = await ethers.getContractFactory('TokenFactory', tester)
-            const tokenFactory2 = await TokenFactory2.deploy('0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D', mockV3Aggregator.address, REBASE_INTERVAL);
+            const tokenFactory2 = await TokenFactory2.deploy('0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D', mockV3Aggregator.address, REBASE_INTERVAL, sanctionsContract.address);
             await tokenFactory2.deployed();
 
             // Fixtures can return anything you consider useful for your tests
-            return { devToken1, devToken2, mockV3Aggregator, underlyingToken, tokenFactory, deployer, tester, tokenFactory2 };
+            return { devToken1, devToken2, mockV3Aggregator, underlyingToken, tokenFactory, deployer, tester, tokenFactory2, sanctionsContract };
         }
 
         describe("Constructor", async function () {
@@ -176,6 +176,24 @@ developmentChains.includes(network.name) ?
 
                 assert.equal(await underlyingToken.balanceOf(deployer.address), expectedBalance);
             })
+
+            it("it should revert if user trying to deposit is on sanction list", async function () {
+                const { tokenFactory, deployer, underlyingToken, devToken1, devToken2, sanctionsContract } = await loadFixture(deployTokenFixture);
+                const depositAmount = ethers.utils.parseEther('6')
+                await tokenFactory.initialize(devToken1.address, devToken2.address);
+                await underlyingToken.approve(tokenFactory.address, depositAmount);
+
+                // add user to sanctions list
+                await sanctionsContract.setSanction(deployer.address, true)
+                const sanctioned = await sanctionsContract.isSanctioned(deployer.address)
+                expect(sanctioned).to.equal(true)
+                await expect(tokenFactory.deposit(depositAmount, deployer.address)).to.be.revertedWithCustomError(tokenFactory, 'TokenFactory__SanctionedAddress');
+
+                // remove user from sanctions list
+                await sanctionsContract.setSanction(deployer.address, false)
+                const notSanctioned = await sanctionsContract.isSanctioned(deployer.address)
+                expect(notSanctioned).to.equal(false)
+            })
         })
 
         describe("Minting", async function () {
@@ -234,7 +252,7 @@ developmentChains.includes(network.name) ?
             it("it should apply pending rebase if a user wants to withdraw", async function () {
                 const { tokenFactory, deployer, underlyingToken, devToken1, devToken2 } = await loadFixture(deployTokenFixture);
                 const depositAmount = ethers.utils.parseEther('6')
-                
+
                 await tokenFactory.initialize(devToken1.address, devToken2.address);
                 // deposit underlying token
                 await underlyingToken.approve(tokenFactory.address, depositAmount);
@@ -243,8 +261,8 @@ developmentChains.includes(network.name) ?
                 // trigger rebase
                 await tokenFactory.rebase();
 
-                await expect(tokenFactory.withdraw(depositAmount, deployer.address, deployer.address)).to.emit(tokenFactory,'RebaseApplied')            
-            })     
+                await expect(tokenFactory.withdraw(depositAmount, deployer.address, deployer.address)).to.emit(tokenFactory,'RebaseApplied')
+            })
             
             it("it should confirm that user gets correct amount of underlying token back after withdrawal", async function () {
                 const { tokenFactory, deployer, underlyingToken, devToken1, devToken2 } = await loadFixture(deployTokenFixture);
@@ -314,7 +332,32 @@ developmentChains.includes(network.name) ?
                 await tokenFactory.deposit(depositAmount, deployer.address)               
                 await tokenFactory.withdraw(depositAmount, deployer.address, deployer.address);
                 await expect(tokenFactory.withdraw(depositAmount, deployer.address, deployer.address)).to.be.reverted           
-            })   
+            })
+
+
+            it("it not allow users on the sanction list to withdraw", async function () {
+                const { tokenFactory, deployer, underlyingToken, devToken1, devToken2, sanctionsContract } = await loadFixture(deployTokenFixture);
+                const depositAmount = ethers.utils.parseEther('6')
+
+                await tokenFactory.initialize(devToken1.address, devToken2.address);
+                // deposit underlying token
+                await underlyingToken.approve(tokenFactory.address, depositAmount);
+                await tokenFactory.deposit(depositAmount, deployer.address)
+
+
+                // add user to sanctions list
+                await sanctionsContract.setSanction(deployer.address, true)
+                const sanctioned = await sanctionsContract.isSanctioned(deployer.address)
+                expect(sanctioned).to.equal(true)
+
+                await expect(tokenFactory.withdraw(depositAmount, deployer.address, deployer.address)).to.be.revertedWithCustomError(tokenFactory, 'TokenFactory__SanctionedAddress');
+
+                // remove user from sanctions list
+                await sanctionsContract.setSanction(deployer.address, false)
+                const notSanctioned = await sanctionsContract.isSanctioned(deployer.address)
+                expect(notSanctioned).to.equal(false)
+
+            })
         })
 
         describe("Redeem", async function () {

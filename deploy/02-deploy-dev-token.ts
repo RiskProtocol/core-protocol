@@ -32,7 +32,7 @@ const func: DeployFunction = async ({ getNamedAccounts, deployments, network }) 
 
     log("----------------------------------")
 
-    log("Deploying DevToken 2...")   
+    log("Deploying DevToken 2...")
     const DevToken2 = await deploy("DevToken", {
         from: deployer,
         args: [TOKEN2_NAME, TOKEN2_SYMBOL, tokenFactory.address, defaultOperators, sanctionsContractAddress],

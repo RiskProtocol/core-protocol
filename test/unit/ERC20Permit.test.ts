@@ -35,7 +35,7 @@ developmentChains.includes(network.name) ?
             await sanctionsContract.deployed();
 
             const TokenFactory = await ethers.getContractFactory('TokenFactory', deployer)
-            const tokenFactory = await TokenFactory.deploy(underlyingToken.address, mockV3Aggregator.address, REBASE_INTERVAL);
+            const tokenFactory = await TokenFactory.deploy(underlyingToken.address, mockV3Aggregator.address, REBASE_INTERVAL, sanctionsContract.address);
             await tokenFactory.deployed();
 
             // deploy devtoken 1     

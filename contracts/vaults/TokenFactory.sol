@@ -19,6 +19,8 @@ error TokenFactory__RedeemMoreThanMax();
 error TokenFactory__OnlyAssetOwner();
 error TokenFactory__ZeroDeposit();
 error TokenFactory__MethodNotAllowed();
+error TokenFactory__SanctionedAddress();
+
 
 /**
  * @title ERC-20 Rebase Tokens
@@ -43,9 +45,17 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
     uint8 private immutable baseTokenDecimals;
     uint256 private immutable interval;
     uint256 private lastTimeStamp;
+    address public immutable sanctionsContract;
 
     modifier onlyAssetOwner(address assetOwner) {
         if (assetOwner != msg.sender) revert TokenFactory__OnlyAssetOwner();
+        _;
+    }
+
+    modifier isSanctioned(address recipient) {
+        SanctionsList sanctionsList = SanctionsList(sanctionsContract);
+        bool isToSanctioned = sanctionsList.isSanctioned(recipient);
+        if (isToSanctioned) revert TokenFactory__SanctionedAddress();
         _;
     }
 
@@ -56,7 +66,8 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
     constructor(
         IERC20 baseTokenAddress,
         address priceFeedAddress,
-        uint256 rebaseInterval // in seconds
+        uint256 rebaseInterval, // in seconds
+        address sanctionsContract_
     ) ERC20("RiskProtocolVault", "RPK") {
         baseToken = IERC20(baseTokenAddress);
         priceFeed = AggregatorV3Interface(priceFeedAddress);
@@ -64,6 +75,7 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
         baseTokenDecimals = success ? assetDecimals : super.decimals();
         interval = rebaseInterval;
         lastTimeStamp = block.timestamp;
+        sanctionsContract = sanctionsContract_;
     }
 
     function initialize(DevToken token1, DevToken token2) external onlyOwner {
@@ -150,7 +162,7 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
     function deposit(
         uint256 assets,
         address receiver
-    ) public virtual override returns (uint256) {
+    ) public virtual override isSanctioned(_msgSender()) returns (uint256) {
         if (assets == 0) revert TokenFactory__ZeroDeposit();
         if (assets > maxDeposit(receiver))
             revert TokenFactory__DepositMoreThanMax();
@@ -213,6 +225,7 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
         virtual
         override
         onlyAssetOwner(owner_)
+        isSanctioned(_msgSender())
         nonReentrant
         returns (uint256)
     {
