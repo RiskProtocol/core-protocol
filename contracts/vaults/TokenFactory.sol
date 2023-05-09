@@ -87,14 +87,15 @@ contract TokenFactory is
         address chainlinkTokenAddress,
         address chainlinkOracleAddress,
         bytes32 chainlinkJobId,
-        uint256 linkFee
+        uint256 linkFee,
+        uint256 currentTimeStamp
     ) ERC20("RiskProtocolVault", "RPK") {
         baseToken = IERC20(baseTokenAddress);
         priceFeed = AggregatorV3Interface(priceFeedAddress);
         (bool success, uint8 assetDecimals) = _tryGetAssetDecimals(baseToken);
         baseTokenDecimals = success ? assetDecimals : super.decimals();
         interval = rebaseInterval;
-        lastTimeStamp = block.timestamp;
+        lastTimeStamp = currentTimeStamp;
         tokenFactoryState = TokenFactoryState.OPEN;
         setChainlinkToken(chainlinkTokenAddress);
         setChainlinkOracle(chainlinkOracleAddress);
@@ -379,10 +380,8 @@ contract TokenFactory is
     // chainlink automation
     function readyForUpkeep() private view returns (bool ready) {
         bool isOpen = TokenFactoryState.OPEN == tokenFactoryState;
-        bool timePassed = (block.timestamp - lastTimeStamp) > interval;
-        bool hasDeposits = totalAssets() > 0;
-
-        ready = (isOpen && timePassed && hasDeposits);
+        bool timePassed = (block.timestamp - lastTimeStamp) > interval; 
+        ready = (isOpen && timePassed);       
     }
 
     /**
@@ -488,7 +487,7 @@ contract TokenFactory is
             divisor;
         scallingFactorX.push(newScallingFactorX);
 
-        lastTimeStamp += interval * 2;
+        lastTimeStamp += interval;
         tokenFactoryState = TokenFactoryState.OPEN;
 
         emit Rebase(getScallingFactorLength(), newScallingFactorX);
@@ -568,6 +567,14 @@ contract TokenFactory is
 
     function getInterval() public view returns (uint256) {
         return interval;
+    }
+
+    function getLastTimeStamp() public view returns (uint256) {
+        return lastTimeStamp;
+    }
+    
+    function getCurrentBlockTimeStamp() public view returns (uint256) {
+        return block.timestamp;
     }
 
     // unwanted methods
