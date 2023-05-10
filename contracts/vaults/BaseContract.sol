@@ -7,16 +7,16 @@ interface SanctionsList {
     function isSanctioned(address addr) external view returns (bool);
 }
 
-error SanctionedAddress__NotAllowed();
+error BaseContract__SanctionedAddress();
 
 
 contract BaseContract {
-    address public immutable sanctionsContract;
+    address private immutable sanctionsContract;
 
     modifier onlyNotSanctioned(address addressToCheck) {
         SanctionsList sanctionsList = SanctionsList(sanctionsContract);
         bool isSanctionedAddress = sanctionsList.isSanctioned(addressToCheck);
-        if (isSanctionedAddress) revert SanctionedAddress__NotAllowed();
+        if (isSanctionedAddress) revert BaseContract__SanctionedAddress();
         _;
     }
 

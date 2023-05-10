@@ -3,7 +3,7 @@
 pragma solidity ^0.8.9;
 
 contract MockSanctionContract {
-    mapping(address => bool) public sanctions;
+    mapping(address => bool) private sanctions;
 
     function isSanctioned(address addr) external view returns (bool) {
         return sanctions[addr];

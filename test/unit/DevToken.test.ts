@@ -136,58 +136,93 @@ developmentChains.includes(network.name) ?
             })
 
             it("should not allow users to send tokens to addresses in sanctions list", async function () {
-                const { devToken1, devToken2, deployer, tokenFactory, underlyingToken, tester, sanctionsContract } = await loadFixture(deployTokenFixture);
-                const depositAmount = ethers.utils.parseEther('6')
-                const transferAmount = ethers.utils.parseEther('1')
-                const bytes = new Uint8Array([0x01, 0x02, 0x03, 0x04]);
+              const {
+                devToken1,
+                devToken2,
+                deployer,
+                tokenFactory,
+                underlyingToken,
+                tester,
+                sanctionsContract,
+              } = await loadFixture(deployTokenFixture);
+              const depositAmount = ethers.utils.parseEther("6");
+              const transferAmount = ethers.utils.parseEther("1");
+              const bytes = new Uint8Array([0x01, 0x02, 0x03, 0x04]);
 
-                await tokenFactory.initialize(devToken1.address, devToken2.address);
-                await underlyingToken.approve(tokenFactory.address, depositAmount);
-                await tokenFactory.deposit(depositAmount, deployer.address);
+              await tokenFactory.initialize(
+                devToken1.address,
+                devToken2.address
+              );
+              await underlyingToken.approve(
+                tokenFactory.address,
+                depositAmount
+              );
+              await tokenFactory.deposit(depositAmount, deployer.address);
 
-                // add tester to sanctions list
-                await sanctionsContract.setSanction(tester.address, true)
-                const sanctioned = await sanctionsContract.isSanctioned(tester.address)
-                expect(sanctioned).to.equal(true)
-                // transfer token using send function
-                await expect(
-                  devToken1.send(tester.address, transferAmount, bytes)
-                ).to.be.revertedWithCustomError(
-                  devToken1,
-                  "SanctionedAddress__NotAllowed"
-                );
+              // add tester to sanctions list
+              await sanctionsContract.setSanction(tester.address, true);
+              const sanctioned = await sanctionsContract.isSanctioned(
+                tester.address
+              );
+              expect(sanctioned).to.equal(true);
+              // transfer token using send function
+              await expect(
+                devToken1.send(tester.address, transferAmount, bytes)
+              ).to.be.revertedWithCustomError(
+                devToken1,
+                "BaseContract__SanctionedAddress"
+              );
 
-                // remove tester from sanctions list
-                await sanctionsContract.setSanction(tester.address, false)
-                const notSanctioned = await sanctionsContract.isSanctioned(tester.address)
-                expect(notSanctioned).to.equal(false)
-            })
+              // remove tester from sanctions list
+              await sanctionsContract.setSanction(tester.address, false);
+              const notSanctioned = await sanctionsContract.isSanctioned(
+                tester.address
+              );
+              expect(notSanctioned).to.equal(false);
+            });
 
             it("should not allow transfer of tokens to addresses in sanctions list", async function () {
-                const { tokenFactory, deployer, underlyingToken, devToken1, devToken2, tester, sanctionsContract } = await loadFixture(deployTokenFixture);
-                const depositAmount = ethers.utils.parseEther('6')
-                await tokenFactory.initialize(devToken1.address, devToken2.address);
-                await underlyingToken.approve(tokenFactory.address, depositAmount);
-                await tokenFactory.deposit(depositAmount, deployer.address);
+              const {
+                tokenFactory,
+                deployer,
+                underlyingToken,
+                devToken1,
+                devToken2,
+                tester,
+                sanctionsContract,
+              } = await loadFixture(deployTokenFixture);
+              const depositAmount = ethers.utils.parseEther("6");
+              await tokenFactory.initialize(
+                devToken1.address,
+                devToken2.address
+              );
+              await underlyingToken.approve(
+                tokenFactory.address,
+                depositAmount
+              );
+              await tokenFactory.deposit(depositAmount, deployer.address);
 
-                // add tester to sanctions list
-                await sanctionsContract.setSanction(tester.address, true)
-                const sanctioned = await sanctionsContract.isSanctioned(tester.address)
-                expect(sanctioned).to.equal(true)
+              // add tester to sanctions list
+              await sanctionsContract.setSanction(tester.address, true);
+              const sanctioned = await sanctionsContract.isSanctioned(
+                tester.address
+              );
+              expect(sanctioned).to.equal(true);
 
+              await expect(
+                devToken1.transfer(tester.address, depositAmount)
+              ).to.be.revertedWithCustomError(
+                devToken1,
+                "BaseContract__SanctionedAddress"
+              );
 
-                await expect(
-                  devToken1.transfer(tester.address, depositAmount)
-                ).to.be.revertedWithCustomError(
-                  devToken1,
-                  "SanctionedAddress__NotAllowed"
-                );
-
-                // remove tester from sanctions list
-                await sanctionsContract.setSanction(tester.address, false)
-                const notSanctioned = await sanctionsContract.isSanctioned(tester.address)
-                expect(notSanctioned).to.equal(false)
-            })
+              // remove tester from sanctions list
+              await sanctionsContract.setSanction(tester.address, false);
+              const notSanctioned = await sanctionsContract.isSanctioned(
+                tester.address
+              );
+              expect(notSanctioned).to.equal(false);
+            });
         })
 
         describe("Mint", async function () {
