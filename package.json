@@ -13,7 +13,8 @@
     "prettier": "prettier --write 'contracts/**/*.sol'",
     "coverage": "hardhat coverage",
     "typechain": "hardhat typechain",
-    "prepare": "husky install"
+    "prepare": "husky install",
+    "forge": "forge install forge-std"
   },
   "devDependencies": {
     "@ethersproject/abi": "^5.4.7",

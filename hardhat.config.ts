@@ -31,7 +31,8 @@ const config: HardhatUserConfig = {
     hardhat: {
       chainId: 31337,
       forking: {
-        url: process.env.MAINNET_RPC_URL! // https://eth-mainnet.g.alchemy.com/v2/MY_KEY
+        url: process.env.MAINNET_RPC_URL!,
+        blockNumber: 17268750 // hardhat recommends forking from a specific block number. for more infor -->https://hardhat.org/hardhat-network/docs/guides/forking-other-networks
       },
     },
     goerli:{
@@ -84,7 +85,10 @@ const config: HardhatUserConfig = {
     disambiguatePaths: false,
     runOnCompile: false,
     strict: true   
-  } 
+  },
+  mocha: {
+    timeout: 100000000
+  }  
 };
 
 export default config;

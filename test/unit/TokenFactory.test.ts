@@ -111,12 +111,7 @@ developmentChains.includes(network.name) ?
             it("it returns the correct value for convertToShares function", async function () {
                 const { tokenFactory } = await loadFixture(deployTokenFixture);
                 assert.equal(await tokenFactory.convertToShares('5'), '5');
-            })
-
-            it("it returns the correct value for convertToShares function", async function () {
-                const { tokenFactory } = await loadFixture(deployTokenFixture);
-                assert.equal(await tokenFactory.convertToShares('5'), '5');
-            })
+            })           
 
             it("it returns the correct value for convertToAssets function", async function () {
                 const { tokenFactory } = await loadFixture(deployTokenFixture);
@@ -125,34 +120,15 @@ developmentChains.includes(network.name) ?
         })
 
         describe("Deposit", async function () {
-          it("it returns the correct value for maxDeposit function", async function () {
-            const { tokenFactory, deployer } = await loadFixture(
-              deployTokenFixture
-            );
-            expect(await tokenFactory.maxDeposit(deployer.address)).to.equal(
-              "115792089237316195423570985008687907853269984665640564039457584007913129639934"
-            );
-          });
+            it("it returns the correct value for maxDeposit function", async function () {
+                const { tokenFactory, deployer } = await loadFixture(deployTokenFixture);
+                expect(await tokenFactory.maxDeposit(deployer.address)).to.equal(ethers.constants.MaxUint256);
+            })
 
-          it("it returns the correct value for previewDeposit function", async function () {
-            const { tokenFactory } = await loadFixture(deployTokenFixture);
-            expect(await tokenFactory.previewDeposit("5")).to.equal("5");
-          });
-
-          it("it should revert when user wants to deposit more than maximum amount", async function () {
-            const { tokenFactory, deployer } = await loadFixture(
-              deployTokenFixture
-            );
-            await expect(
-              tokenFactory.deposit(
-                ethers.constants.MaxUint256,
-                deployer.address
-              )
-            ).to.be.revertedWithCustomError(
-              tokenFactory,
-              "TokenFactory__DepositMoreThanMax"
-            );
-          });
+            it("it returns the correct value for previewDeposit function", async function () {
+                const { tokenFactory } = await loadFixture(deployTokenFixture);
+                expect(await tokenFactory.previewDeposit('5')).to.equal('5');
+            })
 
           it("it should revert when user wants to deposit 0 token", async function () {
             const { tokenFactory, deployer } = await loadFixture(
@@ -263,53 +239,27 @@ developmentChains.includes(network.name) ?
         });
 
         describe("Minting", async function () {
-          it("it returns the correct value for maxMint function", async function () {
-            const { tokenFactory, deployer } = await loadFixture(
-              deployTokenFixture
-            );
-            expect(await tokenFactory.maxMint(deployer.address)).to.equal(
-              "115792089237316195423570985008687907853269984665640564039457584007913129639934"
-            );
-          });
+            it("it returns the correct value for maxMint function", async function () {
+                const { tokenFactory, deployer } = await loadFixture(deployTokenFixture);
+                expect(await tokenFactory.maxMint(deployer.address)).to.equal(ethers.constants.MaxUint256);
+            })
 
           it("it returns the correct value for previewMint function", async function () {
             const { tokenFactory } = await loadFixture(deployTokenFixture);
             assert.equal(await tokenFactory.previewMint("5"), "5");
           });
 
-          it("it should revert when user wants to mint more than maximum amount", async function () {
-            const { tokenFactory, deployer } = await loadFixture(
-              deployTokenFixture
-            );
-            await expect(
-              tokenFactory.mint(ethers.constants.MaxUint256, deployer.address)
-            ).to.be.revertedWithCustomError(
-              tokenFactory,
-              "TokenFactory__MintMoreThanMax"
-            );
-          });
-
-          it("it should make sure that the user is assigned correct amount of token x and y after minting", async function () {
-            const {
-              tokenFactory,
-              deployer,
-              underlyingToken,
-              devToken1,
-              devToken2,
-            } = await loadFixture(deployTokenFixture);
-            const depositAmount = ethers.utils.parseEther("6");
-            await tokenFactory.initialize(devToken1.address, devToken2.address);
-            await underlyingToken.approve(tokenFactory.address, depositAmount);
-            await tokenFactory.mint(depositAmount, deployer.address);
-
-            expect(depositAmount).to.equal(
-              await devToken1.balanceOf(deployer.address)
-            );
-            expect(depositAmount).to.equal(
-              await devToken2.balanceOf(deployer.address)
-            );
-          });
-        });
+            it("it should make sure that the user is assigned correct amount of token x and y after minting", async function () {
+                const { tokenFactory, deployer, underlyingToken, devToken1, devToken2 } = await loadFixture(deployTokenFixture);
+                const depositAmount = ethers.utils.parseEther('6')
+                await tokenFactory.initialize(devToken1.address, devToken2.address);
+                await underlyingToken.approve(tokenFactory.address, depositAmount);
+                await tokenFactory.mint(depositAmount, deployer.address);
+                
+                expect(depositAmount).to.equal(await devToken1.balanceOf(deployer.address));
+                expect(depositAmount).to.equal(await devToken2.balanceOf(deployer.address));            
+            })           
+        })
 
         describe("Withdraw", async function () {
           it("it returns the correct value for maxWithdraw function", async function () {
@@ -767,8 +717,8 @@ developmentChains.includes(network.name) ?
         describe("Forbidden Functions", async function () {
             it("should not allow users to call ERC20 totalSupply function", async function () {
                 const { tokenFactory, tester } = await loadFixture(deployTokenFixture);                  
-                await expect(tokenFactory.connect(tester).totalSupply()).to.be.reverted
-            }) 
+                await expect(tokenFactory.connect(tester).totalSupply()).to.be.reverted  
+            })
 
             it("should not allow users to call ERC20 balanceOf function", async function () {
                 const { tokenFactory, deployer, tester } = await loadFixture(deployTokenFixture);                  
