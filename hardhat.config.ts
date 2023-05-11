@@ -34,6 +34,7 @@ const config: HardhatUserConfig = {
         url: process.env.MAINNET_RPC_URL!,
         blockNumber: 17268750 // hardhat recommends forking from a specific block number. for more infor -->https://hardhat.org/hardhat-network/docs/guides/forking-other-networks
       },
+      allowUnlimitedContractSize: true  
     },
     goerli:{
       url:process.env.GOERLI_RPC_URL,

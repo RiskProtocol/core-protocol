@@ -1,16 +1,6 @@
 import { assert, expect } from "chai";
 import { ethers, network } from "hardhat"
-import {
-    developmentChains,
-    REBASE_INTERVAL,
-    TOKEN1_NAME,
-    TOKEN1_SYMBOL,
-    defaultOperators,
-    TOKEN2_NAME,
-    TOKEN2_SYMBOL,
-    DECIMALS,
-    INITIAL_PRICE,
-} from "../../helper-hardhat-config";
+import { developmentChains, REBASE_INTERVAL, TOKEN1_NAME, TOKEN1_SYMBOL, defaultOperators, TOKEN2_NAME, TOKEN2_SYMBOL, DECIMALS, INITIAL_PRICE } from "../../helper-hardhat-config";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 
 developmentChains.includes(network.name) ?
@@ -18,12 +8,12 @@ developmentChains.includes(network.name) ?
         async function deployTokenFixture() {
             const [deployer, tester] = await ethers.getSigners();
 
-            const MockV3Aggregator = await ethers.getContractFactory('MockV3Aggregator', deployer)
-            const mockV3Aggregator = await MockV3Aggregator.deploy(DECIMALS, INITIAL_PRICE);
+            const MockV3AggregatorFactory = await ethers.getContractFactory('MockV3Aggregator', deployer)
+            const mockV3Aggregator = await MockV3AggregatorFactory.deploy(DECIMALS, INITIAL_PRICE);
             await mockV3Aggregator.deployed();
 
-            const MockERC20Token = await ethers.getContractFactory('MockERC20Token', deployer)
-            const underlyingToken = await MockERC20Token.deploy();
+            const MockERC20TokenWithPermit = await ethers.getContractFactory('MockERC20TokenWithPermit', deployer)
+            const underlyingToken = await MockERC20TokenWithPermit.deploy();
             await underlyingToken.deployed();
 
             // deploy sanctions list mock
@@ -31,27 +21,47 @@ developmentChains.includes(network.name) ?
             const sanctionsContract = await SanctionsList.deploy();
             await sanctionsContract.deployed();
 
-            const TokenFactory = await ethers.getContractFactory('TokenFactory', deployer)
-            const tokenFactory = await TokenFactory.deploy(underlyingToken.address, mockV3Aggregator.address, REBASE_INTERVAL, sanctionsContract.address);
+            const TokenFactoryFactory = await ethers.getContractFactory('TokenFactory', deployer)
+            const tokenFactory = await TokenFactoryFactory.deploy(underlyingToken.address, mockV3Aggregator.address, REBASE_INTERVAL, sanctionsContract.address);
             await tokenFactory.deployed();
 
-            // deploy devtoken 1
-            const DevToken1 = await ethers.getContractFactory("DevToken", deployer);
-            const devToken1 = await DevToken1.deploy(TOKEN1_NAME, TOKEN1_SYMBOL, tokenFactory.address, defaultOperators, sanctionsContract.address);
+            // deploy devtoken 1     
+            const DevToken1Factory = await ethers.getContractFactory("DevToken", deployer);
+            const devToken1 = await DevToken1Factory.deploy(TOKEN1_NAME, TOKEN1_SYMBOL, tokenFactory.address, defaultOperators, sanctionsContract.address);
             await devToken1.deployed();
 
             // deploy devtoken 2 
-            const DevToken2 = await ethers.getContractFactory("DevToken", deployer);
-            const devToken2 = await DevToken2.deploy(TOKEN2_NAME, TOKEN2_SYMBOL, tokenFactory.address, defaultOperators, sanctionsContract.address);
+            const DevToken2Factory = await ethers.getContractFactory("DevToken", deployer);
+            const devToken2 = await DevToken2Factory.deploy(TOKEN2_NAME, TOKEN2_SYMBOL, tokenFactory.address, defaultOperators, sanctionsContract.address);
             await devToken2.deployed();
 
             // other instances to mock fake underlying token
-            const TokenFactory2 = await ethers.getContractFactory('TokenFactory', tester)
-            const tokenFactory2 = await TokenFactory2.deploy('0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D', mockV3Aggregator.address, REBASE_INTERVAL, sanctionsContract.address);
+            const TokenFactory2Factory = await ethers.getContractFactory('TokenFactory', tester)
+            const tokenFactory2 = await TokenFactory2Factory.deploy('0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D', mockV3Aggregator.address, REBASE_INTERVAL, sanctionsContract.address);
             await tokenFactory2.deployed();
 
+            // Underlying Asset without permit function 
+            const MockERC20TokenWithoutPermit = await ethers.getContractFactory('MockERC20TokenWithoutPermit', deployer)
+            const underlyingTokenWithoutPermit = await MockERC20TokenWithoutPermit.deploy();
+            await underlyingTokenWithoutPermit.deployed();
+
+            const TokenFactory3Factory = await ethers.getContractFactory('TokenFactory', deployer)
+            const tokenFactory3 = await TokenFactory3Factory.deploy(underlyingTokenWithoutPermit.address, mockV3Aggregator.address, REBASE_INTERVAL, sanctionsContract.address);
+            await tokenFactory3.deployed();
+
+            // deploy devtoken 1  for the token factory without permit  
+            const DevTokenXFactory = await ethers.getContractFactory("DevToken", deployer);
+            const devTokenX = await DevTokenXFactory.deploy(TOKEN1_NAME, TOKEN1_SYMBOL, tokenFactory3.address, defaultOperators, sanctionsContract.address);
+            await devTokenX.deployed();
+
+            // deploy devtoken 2  for the token factory without permit  
+            const DevTokenYFactory = await ethers.getContractFactory("DevToken", deployer);
+            const devTokenY = await DevTokenYFactory.deploy(TOKEN2_NAME, TOKEN2_SYMBOL, tokenFactory3.address, defaultOperators, sanctionsContract.address);
+            await devTokenY.deployed();
+
+
             // Fixtures can return anything you consider useful for your tests
-            return { devToken1, devToken2, mockV3Aggregator, underlyingToken, tokenFactory, deployer, tester, tokenFactory2, sanctionsContract };
+            return { devToken1, devToken2, mockV3Aggregator, underlyingToken, tokenFactory, deployer, tester, tokenFactory2, underlyingTokenWithoutPermit, tokenFactory3, devTokenX, devTokenY, sanctionsContract };
         }
 
         describe("Constructor", async function () {
@@ -127,116 +137,129 @@ developmentChains.includes(network.name) ?
 
             it("it returns the correct value for previewDeposit function", async function () {
                 const { tokenFactory } = await loadFixture(deployTokenFixture);
-                expect(await tokenFactory.previewDeposit('5')).to.equal('5');
+                expect(await tokenFactory.previewDeposit('5')).to.equal('5');              
             })
 
-          it("it should revert when user wants to deposit 0 token", async function () {
-            const { tokenFactory, deployer } = await loadFixture(
-              deployTokenFixture
-            );
-            await expect(
-              tokenFactory.deposit("0", deployer.address)
-            ).to.be.revertedWithCustomError(
-              tokenFactory,
-              "TokenFactory__ZeroDeposit"
-            );
-          });
+            it("it should revert when user wants to deposit 0 token", async function () {
+                const { tokenFactory, deployer } = await loadFixture(deployTokenFixture);
+                await expect(tokenFactory.deposit('0', deployer.address)).to.be.revertedWithCustomError(tokenFactory, 'TokenFactory__ZeroDeposit')
+            })
 
-          it("it should allow user to deposit acceptable amount of the underlying token successfully", async function () {
-            const {
-              tokenFactory,
-              deployer,
-              underlyingToken,
-              devToken1,
-              devToken2,
-            } = await loadFixture(deployTokenFixture);
-            const depositAmount = ethers.utils.parseEther("6");
-            await tokenFactory.initialize(devToken1.address, devToken2.address);
-            await underlyingToken.approve(tokenFactory.address, depositAmount);
-            await expect(
-              tokenFactory.deposit(depositAmount, deployer.address)
-            ).to.emit(tokenFactory, "Deposit");
-          });
+            it("it should allow user to deposit acceptable amount of the underlying token successfully", async function () {
+                const { tokenFactory, deployer, underlyingToken, devToken1, devToken2 } = await loadFixture(deployTokenFixture);
+                const depositAmount = ethers.utils.parseEther('6')
+                await tokenFactory.initialize(devToken1.address, devToken2.address);
+                await underlyingToken.approve(tokenFactory.address, depositAmount);
+                await expect(tokenFactory.deposit(depositAmount, deployer.address)).to.emit(tokenFactory, 'Deposit')
+            })
 
-          it("it should make sure that the user is assigned correct amount of token x and y after deposit", async function () {
-            const {
-              tokenFactory,
-              deployer,
-              underlyingToken,
-              devToken1,
-              devToken2,
-            } = await loadFixture(deployTokenFixture);
-            const depositAmount = ethers.utils.parseEther("6");
-            await tokenFactory.initialize(devToken1.address, devToken2.address);
-            await underlyingToken.approve(tokenFactory.address, depositAmount);
-            await tokenFactory.deposit(depositAmount, deployer.address);
+            it("it should make sure that the user is assigned correct amount of token x and y after deposit", async function () {
+                const { tokenFactory, deployer, underlyingToken, devToken1, devToken2 } = await loadFixture(deployTokenFixture);
+                const depositAmount = ethers.utils.parseEther('6')
+                await tokenFactory.initialize(devToken1.address, devToken2.address);
+                await underlyingToken.approve(tokenFactory.address, depositAmount);
+                await tokenFactory.deposit(depositAmount, deployer.address);
+                
+                expect(depositAmount).to.equal(await devToken1.balanceOf(deployer.address));
+                expect(depositAmount).to.equal(await devToken2.balanceOf(deployer.address));            
+            })
 
-            expect(depositAmount).to.equal(
-              await devToken1.balanceOf(deployer.address)
-            );
-            expect(depositAmount).to.equal(
-              await devToken2.balanceOf(deployer.address)
-            );
-          });
+            it("it should make sure that the user is debited correct amount of underlying token after making deposit", async function () {
+                const { tokenFactory, deployer, underlyingToken, devToken1, devToken2 } = await loadFixture(deployTokenFixture);
+                const depositAmount = ethers.utils.parseEther('6')
+                const userCurrentBalance = await underlyingToken.balanceOf(deployer.address)
+                const expectedBalance = userCurrentBalance - +depositAmount;
 
-          it("it should make sure that the user is debited correct amount of underlying token after making deposit", async function () {
-            const {
-              tokenFactory,
-              deployer,
-              underlyingToken,
-              devToken1,
-              devToken2,
-            } = await loadFixture(deployTokenFixture);
-            const depositAmount = ethers.utils.parseEther("6");
-            const userCurrentBalance = await underlyingToken.balanceOf(
-              deployer.address
-            );
-            const expectedBalance = userCurrentBalance - +depositAmount;
+                await tokenFactory.initialize(devToken1.address, devToken2.address);
+                await underlyingToken.approve(tokenFactory.address, depositAmount);
+                await tokenFactory.deposit(depositAmount, deployer.address);
 
-            await tokenFactory.initialize(devToken1.address, devToken2.address);
-            await underlyingToken.approve(tokenFactory.address, depositAmount);
-            await tokenFactory.deposit(depositAmount, deployer.address);
+                assert.equal(await underlyingToken.balanceOf(deployer.address), expectedBalance);
+            })
 
-            assert.equal(
-              await underlyingToken.balanceOf(deployer.address),
-              expectedBalance
-            );
-          });
+            it("it should revert if user trying to deposit is on sanction list", async function () {
+              const {
+                tokenFactory,
+                deployer,
+                underlyingToken,
+                devToken1,
+                devToken2,
+                sanctionsContract,
+              } = await loadFixture(deployTokenFixture);
+              const depositAmount = ethers.utils.parseEther("6");
+              await tokenFactory.initialize(devToken1.address, devToken2.address);
+              await underlyingToken.approve(tokenFactory.address, depositAmount);
+  
+              // add user to sanctions list
+              await sanctionsContract.setSanction(deployer.address, true);
+              const sanctioned = await sanctionsContract.isSanctioned(
+                deployer.address
+              );
+              expect(sanctioned).to.equal(true);
+              await expect(
+                tokenFactory.deposit(depositAmount, deployer.address)
+              ).to.be.revertedWithCustomError(
+                tokenFactory,
+                "BaseContract__SanctionedAddress"
+              );
+  
+              // remove user from sanctions list
+              await sanctionsContract.setSanction(deployer.address, false);
+              const notSanctioned = await sanctionsContract.isSanctioned(
+                deployer.address
+              );
+              expect(notSanctioned).to.equal(false);
+            });
 
-          it("it should revert if user trying to deposit is on sanction list", async function () {
-            const {
-              tokenFactory,
-              deployer,
-              underlyingToken,
-              devToken1,
-              devToken2,
-              sanctionsContract,
-            } = await loadFixture(deployTokenFixture);
-            const depositAmount = ethers.utils.parseEther("6");
-            await tokenFactory.initialize(devToken1.address, devToken2.address);
-            await underlyingToken.approve(tokenFactory.address, depositAmount);
+            describe("Deposit with underlying asset that does not support permit", async function () {
+                it("it returns the correct value for maxDeposit function", async function () {
+                    const { tokenFactory3, deployer } = await loadFixture(deployTokenFixture);
+                    expect(await tokenFactory3.maxDeposit(deployer.address)).to.equal('115792089237316195423570985008687907853269984665640564039457584007913129639934'); 
+                })
+    
+                it("it returns the correct value for previewDeposit function", async function () {
+                    const { tokenFactory3 } = await loadFixture(deployTokenFixture);
+                    expect(await tokenFactory3.previewDeposit('5')).to.equal('5');              
+                })
 
-            // add user to sanctions list
-            await sanctionsContract.setSanction(deployer.address, true);
-            const sanctioned = await sanctionsContract.isSanctioned(
-              deployer.address
-            );
-            expect(sanctioned).to.equal(true);
-            await expect(
-              tokenFactory.deposit(depositAmount, deployer.address)
-            ).to.be.revertedWithCustomError(
-              tokenFactory,
-              "BaseContract__SanctionedAddress"
-            );
-
-            // remove user from sanctions list
-            await sanctionsContract.setSanction(deployer.address, false);
-            const notSanctioned = await sanctionsContract.isSanctioned(
-              deployer.address
-            );
-            expect(notSanctioned).to.equal(false);
-          });
-        });
+                it("it should revert when user wants to deposit 0 token", async function () {
+                    const { tokenFactory3, deployer } = await loadFixture(deployTokenFixture);
+                    await expect(tokenFactory3.deposit('0', deployer.address)).to.be.revertedWithCustomError(tokenFactory3, 'TokenFactory__ZeroDeposit')
+                })
+    
+                it("it should allow user to deposit acceptable amount of the underlying token successfully", async function () {
+                    const { tokenFactory3, deployer, underlyingTokenWithoutPermit, devTokenX, devTokenY } = await loadFixture(deployTokenFixture);
+                    const depositAmount = ethers.utils.parseEther('6')
+                    await tokenFactory3.initialize(devTokenX.address, devTokenY.address);
+                    await underlyingTokenWithoutPermit.approve(tokenFactory3.address, depositAmount);
+                    await expect(tokenFactory3.deposit(depositAmount, deployer.address)).to.emit(tokenFactory3, 'Deposit')
+                })
+    
+                it("it should make sure that the user is assigned correct amount of token x and y after deposit", async function () {
+                    const { tokenFactory3, deployer, underlyingTokenWithoutPermit, devTokenX, devTokenY } = await loadFixture(deployTokenFixture);
+                    const depositAmount = ethers.utils.parseEther('6')
+                    await tokenFactory3.initialize(devTokenX.address, devTokenY.address);
+                    await underlyingTokenWithoutPermit.approve(tokenFactory3.address, depositAmount);
+                    await tokenFactory3.deposit(depositAmount, deployer.address);
+                    
+                    expect(depositAmount).to.equal(await devTokenX.balanceOf(deployer.address));
+                    expect(depositAmount).to.equal(await devTokenY.balanceOf(deployer.address));            
+                })
+    
+                it("it should make sure that the user is debited correct amount of underlying token after making deposit", async function () {
+                    const { tokenFactory3, deployer, underlyingTokenWithoutPermit, devTokenX, devTokenY } = await loadFixture(deployTokenFixture);
+                    const depositAmount = ethers.utils.parseEther('6')
+                    const userCurrentBalance = await underlyingTokenWithoutPermit.balanceOf(deployer.address)
+                    const expectedBalance = userCurrentBalance - +depositAmount;
+    
+                    await tokenFactory3.initialize(devTokenX.address, devTokenY.address);
+                    await underlyingTokenWithoutPermit.approve(tokenFactory3.address, depositAmount);
+                    await tokenFactory3.deposit(depositAmount, deployer.address);
+    
+                    assert.equal(await underlyingTokenWithoutPermit.balanceOf(deployer.address), expectedBalance);
+                })
+            })
+        })
 
         describe("Minting", async function () {
             it("it returns the correct value for maxMint function", async function () {
@@ -244,10 +267,10 @@ developmentChains.includes(network.name) ?
                 expect(await tokenFactory.maxMint(deployer.address)).to.equal(ethers.constants.MaxUint256);
             })
 
-          it("it returns the correct value for previewMint function", async function () {
-            const { tokenFactory } = await loadFixture(deployTokenFixture);
-            assert.equal(await tokenFactory.previewMint("5"), "5");
-          });
+            it("it returns the correct value for previewMint function", async function () {
+                const { tokenFactory } = await loadFixture(deployTokenFixture);
+                assert.equal(await tokenFactory.previewMint('5'), '5');
+            })
 
             it("it should make sure that the user is assigned correct amount of token x and y after minting", async function () {
                 const { tokenFactory, deployer, underlyingToken, devToken1, devToken2 } = await loadFixture(deployTokenFixture);
@@ -262,251 +285,157 @@ developmentChains.includes(network.name) ?
         })
 
         describe("Withdraw", async function () {
-          it("it returns the correct value for maxWithdraw function", async function () {
-            const {
-              tokenFactory,
-              deployer,
-              underlyingToken,
-              devToken1,
-              devToken2,
-              tester,
-            } = await loadFixture(deployTokenFixture);
-            const depositAmount = ethers.utils.parseEther("6");
-            await tokenFactory.initialize(devToken1.address, devToken2.address);
-            await underlyingToken.approve(tokenFactory.address, depositAmount);
-            await tokenFactory.deposit(depositAmount, deployer.address);
-            await devToken1.transfer(tester.address, depositAmount);
+            it("it returns the correct value for maxWithdraw function", async function () {
+                const { tokenFactory, deployer, underlyingToken, devToken1, devToken2, tester } = await loadFixture(deployTokenFixture);
+                const depositAmount = ethers.utils.parseEther('6')
+                await tokenFactory.initialize(devToken1.address, devToken2.address);
+                await underlyingToken.approve(tokenFactory.address, depositAmount);
+                await tokenFactory.deposit(depositAmount, deployer.address);
+                await devToken1.transfer(tester.address, depositAmount);
+                
+                expect(await tokenFactory.maxWithdraw(deployer.address)).to.equal(await devToken1.balanceOf(deployer.address));
+            })
 
-            expect(await tokenFactory.maxWithdraw(deployer.address)).to.equal(
-              await devToken1.balanceOf(deployer.address)
-            );
-          });
+            it("it returns the correct value for previewWithdraw function", async function () {
+                const { tokenFactory } = await loadFixture(deployTokenFixture);
+                expect(await tokenFactory.previewWithdraw('5')).to.equal('5');
+            })
 
-          it("it returns the correct value for previewWithdraw function", async function () {
-            const { tokenFactory } = await loadFixture(deployTokenFixture);
-            expect(await tokenFactory.previewWithdraw("5")).to.equal("5");
-          });
+            it("it should revert when user wants to withdraw more than maximum withdrawal amount", async function () {
+                const { tokenFactory, deployer, devToken1, devToken2 } = await loadFixture(deployTokenFixture);
+                
+                await tokenFactory.initialize(devToken1.address, devToken2.address);
+                
+                await expect(tokenFactory.withdraw(ethers.constants.MaxUint256, deployer.address, deployer.address)).to.be.revertedWithCustomError(tokenFactory, 'TokenFactory__WithdrawMoreThanMax')
+            })
 
-          it("it should revert when user wants to withdraw more than maximum withdrawal amount", async function () {
-            const { tokenFactory, deployer, devToken1, devToken2 } =
-              await loadFixture(deployTokenFixture);
+            it("it should apply pending rebase if a user wants to withdraw", async function () {
+                const { tokenFactory, deployer, underlyingToken, devToken1, devToken2 } = await loadFixture(deployTokenFixture);
+                const depositAmount = ethers.utils.parseEther('6')
+                
+                await tokenFactory.initialize(devToken1.address, devToken2.address);
+                // deposit underlying token
+                await underlyingToken.approve(tokenFactory.address, depositAmount);
+                await tokenFactory.deposit(depositAmount, deployer.address)
 
-            await tokenFactory.initialize(devToken1.address, devToken2.address);
+                // trigger rebase
+                await tokenFactory.rebase();
 
-            await expect(
-              tokenFactory.withdraw(
-                ethers.constants.MaxUint256,
-                deployer.address,
+                await expect(tokenFactory.withdraw(depositAmount, deployer.address, deployer.address)).to.emit(tokenFactory,'RebaseApplied')            
+            })     
+            
+            it("it should confirm that user gets correct amount of underlying token back after withdrawal", async function () {
+                const { tokenFactory, deployer, underlyingToken, devToken1, devToken2 } = await loadFixture(deployTokenFixture);
+                const depositAmount = ethers.utils.parseEther('6')
+                
+                await tokenFactory.initialize(devToken1.address, devToken2.address);
+
+                // deposit underlying token
+                await underlyingToken.approve(tokenFactory.address, depositAmount);
+                await tokenFactory.deposit(depositAmount, deployer.address);
+                
+                // get user balance before withdrawal
+                const initialBalance = await underlyingToken.balanceOf(deployer.address);
+                const expectedBalance = +initialBalance + +depositAmount;
+
+                // withdraw underlying token
+                await tokenFactory.withdraw(depositAmount, deployer.address, deployer.address)
+
+                assert.equal(await underlyingToken.balanceOf(deployer.address), expectedBalance);           
+            })    
+            
+            it("it should confirm that users token x and y are reduced correctly after withdrawal", async function () {
+                const { tokenFactory, deployer, underlyingToken, devToken1, devToken2 } = await loadFixture(deployTokenFixture);
+                const depositAmount = ethers.utils.parseEther('6')
+                
+                await tokenFactory.initialize(devToken1.address, devToken2.address);
+
+                // deposit underlying token
+                await underlyingToken.approve(tokenFactory.address, depositAmount);
+                await tokenFactory.deposit(depositAmount, deployer.address);
+                
+                // get user token x and y balance before withdrawal
+                const initialBalanceA = await devToken1.balanceOf(deployer.address);
+                const initialBalanceB = await devToken2.balanceOf(deployer.address);
+                
+                const expectedBalanceA = +initialBalanceA - +depositAmount;
+                const expectedBalanceB = +initialBalanceB - +depositAmount;
+
+                // withdraw underlying token
+                await tokenFactory.withdraw(depositAmount, deployer.address, deployer.address)
+
+                assert.equal(await devToken1.balanceOf(deployer.address), expectedBalanceA);
+                assert.equal(await devToken2.balanceOf(deployer.address), expectedBalanceB);           
+            })  
+            
+            it("it should confirm that user cannot withdraw another persons fund", async function () {
+                const { tokenFactory, deployer, underlyingToken, devToken1, devToken2, tester } = await loadFixture(deployTokenFixture);
+                const depositAmount = ethers.utils.parseEther('6')
+                
+                await tokenFactory.initialize(devToken1.address, devToken2.address);
+
+                // deposit underlying token
+                await underlyingToken.approve(tokenFactory.address, depositAmount);
+                await tokenFactory.deposit(depositAmount, deployer.address);
+                
+                // withdraw underlying token
+                await expect(tokenFactory.withdraw(depositAmount, deployer.address, tester.address)).to.be.revertedWithCustomError(tokenFactory, 'TokenFactory__OnlyAssetOwner')
+            })   
+
+            it("it should test for nonReentrant in withdraw function", async function () {
+                const { tokenFactory, deployer, underlyingToken, devToken1, devToken2 } = await loadFixture(deployTokenFixture);
+                const depositAmount = ethers.utils.parseEther('6')
+                
+                await tokenFactory.initialize(devToken1.address, devToken2.address);
+                // deposit underlying token
+                await underlyingToken.approve(tokenFactory.address, depositAmount);
+                await tokenFactory.deposit(depositAmount, deployer.address)               
+                await tokenFactory.withdraw(depositAmount, deployer.address, deployer.address);
+                await expect(tokenFactory.withdraw(depositAmount, deployer.address, deployer.address)).to.be.reverted           
+            })   
+
+            it("it not allow users on the sanction list to withdraw", async function () {
+              const {
+                tokenFactory,
+                deployer,
+                underlyingToken,
+                devToken1,
+                devToken2,
+                sanctionsContract,
+              } = await loadFixture(deployTokenFixture);
+              const depositAmount = ethers.utils.parseEther("6");
+  
+              await tokenFactory.initialize(devToken1.address, devToken2.address);
+              // deposit underlying token
+              await underlyingToken.approve(tokenFactory.address, depositAmount);
+              await tokenFactory.deposit(depositAmount, deployer.address);
+  
+              // add user to sanctions list
+              await sanctionsContract.setSanction(deployer.address, true);
+              const sanctioned = await sanctionsContract.isSanctioned(
                 deployer.address
-              )
-            ).to.be.revertedWithCustomError(
-              tokenFactory,
-              "TokenFactory__WithdrawMoreThanMax"
-            );
-          });
-
-          it("it should apply pending rebase if a user wants to withdraw", async function () {
-            const {
-              tokenFactory,
-              deployer,
-              underlyingToken,
-              devToken1,
-              devToken2,
-            } = await loadFixture(deployTokenFixture);
-            const depositAmount = ethers.utils.parseEther("6");
-
-            await tokenFactory.initialize(devToken1.address, devToken2.address);
-            // deposit underlying token
-            await underlyingToken.approve(tokenFactory.address, depositAmount);
-            await tokenFactory.deposit(depositAmount, deployer.address);
-
-            // trigger rebase
-            await tokenFactory.rebase();
-
-            await expect(
-              tokenFactory.withdraw(
-                depositAmount,
-                deployer.address,
+              );
+              expect(sanctioned).to.equal(true);
+  
+              await expect(
+                tokenFactory.withdraw(
+                  depositAmount,
+                  deployer.address,
+                  deployer.address
+                )
+              ).to.be.revertedWithCustomError(
+                tokenFactory,
+                "BaseContract__SanctionedAddress"
+              );
+  
+              // remove user from sanctions list
+              await sanctionsContract.setSanction(deployer.address, false);
+              const notSanctioned = await sanctionsContract.isSanctioned(
                 deployer.address
-              )
-            ).to.emit(tokenFactory, "RebaseApplied");
-          });
-
-          it("it should confirm that user gets correct amount of underlying token back after withdrawal", async function () {
-            const {
-              tokenFactory,
-              deployer,
-              underlyingToken,
-              devToken1,
-              devToken2,
-            } = await loadFixture(deployTokenFixture);
-            const depositAmount = ethers.utils.parseEther("6");
-
-            await tokenFactory.initialize(devToken1.address, devToken2.address);
-
-            // deposit underlying token
-            await underlyingToken.approve(tokenFactory.address, depositAmount);
-            await tokenFactory.deposit(depositAmount, deployer.address);
-
-            // get user balance before withdrawal
-            const initialBalance = await underlyingToken.balanceOf(
-              deployer.address
-            );
-            const expectedBalance = +initialBalance + +depositAmount;
-
-            // withdraw underlying token
-            await tokenFactory.withdraw(
-              depositAmount,
-              deployer.address,
-              deployer.address
-            );
-
-            assert.equal(
-              await underlyingToken.balanceOf(deployer.address),
-              expectedBalance
-            );
-          });
-
-          it("it should confirm that users token x and y are reduced correctly after withdrawal", async function () {
-            const {
-              tokenFactory,
-              deployer,
-              underlyingToken,
-              devToken1,
-              devToken2,
-            } = await loadFixture(deployTokenFixture);
-            const depositAmount = ethers.utils.parseEther("6");
-
-            await tokenFactory.initialize(devToken1.address, devToken2.address);
-
-            // deposit underlying token
-            await underlyingToken.approve(tokenFactory.address, depositAmount);
-            await tokenFactory.deposit(depositAmount, deployer.address);
-
-            // get user token x and y balance before withdrawal
-            const initialBalanceA = await devToken1.balanceOf(deployer.address);
-            const initialBalanceB = await devToken2.balanceOf(deployer.address);
-
-            const expectedBalanceA = +initialBalanceA - +depositAmount;
-            const expectedBalanceB = +initialBalanceB - +depositAmount;
-
-            // withdraw underlying token
-            await tokenFactory.withdraw(
-              depositAmount,
-              deployer.address,
-              deployer.address
-            );
-
-            assert.equal(
-              await devToken1.balanceOf(deployer.address),
-              expectedBalanceA
-            );
-            assert.equal(
-              await devToken2.balanceOf(deployer.address),
-              expectedBalanceB
-            );
-          });
-
-          it("it should confirm that user cannot withdraw another persons fund", async function () {
-            const {
-              tokenFactory,
-              deployer,
-              underlyingToken,
-              devToken1,
-              devToken2,
-              tester,
-            } = await loadFixture(deployTokenFixture);
-            const depositAmount = ethers.utils.parseEther("6");
-
-            await tokenFactory.initialize(devToken1.address, devToken2.address);
-
-            // deposit underlying token
-            await underlyingToken.approve(tokenFactory.address, depositAmount);
-            await tokenFactory.deposit(depositAmount, deployer.address);
-
-            // withdraw underlying token
-            await expect(
-              tokenFactory.withdraw(
-                depositAmount,
-                deployer.address,
-                tester.address
-              )
-            ).to.be.revertedWithCustomError(
-              tokenFactory,
-              "TokenFactory__OnlyAssetOwner"
-            );
-          });
-
-          it("it should test for nonReentrant in withdraw function", async function () {
-            const {
-              tokenFactory,
-              deployer,
-              underlyingToken,
-              devToken1,
-              devToken2,
-            } = await loadFixture(deployTokenFixture);
-            const depositAmount = ethers.utils.parseEther("6");
-
-            await tokenFactory.initialize(devToken1.address, devToken2.address);
-            // deposit underlying token
-            await underlyingToken.approve(tokenFactory.address, depositAmount);
-            await tokenFactory.deposit(depositAmount, deployer.address);
-            await tokenFactory.withdraw(
-              depositAmount,
-              deployer.address,
-              deployer.address
-            );
-            await expect(
-              tokenFactory.withdraw(
-                depositAmount,
-                deployer.address,
-                deployer.address
-              )
-            ).to.be.reverted;
-          });
-
-          it("it not allow users on the sanction list to withdraw", async function () {
-            const {
-              tokenFactory,
-              deployer,
-              underlyingToken,
-              devToken1,
-              devToken2,
-              sanctionsContract,
-            } = await loadFixture(deployTokenFixture);
-            const depositAmount = ethers.utils.parseEther("6");
-
-            await tokenFactory.initialize(devToken1.address, devToken2.address);
-            // deposit underlying token
-            await underlyingToken.approve(tokenFactory.address, depositAmount);
-            await tokenFactory.deposit(depositAmount, deployer.address);
-
-            // add user to sanctions list
-            await sanctionsContract.setSanction(deployer.address, true);
-            const sanctioned = await sanctionsContract.isSanctioned(
-              deployer.address
-            );
-            expect(sanctioned).to.equal(true);
-
-            await expect(
-              tokenFactory.withdraw(
-                depositAmount,
-                deployer.address,
-                deployer.address
-              )
-            ).to.be.revertedWithCustomError(
-              tokenFactory,
-              "BaseContract__SanctionedAddress"
-            );
-
-            // remove user from sanctions list
-            await sanctionsContract.setSanction(deployer.address, false);
-            const notSanctioned = await sanctionsContract.isSanctioned(
-              deployer.address
-            );
-            expect(notSanctioned).to.equal(false);
-          });
-        });
+              );
+              expect(notSanctioned).to.equal(false);
+            });
+        })
 
         describe("Redeem", async function () {
             it("it returns the correct value for maxRedeem function", async function () {
