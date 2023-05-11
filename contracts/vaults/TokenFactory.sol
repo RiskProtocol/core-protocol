@@ -68,8 +68,7 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable, BaseContract
         address priceFeedAddress,
         uint256 rebaseInterval, // in seconds
         address sanctionsContract_
-    ) ERC20("RiskProtocolVault", "RPK")
-      BaseContract(sanctionsContract_) {
+    ) ERC20("RiskProtocolVault", "RPK") BaseContract(sanctionsContract_) {
         baseToken = IERC20Update(baseTokenAddress);
         priceFeed = AggregatorV3Interface(priceFeedAddress);
         (bool success, uint8 assetDecimals) = _tryGetAssetDecimals(baseToken);
