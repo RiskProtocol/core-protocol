@@ -25,7 +25,7 @@ developmentChains.includes(network.name) ?
             const mockV3Aggregator = await MockV3Aggregator.deploy(DECIMALS, INITIAL_PRICE);
             await mockV3Aggregator.deployed();
 
-            const MockERC20Token = await ethers.getContractFactory('MockERC20Token', deployer)
+            const MockERC20Token = await ethers.getContractFactory('MockERC20TokenWithPermit', deployer)
             const underlyingToken = await MockERC20Token.deploy();
             await underlyingToken.deployed();
 
