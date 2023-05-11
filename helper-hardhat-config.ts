@@ -31,3 +31,4 @@ export const TOKEN2_NAME = "RistP Two"
 export const TOKEN2_SYMBOL = "R2"
 export const REBASE_INTERVAL = 7890000 // 3months in seconds
 export const defaultOperators: string[] = []
+export const sanctionsContractAddress = "0x40C57923924B5c5c5455c48D93317139ADDaC8fb"; //polygon network

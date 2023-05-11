@@ -1,6 +1,16 @@
 import { assert } from "chai";
 import { ethers, network } from "hardhat"
-import { developmentChains, REBASE_INTERVAL, TOKEN1_NAME, TOKEN1_SYMBOL, defaultOperators, TOKEN2_NAME, TOKEN2_SYMBOL, DECIMALS, INITIAL_PRICE } from "../../helper-hardhat-config";
+import {
+    developmentChains,
+    REBASE_INTERVAL,
+    TOKEN1_NAME,
+    TOKEN1_SYMBOL,
+    defaultOperators,
+    TOKEN2_NAME,
+    TOKEN2_SYMBOL,
+    DECIMALS,
+    INITIAL_PRICE,
+} from "../../helper-hardhat-config";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 
 const rebaseTable = [
@@ -43,23 +53,28 @@ developmentChains.includes(network.name) ?
             const underlyingToken = await MockERC20Token.deploy();
             await underlyingToken.deployed();
 
+            // deploy sanctions list mock
+            const SanctionsList = await ethers.getContractFactory('MockSanctionContract', deployer)
+            const sanctionsContract = await SanctionsList.deploy();
+            await sanctionsContract.deployed();
+
             const TokenFactory = await ethers.getContractFactory('TokenFactory', deployer)
-            const tokenFactory = await TokenFactory.deploy(underlyingToken.address, mockV3Aggregator.address, REBASE_INTERVAL);
+            const tokenFactory = await TokenFactory.deploy(underlyingToken.address, mockV3Aggregator.address, REBASE_INTERVAL, sanctionsContract.address);
             await tokenFactory.deployed();
 
             // deploy devtoken 1     
             const DevToken1 = await ethers.getContractFactory("DevToken", deployer);
-            const devToken1 = await DevToken1.deploy(TOKEN1_NAME, TOKEN1_SYMBOL, tokenFactory.address, defaultOperators);
+            const devToken1 = await DevToken1.deploy(TOKEN1_NAME, TOKEN1_SYMBOL, tokenFactory.address, defaultOperators, sanctionsContract.address);
             await devToken1.deployed();
 
             // deploy devtoken 2 
             const DevToken2 = await ethers.getContractFactory("DevToken", deployer);
-            const devToken2 = await DevToken2.deploy(TOKEN2_NAME, TOKEN2_SYMBOL, tokenFactory.address, defaultOperators);
+            const devToken2 = await DevToken2.deploy(TOKEN2_NAME, TOKEN2_SYMBOL, tokenFactory.address, defaultOperators, sanctionsContract.address);
             await devToken2.deployed();
 
             // other instances to mock fake underlying token
             const TokenFactory2 = await ethers.getContractFactory('TokenFactory', tester)
-            const tokenFactory2 = await TokenFactory2.deploy('0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D', mockV3Aggregator.address, REBASE_INTERVAL);
+            const tokenFactory2 = await TokenFactory2.deploy('0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D', mockV3Aggregator.address, REBASE_INTERVAL, sanctionsContract.address);
             await tokenFactory2.deployed();
 
             // Fixtures can return anything you consider useful for your tests
