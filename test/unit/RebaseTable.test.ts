@@ -45,36 +45,36 @@ developmentChains.includes(network.name) ?
         async function deployTokenFixture() {
             const [deployer, tester] = await ethers.getSigners();
 
-            const MockV3Aggregator = await ethers.getContractFactory('MockV3Aggregator', deployer)
-            const mockV3Aggregator = await MockV3Aggregator.deploy(DECIMALS, INITIAL_PRICE);
+            const MockV3AggregatorFactory = await ethers.getContractFactory('MockV3Aggregator', deployer)
+            const mockV3Aggregator = await MockV3AggregatorFactory.deploy(DECIMALS, INITIAL_PRICE);
             await mockV3Aggregator.deployed();
 
-            const MockERC20Token = await ethers.getContractFactory('MockERC20TokenWithPermit', deployer)
-            const underlyingToken = await MockERC20Token.deploy();
+            const MockERC20TokenWithPermit = await ethers.getContractFactory('MockERC20TokenWithPermit', deployer)
+            const underlyingToken = await MockERC20TokenWithPermit.deploy();
             await underlyingToken.deployed();
 
-            // deploy sanctions list mock
-            const SanctionsList = await ethers.getContractFactory('MockSanctionContract', deployer)
-            const sanctionsContract = await SanctionsList.deploy();
-            await sanctionsContract.deployed();
+             // deploy sanctions list mock
+             const SanctionsList = await ethers.getContractFactory('MockSanctionContract', deployer)
+             const sanctionsContract = await SanctionsList.deploy();
+             await sanctionsContract.deployed();
 
-            const TokenFactory = await ethers.getContractFactory('TokenFactory', deployer)
-            const tokenFactory = await TokenFactory.deploy(underlyingToken.address, mockV3Aggregator.address, REBASE_INTERVAL, sanctionsContract.address);
+            const TokenFactoryFactory = await ethers.getContractFactory('TokenFactory', deployer)
+            const tokenFactory = await TokenFactoryFactory.deploy(underlyingToken.address, mockV3Aggregator.address, REBASE_INTERVAL, sanctionsContract.address);
             await tokenFactory.deployed();
 
             // deploy devtoken 1     
-            const DevToken1 = await ethers.getContractFactory("DevToken", deployer);
-            const devToken1 = await DevToken1.deploy(TOKEN1_NAME, TOKEN1_SYMBOL, tokenFactory.address, defaultOperators, sanctionsContract.address);
+            const DevToken1Factory = await ethers.getContractFactory("DevToken", deployer);
+            const devToken1 = await DevToken1Factory.deploy(TOKEN1_NAME, TOKEN1_SYMBOL, tokenFactory.address, defaultOperators, sanctionsContract.address);
             await devToken1.deployed();
 
             // deploy devtoken 2 
-            const DevToken2 = await ethers.getContractFactory("DevToken", deployer);
-            const devToken2 = await DevToken2.deploy(TOKEN2_NAME, TOKEN2_SYMBOL, tokenFactory.address, defaultOperators, sanctionsContract.address);
+            const DevToken2Factory = await ethers.getContractFactory("DevToken", deployer);
+            const devToken2 = await DevToken2Factory.deploy(TOKEN2_NAME, TOKEN2_SYMBOL, tokenFactory.address, defaultOperators, sanctionsContract.address);
             await devToken2.deployed();
 
             // other instances to mock fake underlying token
-            const TokenFactory2 = await ethers.getContractFactory('TokenFactory', tester)
-            const tokenFactory2 = await TokenFactory2.deploy('0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D', mockV3Aggregator.address, REBASE_INTERVAL, sanctionsContract.address);
+            const TokenFactory2Factory = await ethers.getContractFactory('TokenFactory', tester)
+            const tokenFactory2 = await TokenFactory2Factory.deploy('0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D', mockV3Aggregator.address, REBASE_INTERVAL, sanctionsContract.address);
             await tokenFactory2.deployed();
 
             // Fixtures can return anything you consider useful for your tests

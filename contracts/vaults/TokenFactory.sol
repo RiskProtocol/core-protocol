@@ -52,7 +52,7 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable, BaseContract
         _;
     }
 
-    modifier checkDeposit(uint256 assets, address receiver) {
+    modifier validateDeposit(uint256 assets, address receiver) {
         if (assets == 0) revert TokenFactory__ZeroDeposit();
         if (assets > maxDeposit(receiver))
             revert TokenFactory__DepositMoreThanMax();
@@ -161,7 +161,7 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable, BaseContract
     function deposit(
         uint256 assets,
         address receiver
-    ) public checkDeposit(assets, receiver) virtual override returns (uint256) {       
+    ) public validateDeposit(assets, receiver) virtual override returns (uint256) {       
         uint256 shares = previewDeposit(assets);
         _deposit(_msgSender(), receiver, assets, shares);
 
@@ -176,7 +176,7 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable, BaseContract
         uint8 v,
         bytes32 r,
         bytes32 s
-    ) public checkDeposit(assets, receiver)  returns (uint256) {        
+    ) public validateDeposit(assets, receiver)  returns (uint256) {        
         uint256 shares = previewDeposit(assets);
         baseToken.permit(_msgSender(), address(this), shares, deadline, v, r, s);
         _deposit(_msgSender(), receiver, assets, shares);
