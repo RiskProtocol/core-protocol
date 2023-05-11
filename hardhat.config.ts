@@ -33,6 +33,7 @@ const config: HardhatUserConfig = {
       forking: {
         url: process.env.MAINNET_RPC_URL! // https://eth-mainnet.g.alchemy.com/v2/MY_KEY
       },
+      allowUnlimitedContractSize: true  
     },
     goerli:{
       url:process.env.GOERLI_RPC_URL,
