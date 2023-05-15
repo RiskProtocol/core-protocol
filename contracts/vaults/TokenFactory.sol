@@ -75,7 +75,8 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
         lastTimeStamp = block.timestamp;
         managementFeesRate = 0;
         mgmtFeesHistory.push(managementFeesRate);
-        mgmtFeeSum[0] = managementFeesRate;
+        //mgmtFeeSum[0] = managementFeesRate;
+        mgmtFeeSum.push(managementFeesRate);
     }
 
     function initialize(DevToken token1, DevToken token2) external onlyOwner {
@@ -408,11 +409,11 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
             if (outstandingFeesCount > 0) {
                 uint256 sumOfFees;
 
-                uint256 firstFeeMissedIndex = numberOfFeesCycle -
-                    outstandingFeesCount;
-                sumOfFees =
+                uint256 firstFeeMissedIndex = numberOfFeesCycle - //7
+                    outstandingFeesCount; //2
+                sumOfFees = //6,7
                     mgmtFeeSum[numberOfFeesCycle] -
-                    mgmtFeeSum[firstFeeMissedIndex];
+                    mgmtFeeSum[firstFeeMissedIndex]; //5
 
                 uint32 averageX = uint32(sumOfFees / outstandingFeesCount);
 
@@ -547,9 +548,20 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
     function updateManagementFeeSum() private {
         uint mgmtFeeCycleCount = getMgmtFeeFactorLength() - 1;
         //todo: mgmtfeeSum is set to zero in constructor
-        mgmtFeeSum[mgmtFeeCycleCount] = (mgmtFeeSum[mgmtFeeCycleCount - 1] +
-            managementFeesRate);
+
+        mgmtFeeSum.push(mgmtFeeSum[mgmtFeeCycleCount - 1] + managementFeesRate);
     }
+
+    //0 = 0
+    //1 = 1
+    //2 = 3
+    //3 = 3
+    //4 = 6
+
+    //6-3 = 3/2
+    //1.5
+
+    //todo: create a spreadsheet to demonstrate
 
     function calculateManagementFee(
         uint256 amount,
