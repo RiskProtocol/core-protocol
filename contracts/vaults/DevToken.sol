@@ -31,7 +31,9 @@ contract DevToken is ERC20Permit {
     }
 
     /** @dev See {IERC777-burn}. */
-    function burn(uint256 /* amount */, bytes memory /* data */
+    function burn(
+        uint256 /* amount */,
+        bytes memory /* data */
     ) public pure override(ERC777) {
         revert DevToken__MethodNotAllowed();
     }
@@ -61,7 +63,11 @@ contract DevToken is ERC20Permit {
         }
         tokenFactory.updateUserLastRebaseCount(to);
         super.transfer(to, amount);
-        return true;  
+        return true;
+    }
+
+    function devTransfer(address to, uint256 amount) public onlyTokenFactory {
+        super.transfer(to, amount);
     }
 
     /**

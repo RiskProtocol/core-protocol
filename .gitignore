@@ -10,3 +10,4 @@ cache
 artifacts
 deployments/localhost
 
+remix-compiler.config.js

@@ -19,6 +19,7 @@ error TokenFactory__RedeemMoreThanMax();
 error TokenFactory__OnlyAssetOwner();
 error TokenFactory__ZeroDeposit();
 error TokenFactory__MethodNotAllowed();
+error TokenFactory__InvalidDivision();
 
 /**
  * @title ERC-20 Rebase Tokens
@@ -33,6 +34,8 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
     using PriceFeed for AggregatorV3Interface;
     using Math for uint256;
     using SafeMath for uint256;
+    using SafeMath for uint8;
+    using SafeMath for uint32;
 
     // State variables
     uint256[] private scallingFactorX;
@@ -43,6 +46,23 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
     uint8 private immutable baseTokenDecimals;
     uint256 private immutable interval;
     uint256 private lastTimeStamp;
+    //management fees
+    uint32 public managementFeesRate;
+    //mapping(uint256 => uint32) public managementFeesPerRebase;
+    //struct mgmtFeesArray {
+    //     uint256 count;
+    //     uint256 Fees;
+    // }
+    // mgmtFeesArray[] mgmtFeesArrayRecord;
+    //uint256[] public rebaseHistory;
+    //uint256 public lastManagementFeeTimestamp;
+    //uint256 public lastRaseTimeStamp;
+    //uint32 public rebaseInterval; //todo:if rebase interval == interval, then remove this
+    //uint8 public noOfIntervalsPerAnnum;
+    uint32[] public mgmtFeesHistory; //todo make it private
+    mapping(address => uint256) public userMgmtFeeHistory;
+    bool mgmtFeesState;
+    //uint256 rebaseCount;
 
     modifier onlyAssetOwner(address assetOwner) {
         if (assetOwner != msg.sender) revert TokenFactory__OnlyAssetOwner();
@@ -64,6 +84,11 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
         baseTokenDecimals = success ? assetDecimals : super.decimals();
         interval = rebaseInterval;
         lastTimeStamp = block.timestamp;
+        //lastRaseTimeStamp = block.timestamp;
+        managementFeesRate = 0;
+        mgmtFeesHistory.push(managementFeesRate);
+        //noOfIntervalsPerAnnum = uint8(365 days / rebaseInterval) + 1;
+        managementFeesRate = 0;
     }
 
     function initialize(DevToken token1, DevToken token2) external onlyOwner {
@@ -292,6 +317,16 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
     ) internal virtual {
         SafeERC20.safeTransferFrom(baseToken, caller, address(this), assets);
         updateUserLastRebaseCount(receiver);
+        //mgmtFeeslogic
+        //todo:test run
+        if (managementFeesRate > 0) {
+            uint256 fees = calculateManagementFee(shares, true, 0);
+            shares = shares - fees;
+            factoryMint(0, address(this), fees);
+            factoryMint(1, address(this), fees);
+            emit Deposit(caller, address(this), fees, fees);
+        }
+        userMgmtFeeHistory[receiver] = getMgmtFeeFactorLength();
         factoryMint(0, receiver, shares);
         factoryMint(1, receiver, shares);
 
@@ -308,6 +343,15 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
         uint256 assets,
         uint256 shares
     ) internal virtual {
+        //mgmt fees logic
+        if (managementFeesRate > 0) {
+            //todo: add check for boolean
+            uint256 feesRefund = calculateManagementFee(assets, true, 0); //todo: calclulate for all cycles
+            assets = assets + feesRefund;
+            factoryBurn(0, address(this), feesRefund);
+            factoryBurn(1, address(this), feesRefund);
+            emit Withdraw(caller, address(this), owner, feesRefund, feesRefund);
+        }
         factoryBurn(0, caller, assets);
         factoryBurn(1, caller, assets);
         SafeERC20.safeTransfer(baseToken, receiver, assets);
@@ -332,6 +376,14 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
         devTokenArray[devTokenIndex].devBurn(owner_, amount);
     }
 
+    function factoryTransfer(
+        uint256 devTokenIndex,
+        address receiver,
+        uint256 amount
+    ) private {
+        devTokenArray[devTokenIndex].devTransfer(receiver, amount);
+    }
+
     function subUnchecked(
         uint256 scallingFactorX_
     ) public view returns (uint256) {
@@ -341,10 +393,16 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
     }
 
     function rebase() external onlyOwner {
+        //lastRaseTimeStamp = block.timestamp;
+        //rebaseHistory.push(block.timestamp);
+        //rebaseCount++;
         uint256 rebasePrice = priceFeed.getPrice() / 10 ** decimals();
         uint256 asset1Price = rebasePrice.ceilDiv(3); // this should be gotten from the oracle
         uint256 divisor = rebasePrice.ceilDiv(2);
         scallingFactorX.push(((asset1Price * 10 ** decimals()) / 2) / divisor);
+        if (mgmtFeesState) {
+            mgmtFeesHistory.push(managementFeesRate);
+        }
 
         emit Rebase(getScallingFactorLength());
     }
@@ -352,6 +410,87 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
     function applyRebase(address owner_) public {
         uint256 asset1ValueEth = devTokenArray[0].unScaledbalanceOf(owner_);
         uint256 asset2ValueEth = devTokenArray[1].unScaledbalanceOf(owner_);
+        //mgmt fees
+        //todo: To Test
+        if (mgmtFeesState) {
+            uint256 numberOfFeesCycle = getMgmtFeeFactorLength(); //through rebase only
+            uint256 numberOfUserFeeCycle = userMgmtFeeHistory[owner_]; //through rebase only
+
+            uint256 outstandingFeesCount = numberOfFeesCycle -
+                numberOfUserFeeCycle; //let x be 2
+            // rebaseCount(5) -2 =3
+
+            if (outstandingFeesCount > 0) {
+                // uint256 asset1ValueEthFees = 0;
+                // uint256 asset2ValueEthFees = 0;
+                uint32 sumOfFees;
+
+                for (
+                    //todo
+                    uint256 i = (mgmtFeesHistory.length - outstandingFeesCount);
+                    i < mgmtFeesHistory.length;
+                    i++
+                ) {
+                    sumOfFees += mgmtFeesHistory[i];
+                }
+                uint32 averageX = uint32(sumOfFees / outstandingFeesCount);
+
+                uint256 asset1ValueEthFees = calculateManagementFee(
+                    asset1ValueEth,
+                    false,
+                    averageX
+                ).mul(outstandingFeesCount);
+
+                uint256 asset2ValueEthFees = calculateManagementFee(
+                    asset2ValueEth,
+                    false,
+                    averageX
+                ).mul(outstandingFeesCount);
+
+                // while (rebaseCount > outstandingFeesCount) {
+                //     uint32 managementFee = managementFeesPerRebase[
+                //         outstandingFeesCount
+                //     ];
+
+                //     asset1ValueEthFees =
+                //         asset1ValueEthFees +
+                //         calculateManagementFee(
+                //             asset1ValueEth,
+                //             false,
+                //             managementFee
+                //         );
+                //     asset2ValueEthFees =
+                //         asset2ValueEthFees +
+                //         calculateManagementFee(
+                //             asset2ValueEth,
+                //             false,
+                //             managementFee
+                //         );
+                //     outstandingFeesCount++; //3//4
+                // }
+
+                // uint256 asset1ValueEthFees = calculateManagementFee(
+                //     asset1ValueEth
+                // ).mul(outstandingFeesCount);
+
+                // uint256 asset2ValueEthFees = calculateManagementFee(
+                //     asset2ValueEth
+                // ).mul(outstandingFeesCount);
+
+                asset1ValueEth = asset1ValueEth - asset1ValueEthFees;
+                asset2ValueEth = asset2ValueEth - asset2ValueEthFees;
+
+                factoryTransfer(0, address(this), asset1ValueEthFees);
+                factoryTransfer(1, address(this), asset2ValueEthFees);
+                emit Deposit(
+                    owner_,
+                    address(this),
+                    asset1ValueEthFees,
+                    asset1ValueEthFees
+                );
+                userMgmtFeeHistory[owner_] = getMgmtFeeFactorLength();
+            }
+        }
 
         uint256 rollOverValue = calculateRollOverValue(owner_);
         lastRebaseCount[owner_] = getScallingFactorLength();
@@ -380,6 +519,49 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
 
         uint256 asset1Balance = devTokenArray[0].unScaledbalanceOf(owner_);
         uint256 asset2Balance = devTokenArray[1].unScaledbalanceOf(owner_);
+        //todo: add mgmt fees
+
+        if (managementFeesRate > 0) {
+            uint256 numberOfFeesCycle = getMgmtFeeFactorLength(); //through rebase only
+            uint256 numberOfUserFeeCycle = userMgmtFeeHistory[owner_]; //through rebase only
+
+            uint256 outstandingFeesCount = numberOfFeesCycle -
+                numberOfUserFeeCycle;
+
+            if (outstandingFeesCount > 0) {
+                //     uint256 asset1Fee = calculateManagementFee(asset1Balance).mul(
+                //         outstandingFeesCount
+                //     );
+                //     uint256 asset2Fee = calculateManagementFee(asset2Balance).mul(
+                //         outstandingFeesCount
+                //     );
+                uint32 sumOfFees;
+
+                for (
+                    uint256 i = (mgmtFeesHistory.length - outstandingFeesCount);
+                    i < mgmtFeesHistory.length;
+                    i++
+                ) {
+                    sumOfFees += mgmtFeesHistory[i];
+                }
+                uint32 averageX = uint32(sumOfFees / outstandingFeesCount);
+
+                uint256 asset1Fee = calculateManagementFee(
+                    asset1Balance,
+                    false,
+                    averageX
+                ).mul(outstandingFeesCount);
+
+                uint256 asset2Fee = calculateManagementFee(
+                    asset2Balance,
+                    false,
+                    averageX
+                ).mul(outstandingFeesCount);
+                asset1Balance -= asset1Fee;
+                asset2Balance -= asset2Fee;
+            }
+        }
+
         uint256 rollOverValue = ((asset1Balance * scallingFactorX_) +
             (asset2Balance * scallingFactorY)) / denominator;
 
@@ -395,6 +577,64 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
         }
     }
 
+    /*
+    Mgmt Fees Block
+    rate is per annum
+     */
+    //scaling factor is 100
+    function setManagementFeeRate(
+        uint32 rate
+    ) external onlyOwner returns (bool) {
+        require(
+            rate < 10001,
+            "The management fee rate cannot exeed 100 percent (1000)"
+        );
+        managementFeesRate = rate;
+        //managementFeesPerRebase[rebaseCount] = rate;
+        return true;
+    }
+
+    // function setNoOfIntervalsPerAnnm(
+    //     uint8 number
+    // ) external onlyOwner returns (bool) {
+    //     noOfIntervalsPerAnnum = number; //todo: double check logic if rebase interval == interval
+    //     return true;
+    // }
+
+    function calculateManagementFee(
+        uint256 amount,
+        bool isDefault,
+        uint32 mgmtFee //calculates both for fee and refund // same cal/ in wei scale
+    ) public view returns (uint256) {
+        uint256 lastRaseTimeStamp = mgmtFeesHistory[
+            getMgmtFeeFactorLength() - 1
+        ];
+        uint32 internalManagementFeesRate;
+        if (isDefault) {
+            internalManagementFeesRate = managementFeesRate; //managementFeesPerRebase[rebaseCount];
+        } else {
+            internalManagementFeesRate = mgmtFee;
+        }
+
+        uint256 nextRebaseTimeStamp = lastRaseTimeStamp + interval;
+        uint32 mgmtFeesPerInterval = internalManagementFeesRate /
+            uint32(366 days / interval); //todo:
+
+        uint256 userDepositTimeStamp = block.timestamp;
+        uint256 userDepositCycle = nextRebaseTimeStamp - userDepositTimeStamp;
+        uint256 mgmtFeeCycle = nextRebaseTimeStamp - lastRaseTimeStamp;
+
+        if (userDepositCycle == 0 || mgmtFeeCycle == 0) {
+            revert TokenFactory__InvalidDivision();
+        }
+        uint256 userFeesUnscaled = userDepositCycle
+            .mul(mgmtFeesPerInterval)
+            .mul(amount)
+            .div(mgmtFeeCycle);
+        uint256 userFees = userFeesUnscaled.div(10000);
+        return userFees;
+    }
+
     //  other getter methods
     function getPriceFeedAddress() public view returns (AggregatorV3Interface) {
         return priceFeed;
@@ -402,6 +642,10 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
 
     function getScallingFactorLength() public view returns (uint256) {
         return scallingFactorX.length;
+    }
+
+    function getMgmtFeeFactorLength() public view returns (uint256) {
+        return mgmtFeesHistory.length;
     }
 
     function getUserLastRebaseCount(
