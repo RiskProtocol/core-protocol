@@ -9,7 +9,6 @@ import "./BaseContract.sol";
 error DevToken__NotTokenFactory();
 error DevToken__MethodNotAllowed();
 
-
 contract DevToken is ERC20Permit, BaseContract {
     TokenFactory private immutable tokenFactory;
 
@@ -19,16 +18,17 @@ contract DevToken is ERC20Permit, BaseContract {
         _;
     }
 
-
     constructor(
         string memory tokenName,
         string memory tokenSymbol,
         address factoryAddress,
         address[] memory defaultOperators,
         address sanctionsContract_
-    ) ERC777(tokenName, tokenSymbol, defaultOperators)
-      ERC20Permit(tokenName)
-      BaseContract(sanctionsContract_) {
+    )
+        ERC777(tokenName, tokenSymbol, defaultOperators)
+        ERC20Permit(tokenName)
+        BaseContract(sanctionsContract_)
+    {
         tokenFactory = TokenFactory(factoryAddress);
     }
 
@@ -37,7 +37,9 @@ contract DevToken is ERC20Permit, BaseContract {
     }
 
     /** @dev See {IERC777-burn}. */
-    function burn(uint256 /* amount */, bytes memory /* data */
+    function burn(
+        uint256 /* amount */,
+        bytes memory /* data */
     ) public pure override(ERC777) {
         revert DevToken__MethodNotAllowed();
     }
@@ -60,12 +62,21 @@ contract DevToken is ERC20Permit, BaseContract {
     function transfer(
         address to,
         uint256 amount
-    ) public onlyNotSanctioned(to) onlyNotSanctioned(msg.sender) override returns (bool) {
+    )
+        public
+        override
+        onlyNotSanctioned(to)
+        onlyNotSanctioned(msg.sender)
+        returns (bool)
+    {
         address owner_ = msg.sender;
         if (hasPendingRebase(owner_)) {
             tokenFactory.applyRebase(owner_);
         }
         tokenFactory.updateUserLastRebaseCount(to);
+        if (hasPendingRebase(to)) {
+            tokenFactory.applyRebase(to);
+        }
         super.transfer(to, amount);
         return true;
     }
@@ -79,12 +90,20 @@ contract DevToken is ERC20Permit, BaseContract {
         address recipient,
         uint256 amount,
         bytes memory data
-    ) public onlyNotSanctioned(recipient) onlyNotSanctioned(msg.sender) override {
+    )
+        public
+        override
+        onlyNotSanctioned(recipient)
+        onlyNotSanctioned(msg.sender)
+    {
         address owner_ = msg.sender;
         if (hasPendingRebase(owner_)) {
             tokenFactory.applyRebase(owner_);
         }
         tokenFactory.updateUserLastRebaseCount(recipient);
+        if (hasPendingRebase(recipient)) {
+            tokenFactory.applyRebase(recipient);
+        }
         super.send(recipient, amount, data);
     }
 
@@ -115,11 +134,20 @@ contract DevToken is ERC20Permit, BaseContract {
         address sender,
         address recipient,
         uint256 amount
-    ) public onlyNotSanctioned(recipient) onlyNotSanctioned(sender) override returns (bool) {
+    )
+        public
+        override
+        onlyNotSanctioned(recipient)
+        onlyNotSanctioned(sender)
+        returns (bool)
+    {
         if (hasPendingRebase(sender)) {
             tokenFactory.applyRebase(sender);
         }
         tokenFactory.updateUserLastRebaseCount(recipient);
+        if (hasPendingRebase(recipient)) {
+            tokenFactory.applyRebase(recipient);
+        }
         return super.transferFrom(sender, recipient, amount);
     }
 }
