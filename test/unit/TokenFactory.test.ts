@@ -11,7 +11,7 @@ import {
   DECIMALS,
   INITIAL_PRICE,
 } from "../../helper-hardhat-config";
-import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
+import { loadFixture, time } from "@nomicfoundation/hardhat-network-helpers";
 import { token } from "../../typechain-types/@openzeppelin/contracts";
 import { days } from "@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time/duration";
 import { BigNumber } from "ethers";
@@ -828,56 +828,89 @@ developmentChains.includes(network.name)
           expect(fee).to.equal(BigNumber.from(Math.trunc(expectFee)));
         });
 
-        // it(`Should calculate the correct fees amount for 1 ether`, async () => {
-        //   const { tokenFactory, deployer } = await loadFixture(
-        //     deployTokenFixture
-        //   );
-        //   const mgmtFee = 200; // Assuming 2% fee rate
-        //   await tokenFactory.connect(deployer).setManagementFeeRate(mgmtFee);
-        //   const amount = ethers.utils.parseEther("1");
-        //   const isDefault = true;
+        it(`Should calculate the correct fees amount for 0 ether`, async () => {
+          const { tokenFactory, deployer } = await loadFixture(
+            deployTokenFixture
+          );
+          const mgmtFee = 200; // Assuming 2% fee rate
+          await tokenFactory.connect(deployer).setManagementFeeRate(mgmtFee);
+          const amount = ethers.utils.parseEther("0");
+          const isDefault = true;
 
-        //   //   const fee = await tokenFactory.calculateManagementFee(
-        //   //     amount,
-        //   //     isDefault,
-        //   //     mgmtFee
-        //   //   );
-        //   const lastTimeStamp = await tokenFactory.getLastTimeStamp();
-        //   console.log(`lastTimeStamp: ${lastTimeStamp}`);
+          const lastTimeStamp = await tokenFactory.getLastTimeStamp();
+          console.log(`lastTimeStamp: ${lastTimeStamp}`);
 
-        //   const nextRebaseTimeStamp: BigNumber = BigNumber.from(
-        //     Number(lastTimeStamp) + Number(REBASE_INTERVAL)
-        //   );
+          const nextRebaseTimeStamp: bigint = BigInt(
+            Number(lastTimeStamp) + Number(REBASE_INTERVAL)
+          );
 
-        //   const mgmtFeePerInterval: BigNumber = BigNumber.from(
-        //     Math.trunc(mgmtFee / ((86400 * 366) / Number(REBASE_INTERVAL)))
-        //   );
-        //   //contract call
-        //   const fee = await tokenFactory.calculateManagementFee(
-        //     amount,
-        //     isDefault,
-        //     mgmtFee
-        //   );
-        //   let block = await ethers.provider.getBlock("latest");
-        //   const now: BigNumber = BigNumber.from(block.timestamp);
-        //   const userDepositCycle: BigNumber = nextRebaseTimeStamp.sub(now);
-        //   const expectedFeeUnscaled: BigNumber = userDepositCycle
-        //     .mul(mgmtFeePerInterval)
-        //     .mul(amount)
-        //     .div(Number(REBASE_INTERVAL));
+          const oneYear: bigint = BigInt(86400 * 366);
+          const numberOfRebase: bigint = oneYear / BigInt(REBASE_INTERVAL);
+          const mgmtFeePerInterval: bigint = BigInt(mgmtFee) / numberOfRebase;
 
-        //   const expectedFee: BigNumber = expectedFeeUnscaled.div(10000);
+          let block = await ethers.provider.getBlock("latest");
+          const now: bigint = BigInt(block.timestamp);
+          //contract call
+          await time.setNextBlockTimestamp(now);
+          const fee = await tokenFactory.calculateManagementFee(
+            amount,
+            isDefault,
+            mgmtFee
+          );
 
-        //   console.log(`fee from contract: ${fee}`);
-        //   console.log(`block: ${now}`);
-        //   console.log(`mgFeePerInterval : ${mgmtFeePerInterval} \n
-        //     nextRebaseTimeStamp: ${nextRebaseTimeStamp} \n
-        //     userDepositCycle: ${userDepositCycle}`);
+          const userDepositCycle: bigint = nextRebaseTimeStamp - now;
 
-        //   console.log(`expected fee : ${expectedFee}`);
-        //   //const expectedFee: BigNumber = BigNumber.from();
-        //   expect(fee).to.equal(expectedFee);
-        // });
+          const expectedFeeUnscaled2: bigint =
+            (userDepositCycle *
+              mgmtFeePerInterval *
+              BigInt(amount.toString())) /
+            BigInt(REBASE_INTERVAL);
+
+          const expectedFee: bigint = expectedFeeUnscaled2 / BigInt(10000);
+          expect(fee).to.equal(expectedFee);
+        });
+
+        it(`Should calculate the correct fees amount for 1 ether`, async () => {
+          const { tokenFactory, deployer } = await loadFixture(
+            deployTokenFixture
+          );
+          const mgmtFee = 200; // Assuming 2% fee rate
+          await tokenFactory.connect(deployer).setManagementFeeRate(mgmtFee);
+          const amount = ethers.utils.parseEther("1");
+          const isDefault = true;
+
+          const lastTimeStamp = await tokenFactory.getLastTimeStamp();
+          console.log(`lastTimeStamp: ${lastTimeStamp}`);
+
+          const nextRebaseTimeStamp: bigint = BigInt(
+            Number(lastTimeStamp) + Number(REBASE_INTERVAL)
+          );
+
+          const oneYear: bigint = BigInt(86400 * 366);
+          const numberOfRebase: bigint = oneYear / BigInt(REBASE_INTERVAL);
+          const mgmtFeePerInterval: bigint = BigInt(mgmtFee) / numberOfRebase;
+
+          let block = await ethers.provider.getBlock("latest");
+          const now: bigint = BigInt(block.timestamp);
+          //contract call
+          await time.setNextBlockTimestamp(now);
+          const fee = await tokenFactory.calculateManagementFee(
+            amount,
+            isDefault,
+            mgmtFee
+          );
+
+          const userDepositCycle: bigint = nextRebaseTimeStamp - now;
+
+          const expectedFeeUnscaled2: bigint =
+            (userDepositCycle *
+              mgmtFeePerInterval *
+              BigInt(amount.toString())) /
+            BigInt(REBASE_INTERVAL);
+
+          const expectedFee: bigint = expectedFeeUnscaled2 / BigInt(10000);
+          expect(fee).to.equal(expectedFee);
+        });
       });
 
       describe(`ERC777: Token receive and sender implementation`, () => {

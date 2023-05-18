@@ -119,7 +119,6 @@ contract TokenFactory is
         lastTimeStamp = block.timestamp;
         managementFeesRate = 0;
         mgmtFeesHistory.push(managementFeesRate);
-        //mgmtFeeSum[0] = managementFeesRate;
         mgmtFeeSum.push(managementFeesRate);
     }
 
@@ -689,7 +688,7 @@ contract TokenFactory is
         uint256 amount,
         bytes calldata userData,
         bytes calldata operatorData
-    ) external override {
+    ) external override nonReentrant {
         emit Erc777TokenReceived(
             operator,
             from,
@@ -707,7 +706,7 @@ contract TokenFactory is
         uint256 amount,
         bytes calldata userData,
         bytes calldata operatorData
-    ) external override {
+    ) external override nonReentrant {
         emit Erc777TokenSent(
             operator,
             from,
