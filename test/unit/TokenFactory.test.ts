@@ -880,6 +880,46 @@ developmentChains.includes(network.name)
         // });
       });
 
+      describe(`ERC777: Token receive and sender implementation`, () => {
+        it(`Should mint correct amount of tokens to the tokenfactory`, async () => {
+          const {
+            tokenFactory,
+            deployer,
+            devToken1,
+            devToken2,
+            underlyingToken,
+          } = await loadFixture(deployTokenFixture);
+          const amount = ethers.utils.parseEther("1");
+          await tokenFactory.initialize(devToken1.address, devToken2.address);
+          await underlyingToken.approve(tokenFactory.address, amount);
+          await tokenFactory.mint(amount, tokenFactory.address);
+
+          const tokenFactoryBalance = await devToken1.balanceOf(
+            tokenFactory.address
+          );
+          expect(tokenFactoryBalance).to.equal(amount);
+        });
+
+        it(`Should deposit correct amount of tokens to the tokenfactory`, async () => {
+          const {
+            tokenFactory,
+            deployer,
+            devToken1,
+            devToken2,
+            underlyingToken,
+          } = await loadFixture(deployTokenFixture);
+          const amount = ethers.utils.parseEther("1");
+          await tokenFactory.initialize(devToken1.address, devToken2.address);
+          await underlyingToken.approve(tokenFactory.address, amount);
+          await tokenFactory.deposit(amount, tokenFactory.address);
+
+          const tokenFactoryBalance = await devToken1.balanceOf(
+            tokenFactory.address
+          );
+          expect(tokenFactoryBalance).to.equal(amount);
+        });
+      });
+
       describe("Rebase", async function () {
         it("it cannot be triggered by any one apart from the deployer", async function () {
           const { tokenFactory, tester } = await loadFixture(

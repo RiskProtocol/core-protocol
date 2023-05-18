@@ -9,6 +9,10 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/utils/introspection/IERC1820Registry.sol";
+import "@openzeppelin/contracts/token/ERC777/IERC777Recipient.sol";
+import "@openzeppelin/contracts/utils/introspection/ERC1820Implementer.sol";
+import "@openzeppelin/contracts/token/ERC777/IERC777Sender.sol";
 import "./DevToken.sol";
 import "./../libraries/PriceFeed.sol";
 
@@ -30,13 +34,27 @@ error TokenFactory__InvalidDivision();
  * The asset will be burned in exactly the same proportion when asked to redeem/withdrawal the underlying asset.
  * The contract will implement periodic rebalancing
  */
-contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
+contract TokenFactory is
+    ERC20,
+    IERC4626,
+    ReentrancyGuard,
+    Ownable,
+    IERC777Recipient,
+    IERC777Sender,
+    ERC1820Implementer
+{
     using PriceFeed for AggregatorV3Interface;
     using Math for uint256;
     using SafeMath for uint256;
     using SafeMath for uint8;
     using SafeMath for uint32;
 
+    IERC1820Registry private _erc1820 =
+        IERC1820Registry(0x1820a4B7618BdE71Dce8cdc73aAB6C95905faD24);
+    bytes32 private constant TOKENS_RECIPIENT_INTERFACE_HASH =
+        keccak256("ERC777TokensRecipient");
+    bytes32 public constant TOKENS_SENDER_INTERFACE_HASH =
+        keccak256("ERC777TokensSender");
     // State variables
     uint256[] private scallingFactorX;
     DevToken[] private devTokenArray;
@@ -61,12 +79,38 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
     // Events
     event RebaseApplied(address userAddress, uint256 rebaseCount);
     event Rebase(uint256 rebaseCount);
+    event Erc777TokenReceived(
+        address operator,
+        address from,
+        address to,
+        uint256 amount,
+        bytes userData,
+        bytes operatorData
+    );
+    event Erc777TokenSent(
+        address operator,
+        address from,
+        address to,
+        uint256 amount,
+        bytes userData,
+        bytes operatorData
+    );
 
     constructor(
         IERC20 baseTokenAddress,
         address priceFeedAddress,
         uint256 rebaseInterval // in seconds
     ) ERC20("RiskProtocolVault", "RPK") {
+        _erc1820.setInterfaceImplementer(
+            address(this),
+            TOKENS_RECIPIENT_INTERFACE_HASH,
+            address(this)
+        );
+        _erc1820.setInterfaceImplementer(
+            address(this),
+            TOKENS_SENDER_INTERFACE_HASH,
+            address(this)
+        );
         baseToken = IERC20(baseTokenAddress);
         priceFeed = AggregatorV3Interface(priceFeedAddress);
         (bool success, uint8 assetDecimals) = _tryGetAssetDecimals(baseToken);
@@ -632,6 +676,46 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable {
 
     function getInterval() public view returns (uint256) {
         return interval;
+    }
+
+    /* ERC777: token recieve and sender implmentations
+    We could use these as a sort of hooks and allowing us to do stuffs based on
+    the tokens the contract recieve and vice versa.
+     */
+    function tokensReceived(
+        address operator,
+        address from,
+        address to,
+        uint256 amount,
+        bytes calldata userData,
+        bytes calldata operatorData
+    ) external override {
+        emit Erc777TokenReceived(
+            operator,
+            from,
+            to,
+            amount,
+            userData,
+            operatorData
+        );
+    }
+
+    function tokensToSend(
+        address operator,
+        address from,
+        address to,
+        uint256 amount,
+        bytes calldata userData,
+        bytes calldata operatorData
+    ) external override {
+        emit Erc777TokenSent(
+            operator,
+            from,
+            to,
+            amount,
+            userData,
+            operatorData
+        );
     }
 
     // unwanted methods
