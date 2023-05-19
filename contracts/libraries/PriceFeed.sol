@@ -2,6 +2,7 @@
 pragma solidity ^0.8.7;
 
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
+
 /*
     * A library is similar to a contract but you can't decalre a state variable and you can't send ether
     * Money maths is done in terms of wei, 1ether = 1E18 wei(1 * 10^18 wei)  
@@ -16,16 +17,16 @@ import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
     * Chainlink nodes can make API calls
     * Chainlink VRF is used to get provable random numbers
 */
-library PriceFeed{
-    
-    function getPrice(AggregatorV3Interface priceFeed) internal view returns(uint256) {
+library PriceFeed {
+    function getPrice(
+        AggregatorV3Interface priceFeed
+    ) internal view returns (uint256) {
         // here we have to interact with chainlink to get the price
         // inorder to interact with external contracts we will need the address and ABI
-        // to get the ABI, we have to compile the interface   
-        // this price below is ether in terms of USD         
-        (,int256 price,,,) = priceFeed.latestRoundData();   
-        // return uint256(price * 1e10); 
-        return uint256(price); 
-
-    }   
+        // to get the ABI, we have to compile the interface
+        // this price below is ether in terms of USD
+        (, int256 price, , , ) = priceFeed.latestRoundData();
+        // return uint256(price * 1e10);
+        return uint256(price);
+    }
 }

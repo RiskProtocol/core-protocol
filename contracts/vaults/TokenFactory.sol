@@ -21,7 +21,6 @@ error TokenFactory__OnlyAssetOwner();
 error TokenFactory__ZeroDeposit();
 error TokenFactory__MethodNotAllowed();
 
-
 /**
  * @title ERC-20 Rebase Tokens
  * @author Okwuosa Chijioke
@@ -31,7 +30,13 @@ error TokenFactory__MethodNotAllowed();
  * The asset will be burned in exactly the same proportion when asked to redeem/withdrawal the underlying asset.
  * The contract will implement periodic rebalancing
  */
-contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable, BaseContract {
+contract TokenFactory is
+    ERC20,
+    IERC4626,
+    ReentrancyGuard,
+    Ownable,
+    BaseContract
+{
     using PriceFeed for AggregatorV3Interface;
     using Math for uint256;
     using SafeMath for uint256;
@@ -60,8 +65,7 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable, BaseContract
         address priceFeedAddress,
         uint256 rebaseInterval, // in seconds
         address sanctionsContract_
-    ) ERC20("RiskProtocolVault", "RPK")
-      BaseContract(sanctionsContract_) {
+    ) ERC20("RiskProtocolVault", "RPK") BaseContract(sanctionsContract_) {
         baseToken = IERC20(baseTokenAddress);
         priceFeed = AggregatorV3Interface(priceFeedAddress);
         (bool success, uint8 assetDecimals) = _tryGetAssetDecimals(baseToken);

@@ -4,3 +4,4 @@
 yarn test
 yarn lint
 yarn hardhat compile
+yarn run prettier

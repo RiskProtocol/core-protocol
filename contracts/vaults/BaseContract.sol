@@ -9,7 +9,6 @@ interface SanctionsList {
 
 error BaseContract__SanctionedAddress();
 
-
 contract BaseContract {
     address private immutable sanctionsContract;
 

@@ -69,9 +69,9 @@ contract DevToken is ERC20Permit, BaseContract {
         onlyNotSanctioned(msg.sender)
         returns (bool)
     {
-        address owner_ = msg.sender;
-        if (hasPendingRebase(owner_)) {
-            tokenFactory.applyRebase(owner_);
+        address caller = msg.sender;
+        if (hasPendingRebase(caller)) {
+            tokenFactory.applyRebase(caller);
         }
         tokenFactory.updateUserLastRebaseCount(to);
         if (hasPendingRebase(to)) {
@@ -96,14 +96,7 @@ contract DevToken is ERC20Permit, BaseContract {
         onlyNotSanctioned(recipient)
         onlyNotSanctioned(msg.sender)
     {
-        address owner_ = msg.sender;
-        if (hasPendingRebase(owner_)) {
-            tokenFactory.applyRebase(owner_);
-        }
-        tokenFactory.updateUserLastRebaseCount(recipient);
-        if (hasPendingRebase(recipient)) {
-            tokenFactory.applyRebase(recipient);
-        }
+        handlePendingRebase(msg.sender, recipient);
         super.send(recipient, amount, data);
     }
 
@@ -141,13 +134,17 @@ contract DevToken is ERC20Permit, BaseContract {
         onlyNotSanctioned(sender)
         returns (bool)
     {
+        handlePendingRebase(sender, recipient);
+        return super.transferFrom(sender, recipient, amount);
+    }
+
+    function handlePendingRebase(address sender, address receiver) public {
         if (hasPendingRebase(sender)) {
             tokenFactory.applyRebase(sender);
         }
-        tokenFactory.updateUserLastRebaseCount(recipient);
-        if (hasPendingRebase(recipient)) {
-            tokenFactory.applyRebase(recipient);
+        tokenFactory.updateUserLastRebaseCount(receiver);
+        if (hasPendingRebase(receiver)) {
+            tokenFactory.applyRebase(receiver);
         }
-        return super.transferFrom(sender, recipient, amount);
     }
 }
