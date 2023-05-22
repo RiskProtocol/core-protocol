@@ -349,8 +349,7 @@ contract TokenFactory is
         SafeERC20.safeTransferFrom(baseToken, caller, address(this), assets);
         updateUserLastRebaseCount(receiver);
         //mgmtFeeslogic
-        //todo:test run
-        if (managementFeesRate > 0) {
+        if (mgmtFeesState) {
             uint256 fees = calculateManagementFee(shares, true, 0);
             shares = shares - fees;
             factoryMint(0, address(this), fees);
