@@ -811,11 +811,6 @@ developmentChains.includes(network.name)
           let block = await ethers.provider.getBlock("latest");
           const now: number = block.timestamp;
           const userDepositCycle: number = nextRebaseTimeStamp - now;
-          console.log(`block: ${now}`);
-
-          console.log(`mgFeePerInterval : ${mgmtFeePerInterval} \n 
-          nextRebaseTimeStamp: ${nextRebaseTimeStamp} \n
-          userDepositCycle: ${userDepositCycle}`);
 
           const expectFee: number = Math.trunc(
             Math.trunc(
@@ -823,8 +818,7 @@ developmentChains.includes(network.name)
                 Number(REBASE_INTERVAL)
             ) / 10000
           );
-          console.log(`expected fee : ${expectFee}`);
-          //const expectedFee: BigNumber = BigNumber.from();
+
           expect(fee).to.equal(BigNumber.from(Math.trunc(expectFee)));
         });
 
@@ -838,7 +832,6 @@ developmentChains.includes(network.name)
           const isDefault = true;
 
           const lastTimeStamp = await tokenFactory.getLastTimeStamp();
-          console.log(`lastTimeStamp: ${lastTimeStamp}`);
 
           const nextRebaseTimeStamp: bigint = BigInt(
             Number(lastTimeStamp) + Number(REBASE_INTERVAL)

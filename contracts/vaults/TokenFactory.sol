@@ -375,16 +375,20 @@ contract TokenFactory is
         uint256 shares
     ) internal virtual {
         //mgmt fees logic
-        if (managementFeesRate > 0) {
+        uint256 feesRefund = 0;
+        if (mgmtFeesState) {
             //todo: add check for boolean
-            uint256 feesRefund = calculateManagementFee(assets, true, 0); //todo: calclulate for all cycles
-            assets = assets + feesRefund;
+            feesRefund = calculateManagementFee(assets, true, 0); //todo: calclulate for all cycles
+            //assets = assets + feesRefund;
             factoryBurn(0, address(this), feesRefund);
             factoryBurn(1, address(this), feesRefund);
             emit Withdraw(caller, address(this), owner, feesRefund, feesRefund);
         }
         factoryBurn(0, caller, assets);
         factoryBurn(1, caller, assets);
+        if (feesRefund > 0) {
+            assets = assets + feesRefund;
+        }
         SafeERC20.safeTransfer(baseToken, receiver, assets);
 
         emit Withdraw(caller, receiver, owner, assets, shares);
@@ -520,12 +524,11 @@ contract TokenFactory is
         if (managementFeesRate > 0) {
             uint256 numberOfFeesCycle = getMgmtFeeFactorLength() - 1; //through rebase only
             uint256 numberOfUserFeeCycle = userMgmtFeeHistory[owner_]; //through rebase only
-
             uint256 outstandingFeesCount = numberOfFeesCycle -
                 numberOfUserFeeCycle;
 
             if (outstandingFeesCount > 0) {
-                uint256 sumOfFees;
+                uint256 sumOfFees = 0;
 
                 uint256 firstFeeMissedIndex = numberOfFeesCycle -
                     outstandingFeesCount;
@@ -533,18 +536,17 @@ contract TokenFactory is
                     mgmtFeeSum[numberOfFeesCycle] -
                     mgmtFeeSum[firstFeeMissedIndex];
                 //uint32 averageX = uint32(sumOfFees / outstandingFeesCount);
-
                 uint256 asset1Fee = calculateManagementFee(
                     asset1Balance,
                     false,
                     sumOfFees
                 ); //.mul(outstandingFeesCount);
-
                 uint256 asset2Fee = calculateManagementFee(
                     asset2Balance,
                     false,
                     sumOfFees
                 ); //.mul(outstandingFeesCount);
+
                 asset1Balance -= asset1Fee;
                 asset2Balance -= asset2Fee;
             }
@@ -552,7 +554,6 @@ contract TokenFactory is
 
         uint256 rollOverValue = ((asset1Balance * scallingFactorX_) +
             (asset2Balance * scallingFactorY)) / denominator;
-
         return rollOverValue;
     }
 
@@ -706,7 +707,7 @@ contract TokenFactory is
         uint256 amount,
         bytes calldata userData,
         bytes calldata operatorData
-    ) external override nonReentrant {
+    ) external override {
         emit Erc777TokenSent(
             operator,
             from,
