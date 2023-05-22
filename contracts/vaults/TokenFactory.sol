@@ -376,9 +376,9 @@ contract TokenFactory is
     ) internal virtual {
         //mgmt fees logic
         uint256 feesRefund = 0;
+
         if (mgmtFeesState) {
-            //todo: add check for boolean
-            feesRefund = calculateManagementFee(assets, true, 0); //todo: calclulate for all cycles
+            feesRefund = calculateManagementFee(assets, true, 0);
             //assets = assets + feesRefund;
             factoryBurn(0, address(this), feesRefund);
             factoryBurn(1, address(this), feesRefund);
@@ -445,7 +445,6 @@ contract TokenFactory is
         uint256 asset1ValueEth = devTokenArray[0].unScaledbalanceOf(owner_);
         uint256 asset2ValueEth = devTokenArray[1].unScaledbalanceOf(owner_);
         //mgmt fees
-        //todo: To Test
         if (mgmtFeesState) {
             uint256 numberOfFeesCycle = getMgmtFeeFactorLength() - 1; //through rebase only
             uint256 numberOfUserFeeCycle = userMgmtFeeHistory[owner_]; //through rebase only
@@ -519,9 +518,8 @@ contract TokenFactory is
 
         uint256 asset1Balance = devTokenArray[0].unScaledbalanceOf(owner_);
         uint256 asset2Balance = devTokenArray[1].unScaledbalanceOf(owner_);
-        //todo: add mgmt fees
 
-        if (managementFeesRate > 0) {
+        if (mgmtFeesState) {
             uint256 numberOfFeesCycle = getMgmtFeeFactorLength() - 1; //through rebase only
             uint256 numberOfUserFeeCycle = userMgmtFeeHistory[owner_]; //through rebase only
             uint256 outstandingFeesCount = numberOfFeesCycle -
@@ -535,17 +533,17 @@ contract TokenFactory is
                 sumOfFees =
                     mgmtFeeSum[numberOfFeesCycle] -
                     mgmtFeeSum[firstFeeMissedIndex];
-                //uint32 averageX = uint32(sumOfFees / outstandingFeesCount);
+
                 uint256 asset1Fee = calculateManagementFee(
                     asset1Balance,
                     false,
                     sumOfFees
-                ); //.mul(outstandingFeesCount);
+                );
                 uint256 asset2Fee = calculateManagementFee(
                     asset2Balance,
                     false,
                     sumOfFees
-                ); //.mul(outstandingFeesCount);
+                );
 
                 asset1Balance -= asset1Fee;
                 asset2Balance -= asset2Fee;

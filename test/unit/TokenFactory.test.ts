@@ -800,12 +800,10 @@ developmentChains.includes(network.name)
             isDefault,
             mgmtFee
           );
-          console.log(`fee from contract: ${fee}`);
           const mgmtFeePerInterval: number = Math.trunc(
             mgmtFee / ((86400 * 366) / Number(REBASE_INTERVAL))
           );
           const lastTimeStamp: number = await tokenFactory.getLastTimeStamp();
-          console.log(`lastTimeStamp: ${lastTimeStamp}`);
           const nextRebaseTimeStamp: number =
             Number(lastTimeStamp) + Number(REBASE_INTERVAL);
           let block = await ethers.provider.getBlock("latest");

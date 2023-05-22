@@ -40,15 +40,6 @@ const rebaseTable = [
     },
     afterRebase: "4573170000000000000",
   },
-  //   },
-  //   {
-  //     depositValue: "4335000000000000000",
-  //     beforeRebase: {
-  //       x: "3335000000000000000", // we simiulate that one of token X has been traded before rebase
-  //       y: "4335000000000000000",
-  //     },
-  //     afterRebase: "4001500000000000000",
-  //   },
 ];
 
 developmentChains.includes(network.name)
@@ -156,9 +147,6 @@ developmentChains.includes(network.name)
             const userBal = await devToken1.balanceOf(deployer.address);
             const factBal = await devToken1.balanceOf(tokenFactory.address);
 
-            // console.log(`user: ${userBal}`);
-            // console.log(`fact:${factBal}`);
-
             // confirm user balances when rebase has taken place
             assert.equal(
               BigInt(factBal) + BigInt(userBal),
@@ -166,72 +154,117 @@ developmentChains.includes(network.name)
             );
           });
 
-          //   it(`It should withdraw correct amount with respect to fees.`, async function () {
-          //     const {
-          //       tokenFactory,
-          //       deployer,
-          //       underlyingToken,
-          //       devToken1,
-          //       devToken2,
-          //       tester,
-          //     } = await loadFixture(deployTokenFixture);
-          //     const depositAmount: bigint = BigInt(item.depositValue);
-          //     //const transferAmount = ethers.utils.parseEther("1");
+          it(`It should apply rebase with mgmt fee`, async function () {
+            const {
+              tokenFactory,
+              deployer,
+              underlyingToken,
+              devToken1,
+              devToken2,
+              tester,
+            } = await loadFixture(deployTokenFixture);
+            const depositAmount = item.depositValue;
+            //const transferAmount = ethers.utils.parseEther("1");
 
-          //     await tokenFactory.initialize(devToken1.address, devToken2.address);
+            await tokenFactory.initialize(devToken1.address, devToken2.address);
 
-          //     // set the management fee to 2% and activating fees
-          //     await tokenFactory.setManagementFeeRate(200);
-          //     await tokenFactory.setManagementFeeState(true);
+            // set the management fee to 2% and activating fees
+            await tokenFactory.setManagementFeeRate(200);
+            await tokenFactory.setManagementFeeState(true);
 
-          //     // const initialBalance = await underlyingToken.balanceOf(
-          //     //   deployer.address
-          //     // );
-          //     // deposit underlying token
-          //     await underlyingToken.approve(tokenFactory.address, depositAmount);
-          //     await tokenFactory.mint(depositAmount, deployer.address);
+            // deposit underlying token
+            await underlyingToken.approve(tokenFactory.address, depositAmount);
+            await tokenFactory.mint(depositAmount, deployer.address);
 
-          //     // get user balance before withdrawal
+            const userBal: bigint = await devToken1.balanceOf(deployer.address);
+            const factBal = await devToken1.balanceOf(tokenFactory.address);
 
-          //     //const expectedBalance = +initialBalance + +depositAmount;
+            let block = await ethers.provider.getBlock("latest");
+            const now = block.timestamp;
 
-          //     const withdrawAmount: bigint =
-          //       (await devToken1.balanceOf(deployer.address)) >
-          //       (await devToken2.balanceOf(deployer.address))
-          //         ? devToken1.balanceOf(deployer.address)
-          //         : await devToken2.balanceOf(deployer.address);
+            const nextRebaseTimeStamp = now + REBASE_INTERVAL;
+            await time.setNextBlockTimestamp(nextRebaseTimeStamp);
+            await tokenFactory.rebase();
 
-          //     console.log(`withdrawAmount:${withdrawAmount}`);
+            await time.setNextBlockTimestamp(nextRebaseTimeStamp);
+            const fee = await tokenFactory.calculateManagementFee(
+              userBal,
+              true,
+              0
+            );
 
-          //     const userBalanceBeforeWithdrawal: bigint =
-          //       await underlyingToken.balanceOf(deployer.address);
+            //assume that user made tx, apply rebase
+            await time.setNextBlockTimestamp(nextRebaseTimeStamp);
+            await tokenFactory.applyRebase(deployer.address);
 
-          //     // withdraw underlying token
-          //     await tokenFactory.withdraw(
-          //       withdrawAmount,
-          //       deployer.address,
-          //       deployer.address
-          //     );
+            const userBal2: bigint = await devToken1.balanceOf(
+              deployer.address
+            );
 
-          //     const factBal: bigint =
-          //       (await devToken1.balanceOf(tokenFactory.address)) >
-          //       (await devToken2.balanceOf(tokenFactory.address))
-          //         ? await devToken1.balanceOf(tokenFactory.address)
-          //         : await devToken2.balanceOf(tokenFactory.address);
-          //     //const userWithdrawal: bigint = depositAmount - factBal;
-          //     const userWithdrawal: bigint = depositAmount - BigInt(factBal);
-          //     const userBalance: bigint = await underlyingToken.balanceOf(
-          //       deployer.address
-          //     );
+            assert.equal(userBal, BigInt(userBal2) - BigInt(fee));
+          });
 
-          //     const userWithdrawNet: bigint =
-          //       userBalance - userBalanceBeforeWithdrawal;
+          it(`It should withdraw correct amount with respect to fees.`, async function () {
+            const {
+              tokenFactory,
+              deployer,
+              underlyingToken,
+              devToken1,
+              devToken2,
+              tester,
+            } = await loadFixture(deployTokenFixture);
+            const depositAmount: bigint = BigInt(item.depositValue);
 
-          //     // console.log(`userFeesPaid: ${userFeesPaid}`);
-          //     // console.log(`factBal:${factBal}`);
+            await tokenFactory.initialize(devToken1.address, devToken2.address);
 
-          //     assert.equal(userWithdrawNet, userWithdrawal);
-          //   });
+            // set the management fee to 2% and activating fees
+            await tokenFactory.setManagementFeeRate(200);
+            await tokenFactory.setManagementFeeState(true);
+
+            // deposit underlying token
+            await underlyingToken.approve(tokenFactory.address, depositAmount);
+            await tokenFactory.mint(depositAmount, deployer.address);
+
+            const withdrawAmount: bigint =
+              (await devToken1.balanceOf(deployer.address)) >
+              (await devToken2.balanceOf(deployer.address))
+                ? devToken1.balanceOf(deployer.address)
+                : await devToken2.balanceOf(deployer.address);
+
+            let block = await ethers.provider.getBlock("latest");
+            const now: bigint = BigInt(block.timestamp);
+            //contract call
+            await time.setNextBlockTimestamp(now);
+            const fee = await tokenFactory.calculateManagementFee(
+              withdrawAmount,
+              true,
+              0
+            );
+            const userBalance1: bigint = await underlyingToken.balanceOf(
+              deployer.address
+            );
+
+            await time.setNextBlockTimestamp(now);
+
+            // withdraw underlying token
+            await tokenFactory.withdraw(
+              withdrawAmount,
+              deployer.address,
+              deployer.address
+            );
+
+            const expectedWithdraw: bigint =
+              BigInt(withdrawAmount) + BigInt(fee);
+
+            const userBalance2: bigint = await underlyingToken.balanceOf(
+              deployer.address
+            );
+
+            const userWithdrawNet: bigint =
+              BigInt(userBalance2) - BigInt(userBalance1);
+
+            assert.equal(userWithdrawNet, expectedWithdraw);
+          });
 
           it(`it should have correct balances for X and Y tokens after rebase with initial token balance of X:${item.beforeRebase.x}, Y:${item.beforeRebase.y} and when management Fees are set.`, async function () {
             const {
