@@ -43,7 +43,7 @@ const rebaseTable = [
 ];
 
 developmentChains.includes(network.name)
-  ? describe("RebaseTableWithMgmtFees", async function () {
+  ? describe("Management Fees", async function () {
       async function deployTokenFixture() {
         const [deployer, tester] = await ethers.getSigners();
 
@@ -64,6 +64,14 @@ developmentChains.includes(network.name)
         const underlyingToken = await MockERC20Token.deploy();
         await underlyingToken.deployed();
 
+        // deploy sanctions list mock
+        const SanctionsList = await ethers.getContractFactory(
+          "MockSanctionContract",
+          deployer
+        );
+        const sanctionsContract = await SanctionsList.deploy();
+        await sanctionsContract.deployed();
+
         const TokenFactory = await ethers.getContractFactory(
           "TokenFactory",
           deployer
@@ -71,7 +79,8 @@ developmentChains.includes(network.name)
         const tokenFactory = await TokenFactory.deploy(
           underlyingToken.address,
           mockV3Aggregator.address,
-          REBASE_INTERVAL
+          REBASE_INTERVAL,
+          sanctionsContract.address
         );
         await tokenFactory.deployed();
 
@@ -81,7 +90,8 @@ developmentChains.includes(network.name)
           TOKEN1_NAME,
           TOKEN1_SYMBOL,
           tokenFactory.address,
-          defaultOperators
+          defaultOperators,
+          sanctionsContract.address
         );
         await devToken1.deployed();
 
@@ -91,7 +101,8 @@ developmentChains.includes(network.name)
           TOKEN2_NAME,
           TOKEN2_SYMBOL,
           tokenFactory.address,
-          defaultOperators
+          defaultOperators,
+          sanctionsContract.address
         );
         await devToken2.deployed();
 
@@ -103,7 +114,8 @@ developmentChains.includes(network.name)
         const tokenFactory2 = await TokenFactory2.deploy(
           "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D",
           mockV3Aggregator.address,
-          REBASE_INTERVAL
+          REBASE_INTERVAL,
+          sanctionsContract.address
         );
         await tokenFactory2.deployed();
 
