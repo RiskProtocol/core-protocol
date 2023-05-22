@@ -4,11 +4,12 @@ pragma solidity ^0.8.9;
 
 import "./TokenFactory.sol";
 import "../external/ERC20Permit.sol";
+import "./BaseContract.sol";
 
 error DevToken__NotTokenFactory();
 error DevToken__MethodNotAllowed();
 
-contract DevToken is ERC20Permit {
+contract DevToken is ERC20Permit, BaseContract {
     TokenFactory private immutable tokenFactory;
 
     modifier onlyTokenFactory() {
@@ -21,8 +22,13 @@ contract DevToken is ERC20Permit {
         string memory tokenName,
         string memory tokenSymbol,
         address factoryAddress,
-        address[] memory defaultOperators
-    ) ERC777(tokenName, tokenSymbol, defaultOperators) ERC20Permit(tokenName) {
+        address[] memory defaultOperators,
+        address sanctionsContract_
+    )
+        ERC777(tokenName, tokenSymbol, defaultOperators)
+        ERC20Permit(tokenName)
+        BaseContract(sanctionsContract_)
+    {
         tokenFactory = TokenFactory(factoryAddress);
     }
 
@@ -56,13 +62,20 @@ contract DevToken is ERC20Permit {
     function transfer(
         address to,
         uint256 amount
-    ) public override returns (bool) {
+    )
+        public
+        override
+        onlyNotSanctioned(to)
+        onlyNotSanctioned(msg.sender)
+        returns (bool)
+    {
         address owner_ = msg.sender;
         if (hasPendingRebase(owner_)) {
             tokenFactory.applyRebase(owner_);
         }
         tokenFactory.updateUserLastRebaseCount(to);
         super.transfer(to, amount);
+        return true;
         return true;
     }
 
@@ -79,7 +92,12 @@ contract DevToken is ERC20Permit {
         address recipient,
         uint256 amount,
         bytes memory data
-    ) public override {
+    )
+        public
+        override
+        onlyNotSanctioned(recipient)
+        onlyNotSanctioned(msg.sender)
+    {
         address owner_ = msg.sender;
         if (hasPendingRebase(owner_)) {
             tokenFactory.applyRebase(owner_);
@@ -109,5 +127,23 @@ contract DevToken is ERC20Permit {
 
     function getTokenFactory() public view returns (address) {
         return address(tokenFactory);
+    }
+
+    function transferFrom(
+        address sender,
+        address recipient,
+        uint256 amount
+    )
+        public
+        override
+        onlyNotSanctioned(recipient)
+        onlyNotSanctioned(sender)
+        returns (bool)
+    {
+        if (hasPendingRebase(sender)) {
+            tokenFactory.applyRebase(sender);
+        }
+        tokenFactory.updateUserLastRebaseCount(recipient);
+        return super.transferFrom(sender, recipient, amount);
     }
 }

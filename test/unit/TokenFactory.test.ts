@@ -38,6 +38,14 @@ developmentChains.includes(network.name)
         const underlyingToken = await MockERC20Token.deploy();
         await underlyingToken.deployed();
 
+        // deploy sanctions list mock
+        const SanctionsList = await ethers.getContractFactory(
+          "MockSanctionContract",
+          deployer
+        );
+        const sanctionsContract = await SanctionsList.deploy();
+        await sanctionsContract.deployed();
+
         const TokenFactory = await ethers.getContractFactory(
           "TokenFactory",
           deployer
@@ -45,7 +53,8 @@ developmentChains.includes(network.name)
         const tokenFactory = await TokenFactory.deploy(
           underlyingToken.address,
           mockV3Aggregator.address,
-          REBASE_INTERVAL
+          REBASE_INTERVAL,
+          sanctionsContract.address
         );
         await tokenFactory.deployed();
 
@@ -55,7 +64,8 @@ developmentChains.includes(network.name)
           TOKEN1_NAME,
           TOKEN1_SYMBOL,
           tokenFactory.address,
-          defaultOperators
+          defaultOperators,
+          sanctionsContract.address
         );
         await devToken1.deployed();
 
@@ -65,7 +75,8 @@ developmentChains.includes(network.name)
           TOKEN2_NAME,
           TOKEN2_SYMBOL,
           tokenFactory.address,
-          defaultOperators
+          defaultOperators,
+          sanctionsContract.address
         );
         await devToken2.deployed();
 
@@ -77,7 +88,8 @@ developmentChains.includes(network.name)
         const tokenFactory2 = await TokenFactory2.deploy(
           "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D",
           mockV3Aggregator.address,
-          REBASE_INTERVAL
+          REBASE_INTERVAL,
+          sanctionsContract.address
         );
         await tokenFactory2.deployed();
 
@@ -91,6 +103,7 @@ developmentChains.includes(network.name)
           deployer,
           tester,
           tokenFactory2,
+          sanctionsContract,
         };
       }
 
@@ -284,6 +297,40 @@ developmentChains.includes(network.name)
             await underlyingToken.balanceOf(deployer.address),
             expectedBalance
           );
+        });
+
+        it("it should revert if user trying to deposit is on sanction list", async function () {
+          const {
+            tokenFactory,
+            deployer,
+            underlyingToken,
+            devToken1,
+            devToken2,
+            sanctionsContract,
+          } = await loadFixture(deployTokenFixture);
+          const depositAmount = ethers.utils.parseEther("6");
+          await tokenFactory.initialize(devToken1.address, devToken2.address);
+          await underlyingToken.approve(tokenFactory.address, depositAmount);
+
+          // add user to sanctions list
+          await sanctionsContract.setSanction(deployer.address, true);
+          const sanctioned = await sanctionsContract.isSanctioned(
+            deployer.address
+          );
+          expect(sanctioned).to.equal(true);
+          await expect(
+            tokenFactory.deposit(depositAmount, deployer.address)
+          ).to.be.revertedWithCustomError(
+            tokenFactory,
+            "BaseContract__SanctionedAddress"
+          );
+
+          // remove user from sanctions list
+          await sanctionsContract.setSanction(deployer.address, false);
+          const notSanctioned = await sanctionsContract.isSanctioned(
+            deployer.address
+          );
+          expect(notSanctioned).to.equal(false);
         });
       });
 
@@ -538,6 +585,48 @@ developmentChains.includes(network.name)
               deployer.address
             )
           ).to.be.reverted;
+        });
+
+        it("it not allow users on the sanction list to withdraw", async function () {
+          const {
+            tokenFactory,
+            deployer,
+            underlyingToken,
+            devToken1,
+            devToken2,
+            sanctionsContract,
+          } = await loadFixture(deployTokenFixture);
+          const depositAmount = ethers.utils.parseEther("6");
+
+          await tokenFactory.initialize(devToken1.address, devToken2.address);
+          // deposit underlying token
+          await underlyingToken.approve(tokenFactory.address, depositAmount);
+          await tokenFactory.deposit(depositAmount, deployer.address);
+
+          // add user to sanctions list
+          await sanctionsContract.setSanction(deployer.address, true);
+          const sanctioned = await sanctionsContract.isSanctioned(
+            deployer.address
+          );
+          expect(sanctioned).to.equal(true);
+
+          await expect(
+            tokenFactory.withdraw(
+              depositAmount,
+              deployer.address,
+              deployer.address
+            )
+          ).to.be.revertedWithCustomError(
+            tokenFactory,
+            "BaseContract__SanctionedAddress"
+          );
+
+          // remove user from sanctions list
+          await sanctionsContract.setSanction(deployer.address, false);
+          const notSanctioned = await sanctionsContract.isSanctioned(
+            deployer.address
+          );
+          expect(notSanctioned).to.equal(false);
         });
       });
 

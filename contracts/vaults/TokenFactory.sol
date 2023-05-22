@@ -15,6 +15,7 @@ import "@openzeppelin/contracts/utils/introspection/ERC1820Implementer.sol";
 import "@openzeppelin/contracts/token/ERC777/IERC777Sender.sol";
 import "./DevToken.sol";
 import "./../libraries/PriceFeed.sol";
+import "./BaseContract.sol";
 
 error TokenFactory__DepositMoreThanMax();
 error TokenFactory__MintMoreThanMax();
@@ -39,6 +40,7 @@ contract TokenFactory is
     IERC4626,
     ReentrancyGuard,
     Ownable,
+    BaseContract,
     IERC777Recipient,
     IERC777Sender,
     ERC1820Implementer
@@ -99,8 +101,9 @@ contract TokenFactory is
     constructor(
         IERC20 baseTokenAddress,
         address priceFeedAddress,
-        uint256 rebaseInterval // in seconds
-    ) ERC20("RiskProtocolVault", "RPK") {
+        uint256 rebaseInterval, // in seconds
+        address sanctionsContract_
+    ) ERC20("RiskProtocolVault", "RPK") BaseContract(sanctionsContract_) {
         _erc1820.setInterfaceImplementer(
             address(this),
             TOKENS_RECIPIENT_INTERFACE_HASH,
@@ -345,7 +348,7 @@ contract TokenFactory is
         address receiver,
         uint256 assets,
         uint256 shares
-    ) internal virtual {
+    ) internal virtual onlyNotSanctioned(caller) {
         SafeERC20.safeTransferFrom(baseToken, caller, address(this), assets);
         updateUserLastRebaseCount(receiver);
         //mgmtFeeslogic
@@ -372,7 +375,7 @@ contract TokenFactory is
         address owner,
         uint256 assets,
         uint256 shares
-    ) internal virtual {
+    ) internal virtual onlyNotSanctioned(caller) {
         //mgmt fees logic
         uint256 feesRefund = 0;
 
