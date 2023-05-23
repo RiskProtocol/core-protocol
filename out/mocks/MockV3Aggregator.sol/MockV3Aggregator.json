@@ -1,0 +1,60 @@
+{
+  "abi": [],
+  "bytecode": {
+    "object": "0x",
+    "linkReferences": {}
+  },
+  "deployedBytecode": {
+    "object": "0x",
+    "linkReferences": {}
+  },
+  "ast": {
+    "absolutePath": "contracts/mocks/MockV3Aggregator.sol",
+    "id": 223,
+    "exportedSymbols": {
+      "AggregatorInterface": [
+        30856
+      ],
+      "AggregatorV2V3Interface": [
+        30865
+      ],
+      "AggregatorV3Interface": [
+        30911
+      ],
+      "MockV3Aggregator": [
+        31117
+      ]
+    },
+    "nodeType": "SourceUnit",
+    "src": "39:91:3",
+    "nodes": [
+      {
+        "id": 221,
+        "nodeType": "PragmaDirective",
+        "src": "39:23:3",
+        "nodes": [],
+        "literals": [
+          "solidity",
+          "^",
+          "0.8",
+          ".9"
+        ]
+      },
+      {
+        "id": 222,
+        "nodeType": "ImportDirective",
+        "src": "64:66:3",
+        "nodes": [],
+        "absolutePath": "node_modules/@chainlink/contracts/src/v0.8/tests/MockV3Aggregator.sol",
+        "file": "@chainlink/contracts/src/v0.8/tests/MockV3Aggregator.sol",
+        "nameLocation": "-1:-1:-1",
+        "scope": 223,
+        "sourceUnit": 31118,
+        "symbolAliases": [],
+        "unitAlias": ""
+      }
+    ],
+    "license": "UNLICENSED"
+  },
+  "id": 3
+}
