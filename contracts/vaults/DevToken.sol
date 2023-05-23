@@ -60,12 +60,12 @@ contract DevToken is ERC20Permit, BaseContract {
 
     /** @dev See {IERC777-transfer}. */
     function transfer(
-        address to,
+        address recipient,
         uint256 amount
     )
         public
         override
-        onlyNotSanctioned(to)
+        onlyNotSanctioned(recipient)
         onlyNotSanctioned(msg.sender)
         returns (bool)
     {
@@ -73,14 +73,16 @@ contract DevToken is ERC20Permit, BaseContract {
         if (hasPendingRebase(owner_)) {
             tokenFactory.applyRebase(owner_);
         }
-        tokenFactory.updateUserLastRebaseCount(to);
-        super.transfer(to, amount);
-        return true;
+        tokenFactory.updateUserLastRebaseCount(recipient);
+        super.transfer(recipient, amount);
         return true;
     }
 
-    function devTransfer(address to, uint256 amount) public onlyTokenFactory {
-        super.transfer(to, amount);
+    function devTransfer(
+        address recipient,
+        uint256 amount
+    ) public onlyTokenFactory {
+        super.transfer(recipient, amount);
     }
 
     /**

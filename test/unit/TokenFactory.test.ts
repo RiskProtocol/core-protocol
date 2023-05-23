@@ -808,7 +808,7 @@ developmentChains.includes(network.name)
             deployTokenFixture
           );
           await tokenFactory.connect(deployer).setManagementFeeRate(5000);
-          expect(await tokenFactory.managementFeesRate()).to.equal(5000);
+          expect(await tokenFactory.getManagementFeeRate()).to.equal(5000);
         });
 
         it(`Should allow not allow other users to set the management fee rate`, async () => {
@@ -827,7 +827,7 @@ developmentChains.includes(network.name)
           );
 
           await tokenFactory.connect(deployer).setManagementFeeRate(10000);
-          expect(await tokenFactory.managementFeesRate()).to.equal(10000);
+          expect(await tokenFactory.getManagementFeeRate()).to.equal(10000);
         });
 
         it(`Should allow management fee rate to be 0(0%)`, async () => {
@@ -836,7 +836,7 @@ developmentChains.includes(network.name)
           );
 
           await tokenFactory.connect(deployer).setManagementFeeRate(0);
-          expect(await tokenFactory.managementFeesRate()).to.equal(0);
+          expect(await tokenFactory.getManagementFeeRate()).to.equal(0);
         });
 
         it(`Should allow not allow management fee rate to be more than 10000(100%)`, async () => {
@@ -854,14 +854,14 @@ developmentChains.includes(network.name)
             deployTokenFixture
           );
           await tokenFactory.connect(deployer).setManagementFeeState(true);
-          expect(await tokenFactory.mgmtFeesState()).to.be.true;
+          expect(await tokenFactory.getManagementFeeState()).to.be.true;
         });
         it(`Should allow the deployer to turn off the management Fees state`, async () => {
           const { tokenFactory, deployer } = await loadFixture(
             deployTokenFixture
           );
           await tokenFactory.connect(deployer).setManagementFeeState(false);
-          expect(await tokenFactory.mgmtFeesState()).to.be.false;
+          expect(await tokenFactory.getManagementFeeState()).to.be.false;
         });
         it(`Should allow only the deployer to turn off the management Fees state`, async () => {
           const { tokenFactory, tester } = await loadFixture(

@@ -67,11 +67,11 @@ contract TokenFactory is
     uint256 private immutable interval;
     uint256 private lastTimeStamp;
     //management fees
-    uint32 public managementFeesRate;
-    uint32[] public mgmtFeesHistory; //todo make it private
-    mapping(address => uint256) public userMgmtFeeHistory;
-    bool public mgmtFeesState;
-    uint256[] mgmtFeeSum;
+    uint32 private managementFeesRate;
+    uint32[] private mgmtFeesHistory;
+    mapping(address => uint256) private userMgmtFeeHistory;
+    bool private managementFeeEnabled;
+    uint256[] private mgmtFeeSum;
 
     modifier onlyAssetOwner(address assetOwner) {
         if (assetOwner != msg.sender) revert TokenFactory__OnlyAssetOwner();
@@ -352,7 +352,7 @@ contract TokenFactory is
         SafeERC20.safeTransferFrom(baseToken, caller, address(this), assets);
         updateUserLastRebaseCount(receiver);
         //mgmtFeeslogic
-        if (mgmtFeesState) {
+        if (managementFeeEnabled) {
             uint256 fees = calculateManagementFee(shares, true, 0);
             shares = shares - fees;
             factoryMint(0, address(this), fees);
@@ -379,7 +379,7 @@ contract TokenFactory is
         //mgmt fees logic
         uint256 feesRefund = 0;
 
-        if (mgmtFeesState) {
+        if (managementFeeEnabled) {
             feesRefund = calculateManagementFee(assets, true, 0);
             //assets = assets + feesRefund;
             factoryBurn(0, address(this), feesRefund);
@@ -389,7 +389,7 @@ contract TokenFactory is
         factoryBurn(0, caller, assets);
         factoryBurn(1, caller, assets);
         if (feesRefund > 0) {
-            assets = assets + feesRefund;
+            assets += feesRefund;
         }
         SafeERC20.safeTransfer(baseToken, receiver, assets);
 
@@ -435,7 +435,7 @@ contract TokenFactory is
         uint256 asset1Price = rebasePrice.ceilDiv(3); // this should be gotten from the oracle
         uint256 divisor = rebasePrice.ceilDiv(2);
         scallingFactorX.push(((asset1Price * 10 ** decimals()) / 2) / divisor);
-        if (mgmtFeesState) {
+        if (managementFeeEnabled) {
             mgmtFeesHistory.push(managementFeesRate);
             updateManagementFeeSum();
         }
@@ -446,51 +446,35 @@ contract TokenFactory is
     function applyRebase(address owner_) public {
         uint256 asset1ValueEth = devTokenArray[0].unScaledbalanceOf(owner_);
         uint256 asset2ValueEth = devTokenArray[1].unScaledbalanceOf(owner_);
-        //mgmt fees
-        if (mgmtFeesState) {
-            uint256 numberOfFeesCycle = getMgmtFeeFactorLength() - 1; //through rebase only
-            uint256 numberOfUserFeeCycle = userMgmtFeeHistory[owner_]; //through rebase only
+        uint256 initialAsset1ValueEth = asset1ValueEth;
+        uint256 initialAsset2ValueEth = asset2ValueEth;
 
-            uint256 outstandingFeesCount = numberOfFeesCycle -
-                numberOfUserFeeCycle; //let x be 2
-            // rebaseCount(5) -2 =3
-
-            if (outstandingFeesCount > 0) {
-                uint256 sumOfFees;
-
-                uint256 firstFeeMissedIndex = numberOfFeesCycle - //7
-                    outstandingFeesCount; //2
-                sumOfFees = //6,7
-                    mgmtFeeSum[numberOfFeesCycle] -
-                    mgmtFeeSum[firstFeeMissedIndex]; //5
-
-                //uint32 averageX = uint32(sumOfFees / outstandingFeesCount);
-
-                uint256 asset1ValueEthFees = calculateManagementFee(
-                    asset1ValueEth,
-                    false,
-                    sumOfFees
-                ); //.mul(outstandingFeesCount);
-
-                uint256 asset2ValueEthFees = calculateManagementFee(
-                    asset2ValueEth,
-                    false,
-                    sumOfFees
-                ); //.mul(outstandingFeesCount);
-
-                asset1ValueEth = asset1ValueEth - asset1ValueEthFees;
-                asset2ValueEth = asset2ValueEth - asset2ValueEthFees;
-
-                factoryTransfer(0, address(this), asset1ValueEthFees);
-                factoryTransfer(1, address(this), asset2ValueEthFees);
-                emit Deposit(
-                    owner_,
-                    address(this),
-                    asset1ValueEthFees,
-                    asset1ValueEthFees
-                );
-                userMgmtFeeHistory[owner_] = getMgmtFeeFactorLength() - 1;
-            }
+        (asset1ValueEth, asset2ValueEth) = calculateMgmtFeeForRebase(
+            owner_,
+            asset1ValueEth,
+            asset2ValueEth
+        );
+        if (
+            initialAsset1ValueEth != asset1ValueEth ||
+            initialAsset2ValueEth != asset2ValueEth
+        ) {
+            factoryTransfer(
+                0,
+                address(this),
+                (initialAsset1ValueEth - asset1ValueEth)
+            );
+            factoryTransfer(
+                1,
+                address(this),
+                (initialAsset2ValueEth - asset2ValueEth)
+            );
+            emit Deposit(
+                owner_,
+                address(this),
+                (initialAsset1ValueEth - asset1ValueEth),
+                (initialAsset2ValueEth - asset2ValueEth)
+            );
+            userMgmtFeeHistory[owner_] = getMgmtFeeFactorLength() - 1;
         }
 
         uint256 rollOverValue = calculateRollOverValue(owner_);
@@ -521,36 +505,11 @@ contract TokenFactory is
         uint256 asset1Balance = devTokenArray[0].unScaledbalanceOf(owner_);
         uint256 asset2Balance = devTokenArray[1].unScaledbalanceOf(owner_);
 
-        if (mgmtFeesState) {
-            uint256 numberOfFeesCycle = getMgmtFeeFactorLength() - 1; //through rebase only
-            uint256 numberOfUserFeeCycle = userMgmtFeeHistory[owner_]; //through rebase only
-            uint256 outstandingFeesCount = numberOfFeesCycle -
-                numberOfUserFeeCycle;
-
-            if (outstandingFeesCount > 0) {
-                uint256 sumOfFees = 0;
-
-                uint256 firstFeeMissedIndex = numberOfFeesCycle -
-                    outstandingFeesCount;
-                sumOfFees =
-                    mgmtFeeSum[numberOfFeesCycle] -
-                    mgmtFeeSum[firstFeeMissedIndex];
-
-                uint256 asset1Fee = calculateManagementFee(
-                    asset1Balance,
-                    false,
-                    sumOfFees
-                );
-                uint256 asset2Fee = calculateManagementFee(
-                    asset2Balance,
-                    false,
-                    sumOfFees
-                );
-
-                asset1Balance -= asset1Fee;
-                asset2Balance -= asset2Fee;
-            }
-        }
+        (asset1Balance, asset2Balance) = calculateMgmtFeeForRebase(
+            owner_,
+            asset1Balance,
+            asset2Balance
+        );
 
         uint256 rollOverValue = ((asset1Balance * scallingFactorX_) +
             (asset2Balance * scallingFactorY)) / denominator;
@@ -575,18 +534,17 @@ contract TokenFactory is
         uint32 rate
     ) external onlyOwner returns (bool) {
         require(
-            rate < 10001,
+            rate <= 10000,
             "The management fee rate cannot exeed 100 percent (1000)"
         );
         managementFeesRate = rate;
-        //managementFeesPerRebase[rebaseCount] = rate;
         return true;
     }
 
     function setManagementFeeState(
         bool state
     ) external onlyOwner returns (bool) {
-        mgmtFeesState = state;
+        managementFeeEnabled = state;
         return true;
     }
 
@@ -596,21 +554,6 @@ contract TokenFactory is
 
         mgmtFeeSum.push(mgmtFeeSum[mgmtFeeCycleCount - 1] + managementFeesRate);
     }
-
-    function getLastTimeStamp() external view onlyOwner returns (uint256) {
-        return lastTimeStamp;
-    }
-
-    //0 = 0
-    //1 = 1
-    //2 = 3
-    //3 = 3
-    //4 = 6
-
-    //6-3 = 3/2
-    //1.5
-
-    //todo: create a spreadsheet to demonstrate
 
     function calculateManagementFee(
         uint256 amount,
@@ -651,7 +594,59 @@ contract TokenFactory is
         return userFees;
     }
 
+    function calculateMgmtFeeForRebase(
+        address owner_,
+        uint256 asset1ValueEth,
+        uint256 asset2ValueEth
+    ) private view returns (uint256, uint256) {
+        if (managementFeeEnabled) {
+            uint256 numberOfFeesCycle = getMgmtFeeFactorLength() - 1; //through rebase only
+            uint256 numberOfUserFeeCycle = userMgmtFeeHistory[owner_]; //through rebase only
+
+            uint256 outstandingFeesCount = numberOfFeesCycle -
+                numberOfUserFeeCycle;
+
+            if (outstandingFeesCount > 0) {
+                uint256 sumOfFees;
+
+                uint256 firstFeeMissedIndex = numberOfFeesCycle -
+                    outstandingFeesCount;
+                sumOfFees =
+                    mgmtFeeSum[numberOfFeesCycle] -
+                    mgmtFeeSum[firstFeeMissedIndex];
+
+                uint256 asset1ValueEthFees = calculateManagementFee(
+                    asset1ValueEth,
+                    false,
+                    sumOfFees
+                );
+
+                uint256 asset2ValueEthFees = calculateManagementFee(
+                    asset2ValueEth,
+                    false,
+                    sumOfFees
+                );
+
+                asset1ValueEth -= asset1ValueEthFees;
+                asset2ValueEth -= asset2ValueEthFees;
+            }
+        }
+        return (asset1ValueEth, asset2ValueEth);
+    }
+
     //  other getter methods
+    function getLastTimeStamp() external view onlyOwner returns (uint256) {
+        return lastTimeStamp;
+    }
+
+    function getManagementFeeRate() public view returns (uint32) {
+        return managementFeesRate;
+    }
+
+    function getManagementFeeState() public view returns (bool) {
+        return managementFeeEnabled;
+    }
+
     function getPriceFeedAddress() public view returns (AggregatorV3Interface) {
         return priceFeed;
     }
