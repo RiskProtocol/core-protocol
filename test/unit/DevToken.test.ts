@@ -108,7 +108,7 @@ developmentChains.includes(network.name) ?
 
                 await tokenFactory.initialize(devToken1.address, devToken2.address);
                 await underlyingToken.approve(tokenFactory.address, depositAmount);
-                await tokenFactory.deposit(depositAmount, deployer.address);
+                await devToken1.deposit(depositAmount, deployer.address);
 
                 // transfer token using send function
                 await devToken1.send(tester.address, transferAmount, bytes);
@@ -126,7 +126,7 @@ developmentChains.includes(network.name) ?
 
                 await tokenFactory.initialize(devToken1.address, devToken2.address);
                 await underlyingToken.approve(tokenFactory.address, depositAmount);
-                await tokenFactory.deposit(depositAmount, deployer.address);
+                await devToken1.deposit(depositAmount, deployer.address);
 
                 // trigger rebase
                 await tokenFactory.rebase()
@@ -157,7 +157,7 @@ developmentChains.includes(network.name) ?
                 tokenFactory.address,
                 depositAmount
               );
-              await tokenFactory.deposit(depositAmount, deployer.address);
+              await devToken1.deposit(depositAmount, deployer.address);
 
               // add tester to sanctions list
               await sanctionsContract.setSanction(tester.address, true);
@@ -200,7 +200,7 @@ developmentChains.includes(network.name) ?
                 tokenFactory.address,
                 depositAmount
               );
-              await tokenFactory.deposit(depositAmount, deployer.address);
+              await devToken1.deposit(depositAmount, deployer.address);
 
               // add tester to sanctions list
               await sanctionsContract.setSanction(tester.address, true);
@@ -229,7 +229,7 @@ developmentChains.includes(network.name) ?
             it("should not allow other users to perform mint function except Token Factory", async function () {
                 const { devToken1, deployer, tester } = await loadFixture(deployTokenFixture);
                 const amount = ethers.utils.parseEther('1')
-                await expect(devToken1.connect(tester).mint(deployer.address, amount)).to.be.revertedWithCustomError(devToken1, 'DevToken__NotTokenFactory')
+                await expect(devToken1.connect(tester).mintAsset(deployer.address, amount)).to.be.revertedWithCustomError(devToken1, 'DevToken__NotTokenFactory')
             })              
         })
     })

@@ -2,19 +2,33 @@
 
 pragma solidity ^0.8.9;
 
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import "./TokenFactory.sol";
 import "../external/ERC20Permit.sol";
 import "./BaseContract.sol";
 
 error DevToken__NotTokenFactory();
 error DevToken__MethodNotAllowed();
+error DevToken__DepositMoreThanMax();
+error DevToken__MintMoreThanMax();
+error DevToken__WithdrawMoreThanMax();
+error DevToken__RedeemMoreThanMax();
+error DevToken__OnlyAssetOwner();
+error DevToken__ZeroDeposit();
 
-contract DevToken is ERC20Permit, BaseContract {
+contract DevToken is ERC20Permit, BaseContract, IERC4626, ReentrancyGuard {
     TokenFactory private immutable tokenFactory;
+    IERC20 private immutable underlyingToken;
 
     modifier onlyTokenFactory() {
         if (msg.sender != address(tokenFactory))
             revert DevToken__NotTokenFactory();
+        _;
+    }
+
+    modifier onlyAssetOwner(address assetOwner) {
+        if (assetOwner != msg.sender) revert DevToken__OnlyAssetOwner();
         _;
     }
 
@@ -30,9 +44,10 @@ contract DevToken is ERC20Permit, BaseContract {
         BaseContract(sanctionsContract_)
     {
         tokenFactory = TokenFactory(factoryAddress);
+        underlyingToken = tokenFactory.getBaseToken();
     }
 
-    function mint(address receiver, uint256 amount) public onlyTokenFactory {
+    function mintAsset(address receiver, uint256 amount) public onlyTokenFactory {
         _mint(receiver, amount, "", "");
     }
 
@@ -64,7 +79,7 @@ contract DevToken is ERC20Permit, BaseContract {
         uint256 amount
     )
         public
-        override
+        override(ERC777, IERC20)
         onlyNotSanctioned(recipient)
         onlyNotSanctioned(msg.sender)
         returns (bool)
@@ -83,6 +98,22 @@ contract DevToken is ERC20Permit, BaseContract {
         uint256 amount
     ) public onlyTokenFactory {
         super.transfer(recipient, amount);
+    }
+
+    function decimals() public pure virtual override(ERC777, IERC20Metadata) returns (uint8) {
+        return super.decimals();
+    }
+
+    function name() public view virtual override(ERC777, IERC20Metadata) returns (string memory) {
+        return super.name();
+    }
+
+    function symbol() public view virtual override(ERC777, IERC20Metadata) returns (string memory) {
+        return super.symbol();
+    }
+
+    function totalSupply() public view virtual override(ERC777, IERC20) returns (uint256) {
+        return super.totalSupply();
     }
 
     /**
@@ -109,7 +140,7 @@ contract DevToken is ERC20Permit, BaseContract {
     }
 
     /** @dev See {IERC777-balanceOf}. */
-    function balanceOf(address account) public view override returns (uint256) {
+    function balanceOf(address account) public view override(ERC777, IERC20) returns (uint256) {
         if (hasPendingRebase(account)) {
             return tokenFactory.calculateRollOverValue(account);
         } else {
@@ -137,7 +168,7 @@ contract DevToken is ERC20Permit, BaseContract {
         uint256 amount
     )
         public
-        override
+        override(ERC777, IERC20)
         onlyNotSanctioned(recipient)
         onlyNotSanctioned(sender)
         returns (bool)
@@ -147,5 +178,165 @@ contract DevToken is ERC20Permit, BaseContract {
         }
         tokenFactory.updateUserLastRebaseCount(recipient);
         return super.transferFrom(sender, recipient, amount);
+    }
+
+    /** @dev See {IERC4626-asset}. */
+    function asset() public view virtual override returns (address) {
+        return address(underlyingToken);
+    }
+
+    /** @dev See {IERC4626-totalAssets}. */
+    function totalAssets() public view virtual override returns (uint256) {
+        return underlyingToken.balanceOf(address(this));
+    }
+
+    /** @dev See {IERC4626-convertToShares}. */
+    function convertToShares(
+        uint256 assets
+    ) public view virtual override returns (uint256 shares) {
+        return assets;
+    }
+
+    /** @dev See {IERC4626-convertToAssets}. */
+    function convertToAssets(
+        uint256 shares
+    ) public view virtual override returns (uint256 assets) {
+        return shares;
+    }
+
+    /** @dev See {IERC4626-maxDeposit}. */
+    function maxDeposit(
+        address
+    ) public view virtual override returns (uint256) {
+        return (type(uint256).max) - 1;
+    }
+
+    /** @dev See {IERC4626-previewDeposit}. */
+    function previewDeposit(
+        uint256 assets
+    ) public view virtual override returns (uint256) {
+        return assets;
+    }
+
+    /** @dev See {IERC4626-deposit}. */
+    function deposit(
+        uint256 assets,
+        address receiver
+    ) public virtual override returns (uint256) {
+        if (assets == 0) revert DevToken__ZeroDeposit();
+        if (assets > maxDeposit(receiver))
+            revert DevToken__DepositMoreThanMax();
+        uint256 shares = previewDeposit(assets);
+        tokenFactory._deposit(_msgSender(), receiver, assets, shares);
+
+        return shares;
+    }
+
+    /** @dev See {IERC4626-maxMint}. */
+    function maxMint(address) public view virtual override returns (uint256) {
+        return (type(uint256).max) - 1;
+    }
+
+    /** @dev See {IERC4626-previewMint}. */
+    function previewMint(
+        uint256 shares
+    ) public view virtual override returns (uint256) {
+        return shares;
+    }
+
+    /** @dev See {IERC4626-mint}.
+     *
+     * As opposed to {deposit}, minting is allowed even if the vault is in a state where the price of a share is zero.
+     * In this case, the shares will be minted without requiring any assets to be deposited.
+     */
+    function mint(
+        uint256 shares,
+        address receiver
+    ) public virtual override returns (uint256) {
+        if (shares > maxMint(receiver)) revert DevToken__MintMoreThanMax();
+
+        uint256 assets = previewMint(shares);
+        tokenFactory._deposit(_msgSender(), receiver, assets, shares);
+
+        return assets;
+    }
+
+    /** @dev See {IERC4626-maxWithdraw}. */
+    function maxWithdraw(
+        address owner_
+    ) public view virtual override returns (uint256) {
+        return tokenFactory.maxAmountToWithdraw(owner_);
+    }
+
+    /** @dev See {IERC4626-previewWithdraw}. */
+    function previewWithdraw(
+        uint256 assets
+    ) public view virtual override returns (uint256) {
+        return assets;
+    }
+
+    /** @dev See {IERC4626-withdraw}. */
+    function withdraw(
+        uint256 assets,
+        address receiver,
+        address owner_
+    )
+        public
+        virtual
+        override
+        onlyAssetOwner(owner_)
+        nonReentrant
+        returns (uint256)
+    {
+        // apply user pending rebase
+        if (tokenFactory.getUserLastRebaseCount(receiver) != tokenFactory.getScallingFactorLength()) {
+            tokenFactory.applyRebase(receiver);
+        }
+        if (assets > maxWithdraw(owner_))
+            revert DevToken__WithdrawMoreThanMax();
+
+        uint256 shares = previewWithdraw(assets);
+        tokenFactory._withdraw(_msgSender(), receiver, owner_, assets, shares);
+
+        return shares;
+    }
+
+    /** @dev See {IERC4626-maxRedeem}. */
+    function maxRedeem(
+        address owner_
+    ) public view virtual override returns (uint256) {
+        return tokenFactory.maxAmountToWithdraw(owner_);
+    }
+
+    /** @dev See {IERC4626-previewRedeem}. */
+    function previewRedeem(
+        uint256 shares
+    ) public view virtual override returns (uint256) {
+        return shares;
+    }
+
+    /** @dev See {IERC4626-redeem}. */
+    function redeem(
+        uint256 shares,
+        address receiver,
+        address owner_
+    )
+        public
+        virtual
+        override
+        onlyAssetOwner(owner_)
+        nonReentrant
+        returns (uint256)
+    {
+        // apply user pending rebase
+        if (tokenFactory.getUserLastRebaseCount(receiver) != tokenFactory.getScallingFactorLength()) {
+            tokenFactory.applyRebase(receiver);
+        }
+        if (shares > maxRedeem(owner_))
+            revert DevToken__RedeemMoreThanMax();
+        uint256 assets = previewRedeem(shares);
+        tokenFactory._withdraw(_msgSender(), receiver, owner_, assets, shares);
+
+        return assets;
     }
 }

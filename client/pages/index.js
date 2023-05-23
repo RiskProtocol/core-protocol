@@ -16,8 +16,8 @@ import {
 
 function App() {
 
-  const testAccountAddress = '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266'
-  const test1AccountAddress = '0x70997970C51812dc3A010C7d01b50e0d17dc79C8'
+  const testAccountAddress = '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266';
+  const test1AccountAddress = '0x70997970C51812dc3A010C7d01b50e0d17dc79C8';
   const [depositAmount, setDepositAmount] = useState();
   const [withdrawalAmount, setWithdrawalAmount] = useState();
   const [transferAddress, setTransferAddress] = useState('0x70997970C51812dc3A010C7d01b50e0d17dc79C8');
@@ -34,9 +34,9 @@ function App() {
       const provider = new ethers.providers.Web3Provider(window.ethereum);
       const signer = provider.getSigner();
       const accounts = await requestAccounts();
-      contract = new ethers.Contract(tokenFactoryAddress, tokenFactoryAbi, signer);
+      contract = new ethers.Contract(devTokenXAddress, devTokenAbi, provider);
       try {
-        const data = await contract.mint(devTokenXAddress, devTokenYAddress);        
+        const data = await contract.mint(devTokenXAddress, devTokenYAddress);
       } catch (err) {
         console.log("Error: ", err);
       }
@@ -70,13 +70,14 @@ function App() {
     if (typeof window.ethereum !== "undefined") {
       const provider = new ethers.providers.Web3Provider(window.ethereum);
       const signer = provider.getSigner();
-      const contract = new ethers.Contract(
-        tokenFactoryAddress,
-        tokenFactoryAbi,
-        signer
-      );
       const underlyingToken = new ethers.Contract(
         underlyingTokenAddress,
+        devTokenAbi,
+        signer
+      );
+
+      const devTokenX = new ethers.Contract(
+        devTokenXAddress,
         devTokenAbi,
         signer
       );
@@ -92,7 +93,7 @@ function App() {
           ethers.utils.parseEther(depositAmount)
         );
 
-        await contract.deposit(
+        await devTokenX.deposit(
           `${ethers.utils.parseEther(depositAmount)}`,
           testAccountAddress
         );
@@ -107,13 +108,13 @@ function App() {
     if (typeof window.ethereum !== "undefined") {
       const provider = new ethers.providers.Web3Provider(window.ethereum);
       const signer = provider.getSigner();
-      const contract = new ethers.Contract(
-        tokenFactoryAddress,
-        tokenFactoryAbi,
+      const devTokenX = new ethers.Contract(
+        devTokenXAddress,
+        devTokenAbi,
         signer
       );
       try {
-        const data = await contract.withdraw(
+        const data = await devTokenX.withdraw(
           `${ethers.utils.parseEther(withdrawalAmount)}`,
           testAccountAddress,
           testAccountAddress
@@ -501,7 +502,7 @@ function App() {
         <button style={buttonStyle} onClick={test}>
           Test
         </button>
-        
+
       </div>
     </div>
   );

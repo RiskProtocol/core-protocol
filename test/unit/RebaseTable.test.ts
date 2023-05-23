@@ -92,7 +92,7 @@ developmentChains.includes(network.name) ?
     
                     // deposit underlying token
                     await underlyingToken.approve(tokenFactory.address, depositAmount);
-                    await tokenFactory.deposit(depositAmount, deployer.address);
+                    await devToken1.deposit(depositAmount, deployer.address);
     
                     // to a transaction
                     await devToken1.transfer(tester.address, transferAmount);
