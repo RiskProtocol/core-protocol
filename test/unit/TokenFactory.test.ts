@@ -760,7 +760,7 @@ developmentChains.includes(network.name) ?
           
               // confirm user balances after rebase has been applied on chain  
               assert.equal(await devToken1.balanceOf(tester.address), expectedBalanceAfterTransfer);
-              // assert.equal(await devToken2.balanceOf(tester.address), expectedBalance);
+              assert.equal(await devToken2.balanceOf(tester.address), expectedBalance);
             })
         })
 
