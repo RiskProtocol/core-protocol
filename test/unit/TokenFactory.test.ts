@@ -839,13 +839,13 @@ developmentChains.includes(network.name)
           expect(await tokenFactory.getManagementFeeRate()).to.equal(0);
         });
 
-        it(`Should allow not allow management fee rate to be more than 10000(100%)`, async () => {
+        it(`Should allow not allow management fee rate to be more than 100000(100%)`, async () => {
           const { tokenFactory, deployer } = await loadFixture(
             deployTokenFixture
           );
 
           await expect(
-            tokenFactory.connect(deployer).setManagementFeeRate(10001)
+            tokenFactory.connect(deployer).setManagementFeeRate(100001)
           ).to.be.reverted;
         });
 
@@ -879,7 +879,7 @@ developmentChains.includes(network.name)
           const { tokenFactory, deployer } = await loadFixture(
             deployTokenFixture
           );
-          const mgmtFee = 200; // Assuming 2% fee rate
+          const mgmtFee = 200; // Assuming 0.2% fee rate per day
           await tokenFactory.connect(deployer).setManagementFeeRate(mgmtFee);
           const amount = 1000;
           const isDefault = true;
@@ -889,9 +889,10 @@ developmentChains.includes(network.name)
             isDefault,
             mgmtFee
           );
-          const mgmtFeePerInterval: number = Math.trunc(
-            mgmtFee / ((86400 * 366) / Number(REBASE_INTERVAL))
-          );
+
+          const oneDay: bigint = BigInt(86400);
+          const mgmtFeePerInterval: bigint =
+            (BigInt(mgmtFee) * BigInt(REBASE_INTERVAL)) / oneDay;
           const lastTimeStamp: number = await tokenFactory.getLastTimeStamp();
           const nextRebaseTimeStamp: number =
             Number(lastTimeStamp) + Number(REBASE_INTERVAL);
@@ -901,9 +902,9 @@ developmentChains.includes(network.name)
 
           const expectFee: number = Math.trunc(
             Math.trunc(
-              (userDepositCycle * mgmtFeePerInterval * amount) /
+              (userDepositCycle * Number(mgmtFeePerInterval) * amount) /
                 Number(REBASE_INTERVAL)
-            ) / 10000
+            ) / 100000
           );
 
           expect(fee).to.equal(BigNumber.from(Math.trunc(expectFee)));
@@ -913,7 +914,7 @@ developmentChains.includes(network.name)
           const { tokenFactory, deployer } = await loadFixture(
             deployTokenFixture
           );
-          const mgmtFee = 200; // Assuming 2% fee rate
+          const mgmtFee = 200; // Assuming 0.2% fee rate per day
           await tokenFactory.connect(deployer).setManagementFeeRate(mgmtFee);
           const amount = ethers.utils.parseEther("0");
           const isDefault = true;
@@ -954,7 +955,7 @@ developmentChains.includes(network.name)
           const { tokenFactory, deployer } = await loadFixture(
             deployTokenFixture
           );
-          const mgmtFee = 200; // Assuming 2% fee rate
+          const mgmtFee = 200; // Assuming 0.2% fee rate per day
           await tokenFactory.connect(deployer).setManagementFeeRate(mgmtFee);
           const amount = ethers.utils.parseEther("1");
           const isDefault = true;
@@ -966,9 +967,9 @@ developmentChains.includes(network.name)
             Number(lastTimeStamp) + Number(REBASE_INTERVAL)
           );
 
-          const oneYear: bigint = BigInt(86400 * 366);
-          const numberOfRebase: bigint = oneYear / BigInt(REBASE_INTERVAL);
-          const mgmtFeePerInterval: bigint = BigInt(mgmtFee) / numberOfRebase;
+          const oneDay: bigint = BigInt(86400);
+          const mgmtFeePerInterval: bigint =
+            (BigInt(mgmtFee) * BigInt(REBASE_INTERVAL)) / oneDay;
 
           let block = await ethers.provider.getBlock("latest");
           const now: bigint = BigInt(block.timestamp);
@@ -988,7 +989,7 @@ developmentChains.includes(network.name)
               BigInt(amount.toString())) /
             BigInt(REBASE_INTERVAL);
 
-          const expectedFee: bigint = expectedFeeUnscaled2 / BigInt(10000);
+          const expectedFee: bigint = expectedFeeUnscaled2 / BigInt(100000);
           expect(fee).to.equal(expectedFee);
         });
       });

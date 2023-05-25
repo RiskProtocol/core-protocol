@@ -148,8 +148,8 @@ developmentChains.includes(network.name)
 
             await tokenFactory.initialize(devToken1.address, devToken2.address);
 
-            // set the management fee to 2% and activating fees
-            await tokenFactory.setManagementFeeRate(200);
+            // set the management fee to 0.2% and activating fees
+            await tokenFactory.setManagementFeeRate(200); //0.2 % per day
             await tokenFactory.setManagementFeeState(true);
 
             // deposit underlying token
@@ -180,8 +180,8 @@ developmentChains.includes(network.name)
 
             await tokenFactory.initialize(devToken1.address, devToken2.address);
 
-            // set the management fee to 2% and activating fees
-            await tokenFactory.setManagementFeeRate(200);
+            // set the management fee to 0.2% and activating fees
+            await tokenFactory.setManagementFeeRate(200); //0.2% per day
             await tokenFactory.setManagementFeeState(true);
 
             // deposit underlying token
@@ -229,8 +229,8 @@ developmentChains.includes(network.name)
 
             await tokenFactory.initialize(devToken1.address, devToken2.address);
 
-            // set the management fee to 2% and activating fees
-            await tokenFactory.setManagementFeeRate(200);
+            // set the management fee to 0.2% and activating fees
+            await tokenFactory.setManagementFeeRate(200); //0.2% per day
             await tokenFactory.setManagementFeeState(true);
 
             // deposit underlying token
@@ -313,9 +313,10 @@ developmentChains.includes(network.name)
             );
 
             //variables to be used for caluculations
-            const oneYear: bigint = BigInt(86400 * 366);
-            const numberOfRebase: bigint = oneYear / BigInt(REBASE_INTERVAL);
-            const mgmtFeePerInterval: bigint = BigInt(mgmtFee) / numberOfRebase;
+            const oneDay: bigint = BigInt(86400);
+            // const numberOfRebase: bigint = oneYear / BigInt(REBASE_INTERVAL);
+            const mgmtFeePerInterval: bigint =
+              (BigInt(mgmtFee) * BigInt(REBASE_INTERVAL)) / oneDay;
             const scallingFactorX_: bigint = BigInt(333500000000000000);
             const scallingFactorY: bigint = BigInt(666500000000000000);
             const denominator: bigint = BigInt(1000000000000000000);
@@ -325,8 +326,11 @@ developmentChains.includes(network.name)
             const expectedFeeUnscaled2: bigint =
               mgmtFeePerInterval * BigInt(assetBal2);
 
-            const expectedFee1: bigint = expectedFeeUnscaled1 / BigInt(10000);
-            const expectedFee2: bigint = expectedFeeUnscaled2 / BigInt(10000);
+            const scallingFactorMgmtFee = 100000;
+            const expectedFee1: bigint =
+              expectedFeeUnscaled1 / BigInt(scallingFactorMgmtFee);
+            const expectedFee2: bigint =
+              expectedFeeUnscaled2 / BigInt(scallingFactorMgmtFee);
 
             const asset1BalV2: bigint =
               BigInt(assetBal1) - BigInt(expectedFee1);

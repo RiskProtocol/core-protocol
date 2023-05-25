@@ -67,6 +67,7 @@ contract TokenFactory is
     uint256 private immutable interval;
     uint256 private lastTimeStamp;
     //management fees
+    uint32 private constant MGMT_FEE_SCALING_FACTOR = 100000;
     uint32 private managementFeesRate;
     uint32[] private mgmtFeesHistory;
     mapping(address => uint256) private userMgmtFeeHistory;
@@ -527,15 +528,15 @@ contract TokenFactory is
 
     /*
     Mgmt Fees Block
-    rate is per annum
+    note:rate is per day
      */
-    //scaling factor is 100
+    //scaling factor is 100000
     function setManagementFeeRate(
         uint32 rate
     ) external onlyOwner returns (bool) {
         require(
-            rate <= 10000,
-            "The management fee rate cannot exeed 100 percent (1000)"
+            rate <= MGMT_FEE_SCALING_FACTOR,
+            "The management fee rate cannot exeed 100 percent (100000)"
         );
         managementFeesRate = rate;
         return true;
@@ -570,8 +571,12 @@ contract TokenFactory is
         }
 
         uint256 nextRebaseTimeStamp = lastTimeStamp + interval;
-        uint256 mgmtFeesPerInterval = internalManagementFeesRate /
-            uint32(366 days / interval); //todo:
+        // uint256 mgmtFeesPerInterval = internalManagementFeesRate /
+        //     uint32(1 days / interval);
+
+        uint256 mgmtFeesPerInterval = internalManagementFeesRate
+            .mul(interval)
+            .div(1 days);
 
         uint256 userDepositTimeStamp = block.timestamp;
 
@@ -581,16 +586,16 @@ contract TokenFactory is
         } else {
             userDepositCycle = 0;
         }
-        //uint256 mgmtFeeCycle = nextRebaseTimeStamp - lastTimeStamp;
 
         if (userDepositCycle == 0 || interval == 0) {
             revert TokenFactory__InvalidDivision();
         }
-        uint256 userFeesUnscaled = userDepositCycle
+        uint256 userFees = userDepositCycle
             .mul(mgmtFeesPerInterval)
             .mul(amount)
-            .div(interval);
-        uint256 userFees = userFeesUnscaled.div(10000);
+            .div(interval)
+            .div(MGMT_FEE_SCALING_FACTOR);
+
         return userFees;
     }
 
