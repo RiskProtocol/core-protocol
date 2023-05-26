@@ -62,175 +62,175 @@ developmentChains.includes(network.name) ?
         assert.equal(await devToken2.symbol(), TOKEN2_SYMBOL);
       })
 
-      it("sets the correct address for the token factory", async function () {
-        const { devToken1, devToken2, tokenFactory } = await loadFixture(deployTokenFixture);
-        assert.equal(await devToken1.getTokenFactory(), tokenFactory.address);
-        assert.equal(await devToken2.getTokenFactory(), tokenFactory.address);
-      })
+            it("sets the correct address for the token factory", async function () {
+                const { devToken1, devToken2, tokenFactory } = await loadFixture(deployTokenFixture);
+                assert.equal(await devToken1.getTokenFactory(), tokenFactory.address);
+                assert.equal(await devToken2.getTokenFactory(), tokenFactory.address);
+            })
+        })
+
+        describe("Burn", async function () {
+            it("should not allow users to call the operatorBurn function", async function () {
+                const { devToken1, devToken2, deployer } = await loadFixture(deployTokenFixture);
+                const amount = ethers.utils.parseEther('1')
+                const bytes = new Uint8Array([0x01, 0x02, 0x03, 0x04]);
+
+                await expect(devToken1.operatorBurn(deployer.address, amount, bytes, bytes)).to.be.revertedWithCustomError(devToken1, 'DevToken__MethodNotAllowed')
+                await expect(devToken2.operatorBurn(deployer.address, amount, bytes, bytes)).to.be.revertedWithCustomError(devToken2, 'DevToken__MethodNotAllowed')
+            })
+            
+            it("should not allow users to call the burn function", async function () {
+                const { devToken1, devToken2 } = await loadFixture(deployTokenFixture);
+                const amount = ethers.utils.parseEther('1')
+                const bytes = new Uint8Array([0x01, 0x02, 0x03, 0x04]);
+
+                await expect(devToken1.burn(amount, bytes)).to.be.revertedWithCustomError(devToken1, 'DevToken__MethodNotAllowed')
+                await expect(devToken2.burn(amount, bytes)).to.be.revertedWithCustomError(devToken2, 'DevToken__MethodNotAllowed')
+            })  
+
+            it("should not allow unauthorized users to call the devBurn function", async function () {
+                const { devToken1, devToken2, tester } = await loadFixture(deployTokenFixture);
+                const amount = ethers.utils.parseEther('1')
+                const bytes = new Uint8Array([0x01, 0x02, 0x03, 0x04]);
+
+                await expect(devToken1.connect(tester).devBurn(tester.address, amount)).to.be.revertedWithCustomError(devToken1, 'DevToken__NotTokenFactory')
+                await expect(devToken2.connect(tester).devBurn(tester.address, amount)).to.be.revertedWithCustomError(devToken2, 'DevToken__NotTokenFactory')
+            })  
+        })
+
+        describe("Send", async function () {
+            it("should allow users to transfer tokens using send function", async function () {
+                const { devToken1, devToken2, deployer, tokenFactory, underlyingToken, tester } = await loadFixture(deployTokenFixture);
+                const depositAmount = ethers.utils.parseEther('6')
+                const transferAmount = ethers.utils.parseEther('1')
+                const expectedBalance = ethers.utils.parseEther('5')
+                const bytes = new Uint8Array([0x01, 0x02, 0x03, 0x04]);
+
+                await tokenFactory.initialize(devToken1.address, devToken2.address);
+                await underlyingToken.approve(tokenFactory.address, depositAmount);
+                await devToken1.deposit(depositAmount, deployer.address);
+
+                // transfer token using send function
+                await devToken1.send(tester.address, transferAmount, bytes);
+
+                // confirm that the transfer was successful
+                expect(expectedBalance).to.equal(await devToken1.balanceOf(deployer.address));
+                expect(transferAmount).to.equal(await devToken1.balanceOf(tester.address));
+            })
+
+            it("should apply pending rebase when a user wants to transfer tokens using send function", async function () {
+                const { devToken1, devToken2, deployer, tokenFactory, underlyingToken, tester } = await loadFixture(deployTokenFixture);
+                const depositAmount = ethers.utils.parseEther('6')
+                const transferAmount = ethers.utils.parseEther('1')
+                const bytes = new Uint8Array([0x01, 0x02, 0x03, 0x04]);
+
+                await tokenFactory.initialize(devToken1.address, devToken2.address);
+                await underlyingToken.approve(tokenFactory.address, depositAmount);
+                await devToken1.deposit(depositAmount, deployer.address);
+
+                // trigger rebase
+                await tokenFactory.rebase()
+
+                // confirm that pending rebase was applied
+                await expect(devToken1.send(tester.address, transferAmount, bytes)).to.emit(tokenFactory,'RebaseApplied') 
+            })
+
+            it("should not allow users to send tokens to addresses in sanctions list", async function () {
+              const {
+                devToken1,
+                devToken2,
+                deployer,
+                tokenFactory,
+                underlyingToken,
+                tester,
+                sanctionsContract,
+              } = await loadFixture(deployTokenFixture);
+              const depositAmount = ethers.utils.parseEther("6");
+              const transferAmount = ethers.utils.parseEther("1");
+              const bytes = new Uint8Array([0x01, 0x02, 0x03, 0x04]);
+
+              await tokenFactory.initialize(
+                devToken1.address,
+                devToken2.address
+              );
+              await underlyingToken.approve(
+                tokenFactory.address,
+                depositAmount
+              );
+              await devToken1.deposit(depositAmount, deployer.address);
+
+              // add tester to sanctions list
+              await sanctionsContract.setSanction(tester.address, true);
+              const sanctioned = await sanctionsContract.isSanctioned(
+                tester.address
+              );
+              expect(sanctioned).to.equal(true);
+              // transfer token using send function
+              await expect(
+                devToken1.send(tester.address, transferAmount, bytes)
+              ).to.be.revertedWithCustomError(
+                devToken1,
+                "BaseContract__SanctionedAddress"
+              );
+
+              // remove tester from sanctions list
+              await sanctionsContract.setSanction(tester.address, false);
+              const notSanctioned = await sanctionsContract.isSanctioned(
+                tester.address
+              );
+              expect(notSanctioned).to.equal(false);
+            });
+
+            it("should not allow transfer of tokens to addresses in sanctions list", async function () {
+              const {
+                tokenFactory,
+                deployer,
+                underlyingToken,
+                devToken1,
+                devToken2,
+                tester,
+                sanctionsContract,
+              } = await loadFixture(deployTokenFixture);
+              const depositAmount = ethers.utils.parseEther("6");
+              await tokenFactory.initialize(
+                devToken1.address,
+                devToken2.address
+              );
+              await underlyingToken.approve(
+                tokenFactory.address,
+                depositAmount
+              );
+              await devToken1.deposit(depositAmount, deployer.address);
+
+              // add tester to sanctions list
+              await sanctionsContract.setSanction(tester.address, true);
+              const sanctioned = await sanctionsContract.isSanctioned(
+                tester.address
+              );
+              expect(sanctioned).to.equal(true);
+
+              await expect(
+                devToken1.transfer(tester.address, depositAmount)
+              ).to.be.revertedWithCustomError(
+                devToken1,
+                "BaseContract__SanctionedAddress"
+              );
+
+              // remove tester from sanctions list
+              await sanctionsContract.setSanction(tester.address, false);
+              const notSanctioned = await sanctionsContract.isSanctioned(
+                tester.address
+              );
+              expect(notSanctioned).to.equal(false);
+            });
+        })
+
+        describe("Mint", async function () {
+            it("should not allow other users to perform mint function except Token Factory", async function () {
+                const { devToken1, deployer, tester } = await loadFixture(deployTokenFixture);
+                const amount = ethers.utils.parseEther('1')
+                await expect(devToken1.connect(tester).mintAsset(deployer.address, amount)).to.be.revertedWithCustomError(devToken1, 'DevToken__NotTokenFactory')
+            })
+        })
     })
-
-    describe("Burn", async function () {
-      it("should not allow users to call the operatorBurn function", async function () {
-        const { devToken1, devToken2, deployer } = await loadFixture(deployTokenFixture);
-        const amount = ethers.utils.parseEther('1')
-        const bytes = new Uint8Array([0x01, 0x02, 0x03, 0x04]);
-
-        await expect(devToken1.operatorBurn(deployer.address, amount, bytes, bytes)).to.be.revertedWithCustomError(devToken1, 'DevToken__MethodNotAllowed')
-        await expect(devToken2.operatorBurn(deployer.address, amount, bytes, bytes)).to.be.revertedWithCustomError(devToken2, 'DevToken__MethodNotAllowed')
-      })
-
-      it("should not allow users to call the burn function", async function () {
-        const { devToken1, devToken2 } = await loadFixture(deployTokenFixture);
-        const amount = ethers.utils.parseEther('1')
-        const bytes = new Uint8Array([0x01, 0x02, 0x03, 0x04]);
-
-        await expect(devToken1.burn(amount, bytes)).to.be.revertedWithCustomError(devToken1, 'DevToken__MethodNotAllowed')
-        await expect(devToken2.burn(amount, bytes)).to.be.revertedWithCustomError(devToken2, 'DevToken__MethodNotAllowed')
-      })
-
-      it("should not allow unauthorized users to call the devBurn function", async function () {
-        const { devToken1, devToken2, tester } = await loadFixture(deployTokenFixture);
-        const amount = ethers.utils.parseEther('1')
-        const bytes = new Uint8Array([0x01, 0x02, 0x03, 0x04]);
-
-        await expect(devToken1.connect(tester).devBurn(tester.address, amount)).to.be.revertedWithCustomError(devToken1, 'DevToken__NotTokenFactory')
-        await expect(devToken2.connect(tester).devBurn(tester.address, amount)).to.be.revertedWithCustomError(devToken2, 'DevToken__NotTokenFactory')
-      })
-    })
-
-    describe("Send", async function () {
-      it("should allow users to transfer tokens using send function", async function () {
-        const { devToken1, devToken2, deployer, tokenFactory, underlyingToken, tester } = await loadFixture(deployTokenFixture);
-        const depositAmount = ethers.utils.parseEther('6')
-        const transferAmount = ethers.utils.parseEther('1')
-        const expectedBalance = ethers.utils.parseEther('5')
-        const bytes = new Uint8Array([0x01, 0x02, 0x03, 0x04]);
-
-        await tokenFactory.initialize(devToken1.address, devToken2.address);
-        await underlyingToken.approve(tokenFactory.address, depositAmount);
-        await tokenFactory.deposit(depositAmount, deployer.address);
-
-        // transfer token using send function
-        await devToken1.send(tester.address, transferAmount, bytes);
-
-        // confirm that the transfer was successful
-        expect(expectedBalance).to.equal(await devToken1.balanceOf(deployer.address));
-        expect(transferAmount).to.equal(await devToken1.balanceOf(tester.address));
-      })
-
-      it("should apply pending rebase when a user wants to transfer tokens using send function", async function () {
-        const { devToken1, devToken2, deployer, tokenFactory, underlyingToken, tester } = await loadFixture(deployTokenFixture);
-        const depositAmount = ethers.utils.parseEther('6')
-        const transferAmount = ethers.utils.parseEther('1')
-        const bytes = new Uint8Array([0x01, 0x02, 0x03, 0x04]);
-
-        await tokenFactory.initialize(devToken1.address, devToken2.address);
-        await underlyingToken.approve(tokenFactory.address, depositAmount);
-        await tokenFactory.deposit(depositAmount, deployer.address);
-
-        // trigger rebase
-        await tokenFactory.rebase()
-
-        // confirm that pending rebase was applied
-        await expect(devToken1.send(tester.address, transferAmount, bytes)).to.emit(tokenFactory, 'RebaseApplied')
-      })
-
-      it("should not allow users to send tokens to addresses in sanctions list", async function () {
-        const {
-          devToken1,
-          devToken2,
-          deployer,
-          tokenFactory,
-          underlyingToken,
-          tester,
-          sanctionsContract,
-        } = await loadFixture(deployTokenFixture);
-        const depositAmount = ethers.utils.parseEther("6");
-        const transferAmount = ethers.utils.parseEther("1");
-        const bytes = new Uint8Array([0x01, 0x02, 0x03, 0x04]);
-
-        await tokenFactory.initialize(
-          devToken1.address,
-          devToken2.address
-        );
-        await underlyingToken.approve(
-          tokenFactory.address,
-          depositAmount
-        );
-        await tokenFactory.deposit(depositAmount, deployer.address);
-
-        // add tester to sanctions list
-        await sanctionsContract.setSanction(tester.address, true);
-        const sanctioned = await sanctionsContract.isSanctioned(
-          tester.address
-        );
-        expect(sanctioned).to.equal(true);
-        // transfer token using send function
-        await expect(
-          devToken1.send(tester.address, transferAmount, bytes)
-        ).to.be.revertedWithCustomError(
-          devToken1,
-          "BaseContract__SanctionedAddress"
-        );
-
-        // remove tester from sanctions list
-        await sanctionsContract.setSanction(tester.address, false);
-        const notSanctioned = await sanctionsContract.isSanctioned(
-          tester.address
-        );
-        expect(notSanctioned).to.equal(false);
-      });
-
-      it("should not allow transfer of tokens to addresses in sanctions list", async function () {
-        const {
-          tokenFactory,
-          deployer,
-          underlyingToken,
-          devToken1,
-          devToken2,
-          tester,
-          sanctionsContract,
-        } = await loadFixture(deployTokenFixture);
-        const depositAmount = ethers.utils.parseEther("6");
-        await tokenFactory.initialize(
-          devToken1.address,
-          devToken2.address
-        );
-        await underlyingToken.approve(
-          tokenFactory.address,
-          depositAmount
-        );
-        await tokenFactory.deposit(depositAmount, deployer.address);
-
-        // add tester to sanctions list
-        await sanctionsContract.setSanction(tester.address, true);
-        const sanctioned = await sanctionsContract.isSanctioned(
-          tester.address
-        );
-        expect(sanctioned).to.equal(true);
-
-        await expect(
-          devToken1.transfer(tester.address, depositAmount)
-        ).to.be.revertedWithCustomError(
-          devToken1,
-          "BaseContract__SanctionedAddress"
-        );
-
-        // remove tester from sanctions list
-        await sanctionsContract.setSanction(tester.address, false);
-        const notSanctioned = await sanctionsContract.isSanctioned(
-          tester.address
-        );
-        expect(notSanctioned).to.equal(false);
-      });
-    })
-
-    describe("Mint", async function () {
-      it("should not allow other users to perform mint function except Token Factory", async function () {
-        const { devToken1, deployer, tester } = await loadFixture(deployTokenFixture);
-        const amount = ethers.utils.parseEther('1')
-        await expect(devToken1.connect(tester).mint(deployer.address, amount)).to.be.revertedWithCustomError(devToken1, 'DevToken__NotTokenFactory')
-      })
-    })
-  })
   : describe.skip
