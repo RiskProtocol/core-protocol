@@ -443,7 +443,7 @@ developmentChains.includes(network.name)
           await tokenFactory.deposit(depositAmount, deployer.address);
 
           // trigger rebase
-          await tokenFactory.rebase();
+          await tokenFactory.executeRebase(1, true);
 
           await expect(
             tokenFactory.withdraw(
@@ -725,8 +725,7 @@ developmentChains.includes(network.name)
           await tokenFactory.deposit(depositAmount, deployer.address);
 
           // trigger rebase
-          await tokenFactory.rebase();
-
+          await tokenFactory.executeRebase(1, true);
           await expect(
             tokenFactory.redeem(
               depositAmount,
@@ -1039,14 +1038,18 @@ developmentChains.includes(network.name)
           const { tokenFactory, tester } = await loadFixture(
             deployTokenFixture
           );
-          await expect(tokenFactory.connect(tester).rebase()).to.be.reverted;
+          await expect(tokenFactory.connect(tester).executeRebase(1, true)).to
+            .be.reverted;
         });
 
         it("it can be triggered by the deployer", async function () {
           const { tokenFactory, tester } = await loadFixture(
             deployTokenFixture
           );
-          await expect(tokenFactory.rebase()).to.emit(tokenFactory, "Rebase");
+          await expect(tokenFactory.executeRebase(1, true)).to.emit(
+            tokenFactory,
+            "Rebase"
+          );
         });
 
         it("it should confirm that user has correct balances of token x and y after rebase", async function () {
@@ -1073,7 +1076,7 @@ developmentChains.includes(network.name)
           await devToken1.transfer(tester.address, transferAmount);
 
           // trigger a rebase
-          await tokenFactory.rebase();
+          await tokenFactory.executeRebase(1, true);
 
           // confirm user balances when rebase has taken place
           assert.equal(
@@ -1123,9 +1126,8 @@ developmentChains.includes(network.name)
           await devToken2.transfer(tester.address, transferAmount);
 
           // trigger a rebase
-          await tokenFactory.rebase();
-          await tokenFactory.rebase();
-
+          await tokenFactory.executeRebase(1, true);
+          await tokenFactory.executeRebase(2, true);
           // confirm user balances when rebase has taken place
           assert.equal(
             await devToken1.balanceOf(deployer.address),

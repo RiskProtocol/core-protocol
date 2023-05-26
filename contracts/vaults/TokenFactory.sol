@@ -13,6 +13,7 @@ import "@openzeppelin/contracts/utils/introspection/IERC1820Registry.sol";
 import "@openzeppelin/contracts/token/ERC777/IERC777Recipient.sol";
 import "@openzeppelin/contracts/utils/introspection/ERC1820Implementer.sol";
 import "@openzeppelin/contracts/token/ERC777/IERC777Sender.sol";
+
 import "./DevToken.sol";
 import "./../libraries/PriceFeed.sol";
 import "./BaseContract.sol";
@@ -25,6 +26,7 @@ error TokenFactory__OnlyAssetOwner();
 error TokenFactory__ZeroDeposit();
 error TokenFactory__MethodNotAllowed();
 error TokenFactory__InvalidDivision();
+error TokenFactory__InvalidSequenceNumber();
 
 /**
  * @title ERC-20 Rebase Tokens
@@ -73,6 +75,14 @@ contract TokenFactory is
     mapping(address => uint256) private userMgmtFeeHistory;
     bool private managementFeeEnabled;
     uint256[] private mgmtFeeSum;
+
+    struct PendingRebase {
+        uint256 sequenceNumber;
+        bool isNaturalRebase;
+    }
+
+    PendingRebase[] private pendingRebases;
+    uint256 private nextSequenceNumber;
 
     modifier onlyAssetOwner(address assetOwner) {
         if (assetOwner != msg.sender) revert TokenFactory__OnlyAssetOwner();
@@ -124,6 +134,7 @@ contract TokenFactory is
         managementFeesRate = 0;
         mgmtFeesHistory.push(managementFeesRate);
         mgmtFeeSum.push(managementFeesRate);
+        nextSequenceNumber = 1;
     }
 
     function initialize(DevToken token1, DevToken token2) external onlyOwner {
@@ -430,18 +441,59 @@ contract TokenFactory is
         }
     }
 
-    function rebase() external onlyOwner {
-        lastTimeStamp = block.timestamp;
-        uint256 rebasePrice = priceFeed.getPrice() / 10 ** decimals();
-        uint256 asset1Price = rebasePrice.ceilDiv(3); // this should be gotten from the oracle
-        uint256 divisor = rebasePrice.ceilDiv(2);
-        scallingFactorX.push(((asset1Price * 10 ** decimals()) / 2) / divisor);
-        if (managementFeeEnabled) {
-            mgmtFeesHistory.push(managementFeesRate);
-            updateManagementFeeSum();
+    function executeRebase(
+        uint256 sequenceNumber,
+        bool isNaturalRebase
+    ) external onlyOwner {
+        if (sequenceNumber < nextSequenceNumber) {
+            revert TokenFactory__InvalidSequenceNumber();
         }
 
-        emit Rebase(getScallingFactorLength());
+        pendingRebases.push(PendingRebase(sequenceNumber, isNaturalRebase));
+
+        if (sequenceNumber == nextSequenceNumber) {
+            rebase();
+        }
+    }
+
+    function rebase() private {
+        uint256 i = 0;
+        while (i < pendingRebases.length && i < 5) {
+            // a maximum of 5 rebases per transaction
+            PendingRebase memory pendingRebase = pendingRebases[i];
+
+            if (pendingRebase.sequenceNumber != nextSequenceNumber) {
+                i++;
+                continue;
+            }
+            //rebase functionalities
+            if (pendingRebase.isNaturalRebase) {
+                lastTimeStamp = block.timestamp;
+            }
+            uint256 rebasePrice = priceFeed.getPrice() / 10 ** decimals();
+            uint256 asset1Price = rebasePrice.ceilDiv(3); // this should be gotten from the oracle
+            uint256 divisor = rebasePrice.ceilDiv(2);
+            scallingFactorX.push(
+                ((asset1Price * 10 ** decimals()) / 2) / divisor
+            );
+            if (managementFeeEnabled && pendingRebase.isNaturalRebase) {
+                mgmtFeesHistory.push(managementFeesRate);
+                updateManagementFeeSum();
+            }
+
+            emit Rebase(getScallingFactorLength());
+
+            //other items
+
+            nextSequenceNumber++;
+
+            removeRebase(i);
+
+            // Do not increment i if we just removed an element from the array
+            if (i >= pendingRebases.length && i > 0) {
+                i--;
+            }
+        }
     }
 
     function applyRebase(address owner_) public {
@@ -561,8 +613,6 @@ contract TokenFactory is
         bool isDefault,
         uint256 mgmtFee //calculates both for fee and refund // same cal/ in wei scale
     ) public view returns (uint256) {
-        //uint256 lastRaseTimeStamp = lastTimeStamp;
-
         uint256 internalManagementFeesRate;
         if (isDefault) {
             internalManagementFeesRate = managementFeesRate; //managementFeesPerRebase[rebaseCount];
@@ -571,8 +621,6 @@ contract TokenFactory is
         }
 
         uint256 nextRebaseTimeStamp = lastTimeStamp + interval;
-        // uint256 mgmtFeesPerInterval = internalManagementFeesRate /
-        //     uint32(1 days / interval);
 
         uint256 mgmtFeesPerInterval = internalManagementFeesRate
             .mul(interval)
@@ -639,7 +687,20 @@ contract TokenFactory is
         return (asset1ValueEth, asset2ValueEth);
     }
 
+    function removeRebase(uint256 index) private nonReentrant {
+        pendingRebases[index] = pendingRebases[pendingRebases.length - 1];
+        pendingRebases.pop();
+    }
+
     //  other getter methods
+    function getPendingRebases() public view returns (PendingRebase[] memory) {
+        return pendingRebases;
+    }
+
+    function getNextSequenceNumber() public view returns (uint256) {
+        return nextSequenceNumber;
+    }
+
     function getLastTimeStamp() external view onlyOwner returns (uint256) {
         return lastTimeStamp;
     }

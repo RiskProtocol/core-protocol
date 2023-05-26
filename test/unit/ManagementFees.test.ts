@@ -196,7 +196,7 @@ developmentChains.includes(network.name)
 
             const nextRebaseTimeStamp = now + REBASE_INTERVAL;
             await time.setNextBlockTimestamp(nextRebaseTimeStamp);
-            await tokenFactory.rebase();
+            await tokenFactory.executeRebase(1, true);
 
             await time.setNextBlockTimestamp(nextRebaseTimeStamp);
             const fee = await tokenFactory.calculateManagementFee(
@@ -300,7 +300,7 @@ developmentChains.includes(network.name)
             await devToken1.transfer(tester.address, transferAmount);
 
             // set the management fee to 2% and activating fees
-            const mgmtFee = 200;
+            const mgmtFee = 200; //0.2 per day
             await tokenFactory.setManagementFeeRate(mgmtFee);
             await tokenFactory.setManagementFeeState(true);
 
@@ -342,9 +342,101 @@ developmentChains.includes(network.name)
             const rollOverValue: bigint =
               (asset1BalV2 * scallingFactorX_ + asset2BalV2 * scallingFactorY) /
               denominator;
+            let block = await ethers.provider.getBlock("latest");
 
-            await tokenFactory.rebase();
+            const now: bigint = BigInt(block.timestamp);
+            //contract call
+            const nextRebase = now + BigInt(REBASE_INTERVAL);
+            await time.setNextBlockTimestamp(nextRebase);
+            await tokenFactory.executeRebase(1, true);
 
+            expect(rollOverValue).to.equal(
+              await devToken1.balanceOf(deployer.address)
+            );
+            expect(rollOverValue).to.equal(
+              await devToken2.balanceOf(deployer.address)
+            );
+          });
+
+          it(`it should not charge additional fees in case of an early rebase`, async function () {
+            const {
+              tokenFactory,
+              deployer,
+              underlyingToken,
+              devToken1,
+              devToken2,
+              tester,
+            } = await loadFixture(deployTokenFixture);
+            const depositAmount = item.depositValue;
+            const transferAmount = ethers.utils.parseEther("1");
+
+            await tokenFactory.initialize(devToken1.address, devToken2.address);
+
+            // deposit underlying token
+            await underlyingToken.approve(tokenFactory.address, depositAmount);
+            await tokenFactory.deposit(depositAmount, deployer.address);
+
+            // to a transaction
+            await devToken1.transfer(tester.address, transferAmount);
+
+            // set the management fee to 2% and activating fees
+            const mgmtFee = 200; //0.2 per day
+            await tokenFactory.setManagementFeeRate(mgmtFee);
+            await tokenFactory.setManagementFeeState(true);
+
+            //get user balance
+            const assetBal1: bigint = await devToken1.balanceOf(
+              deployer.address
+            );
+            const assetBal2: bigint = await devToken2.balanceOf(
+              deployer.address
+            );
+
+            //variables to be used for caluculations
+            const oneDay: bigint = BigInt(86400);
+            // const numberOfRebase: bigint = oneYear / BigInt(REBASE_INTERVAL);
+            const mgmtFeePerInterval: bigint =
+              (BigInt(mgmtFee) * BigInt(REBASE_INTERVAL)) / oneDay;
+            const scallingFactorX_: bigint = BigInt(333500000000000000);
+            const scallingFactorY: bigint = BigInt(666500000000000000);
+            const denominator: bigint = BigInt(1000000000000000000);
+            //balance fees
+            const expectedFeeUnscaled1: bigint =
+              mgmtFeePerInterval * BigInt(assetBal1);
+            const expectedFeeUnscaled2: bigint =
+              mgmtFeePerInterval * BigInt(assetBal2);
+
+            const scallingFactorMgmtFee = 100000;
+            const expectedFee1: bigint =
+              expectedFeeUnscaled1 / BigInt(scallingFactorMgmtFee);
+            const expectedFee2: bigint =
+              expectedFeeUnscaled2 / BigInt(scallingFactorMgmtFee);
+
+            const asset1BalV2: bigint =
+              BigInt(assetBal1) - BigInt(expectedFee1);
+
+            const asset2BalV2: bigint =
+              BigInt(assetBal2) - BigInt(expectedFee2);
+
+            //the get balance formula after rebase
+            const rollOverValue: bigint =
+              (asset1BalV2 * scallingFactorX_ + asset2BalV2 * scallingFactorY) /
+              denominator;
+            let block = await ethers.provider.getBlock("latest");
+
+            const now: bigint = BigInt(block.timestamp);
+            //contract call
+            const nextRebase = now + BigInt(REBASE_INTERVAL);
+
+            //early rebase
+            const earlyRebase: bigint = now + BigInt(1000);
+            await time.setNextBlockTimestamp(earlyRebase);
+            await tokenFactory.executeRebase(1, false);
+
+            //normal rebase
+            await time.setNextBlockTimestamp(nextRebase);
+            await tokenFactory.executeRebase(2, true);
+            //check the fees
             expect(rollOverValue).to.equal(
               await devToken1.balanceOf(deployer.address)
             );
