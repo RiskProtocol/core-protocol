@@ -81,7 +81,7 @@ contract DevToken is ERC20Permit, BaseContract {
     function devTransfer(
         address recipient,
         uint256 amount
-    ) public onlyTokenFactory {
+    ) external onlyTokenFactory {
         super.transfer(recipient, amount);
     }
 

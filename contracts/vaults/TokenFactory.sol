@@ -57,7 +57,7 @@ contract TokenFactory is
         IERC1820Registry(0x1820a4B7618BdE71Dce8cdc73aAB6C95905faD24);
     bytes32 private constant TOKENS_RECIPIENT_INTERFACE_HASH =
         keccak256("ERC777TokensRecipient");
-    bytes32 public constant TOKENS_SENDER_INTERFACE_HASH =
+    bytes32 private constant TOKENS_SENDER_INTERFACE_HASH =
         keccak256("ERC777TokensSender");
     // State variables
     uint256[] private scallingFactorX;
@@ -580,8 +580,10 @@ contract TokenFactory is
     /*
     Mgmt Fees Block
     note:rate is per day
+    scaling factor is 100000
+    Example 5% per day = 5000
      */
-    //scaling factor is 100000
+
     function setManagementFeeRate(
         uint32 rate
     ) external onlyOwner returns (bool) {
@@ -607,8 +609,9 @@ contract TokenFactory is
     }
 
     function calculateManagementFee(
-        uint256 amount,
-        bool isDefault,
+        uint256 amount, //amount to calculate fee against
+        bool isDefault, //When set to true, the method takes the default management
+        //fee to calculate, otherwise uses the value in the next parameter
         uint256 mgmtFee //calculates both for fee and refund // same cal/ in wei scale
     ) public view returns (uint256) {
         uint256 internalManagementFeesRate;
@@ -617,15 +620,19 @@ contract TokenFactory is
         } else {
             internalManagementFeesRate = mgmtFee;
         }
-
+        //estimate the nextRebase Timestamp
         uint256 nextRebaseTimeStamp = lastTimeStamp + interval;
 
+        //Estimate the mgmt fee per interval with respect to the fees per day value
         uint256 mgmtFeesPerInterval = internalManagementFeesRate
             .mul(interval)
             .div(1 days);
 
+        //User deposit or Withdrawal timestamp
         uint256 userDepositTimeStamp = block.timestamp;
 
+        //Calculate the amount of time that the user will be in the system before next rebase
+        //or calculate the time left before next rebase when the user exits the system
         uint256 userDepositCycle;
         if (nextRebaseTimeStamp > userDepositTimeStamp) {
             userDepositCycle = nextRebaseTimeStamp - userDepositTimeStamp;
@@ -636,6 +643,7 @@ contract TokenFactory is
         if (userDepositCycle == 0 || interval == 0) {
             revert TokenFactory__InvalidDivision();
         }
+        //calculate user fees
         uint256 userFees = userDepositCycle
             .mul(mgmtFeesPerInterval)
             .mul(amount)
@@ -645,27 +653,31 @@ contract TokenFactory is
         return userFees;
     }
 
+    //This method is used to calculate mgmt fees when applying a rebase
     function calculateMgmtFeeForRebase(
-        address owner_,
-        uint256 asset1ValueEth,
-        uint256 asset2ValueEth
+        address owner_, //address of the owner
+        uint256 asset1ValueEth, // Self descriptive, first asset
+        uint256 asset2ValueEth // Self descriptive, second asset
     ) private view returns (uint256, uint256) {
         if (managementFeeEnabled) {
             uint256 numberOfFeesCycle = getMgmtFeeFactorLength() - 1; //through rebase only
             uint256 numberOfUserFeeCycle = userMgmtFeeHistory[owner_]; //through rebase only
 
+            //calculate if user missed any mgmt fees for previous rebases
             uint256 outstandingFeesCount = numberOfFeesCycle -
                 numberOfUserFeeCycle;
 
             if (outstandingFeesCount > 0) {
-                uint256 sumOfFees;
+                uint256 sumOfFees = 0;
 
+                //find out the average fees the user missed since he last paid
                 uint256 firstFeeMissedIndex = numberOfFeesCycle -
                     outstandingFeesCount;
                 sumOfFees =
                     mgmtFeeSum[numberOfFeesCycle] -
                     mgmtFeeSum[firstFeeMissedIndex];
 
+                //calculte the fees wrt to the average
                 uint256 asset1ValueEthFees = calculateManagementFee(
                     asset1ValueEth,
                     false,
@@ -677,7 +689,7 @@ contract TokenFactory is
                     false,
                     sumOfFees
                 );
-
+                //update the token amount after fees payment
                 asset1ValueEth -= asset1ValueEthFees;
                 asset2ValueEth -= asset2ValueEthFees;
             }
