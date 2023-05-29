@@ -214,7 +214,7 @@ developmentChains.includes(network.name) ?
             describe("Deposit with underlying asset that does not support permit", async function () {
                 it("it returns the correct value for maxDeposit function", async function () {
                     const { tokenFactory3, deployer } = await loadFixture(deployTokenFixture);
-                    expect(await tokenFactory3.maxDeposit(deployer.address)).to.equal('115792089237316195423570985008687907853269984665640564039457584007913129639934'); 
+                    expect(await tokenFactory3.maxDeposit(deployer.address)).to.equal(ethers.constants.MaxUint256);
                 })
     
                 it("it returns the correct value for previewDeposit function", async function () {
