@@ -393,7 +393,6 @@ contract TokenFactory is
 
         if (managementFeeEnabled) {
             feesRefund = calculateManagementFee(assets, true, 0);
-            //assets = assets + feesRefund;
             factoryBurn(0, address(this), feesRefund);
             factoryBurn(1, address(this), feesRefund);
             emit Withdraw(caller, address(this), owner, feesRefund, feesRefund);
@@ -603,7 +602,6 @@ contract TokenFactory is
 
     function updateManagementFeeSum() private {
         uint mgmtFeeCycleCount = getMgmtFeeFactorLength() - 1;
-        //todo: mgmtfeeSum is set to zero in constructor
 
         mgmtFeeSum.push(mgmtFeeSum[mgmtFeeCycleCount - 1] + managementFeesRate);
     }
@@ -615,7 +613,7 @@ contract TokenFactory is
     ) public view returns (uint256) {
         uint256 internalManagementFeesRate;
         if (isDefault) {
-            internalManagementFeesRate = managementFeesRate; //managementFeesPerRebase[rebaseCount];
+            internalManagementFeesRate = managementFeesRate;
         } else {
             internalManagementFeesRate = mgmtFee;
         }
