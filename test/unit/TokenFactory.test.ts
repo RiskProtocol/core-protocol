@@ -722,6 +722,46 @@ developmentChains.includes(network.name) ?
                 assert.equal(await devToken1.balanceOf(deployer.address), expectedBalanceAfterTransfer);
                 assert.equal(await devToken2.balanceOf(deployer.address), expectedBalance);
             })
+
+            it("it should confirm that the receiver of a transfer transaction has correct balances of token x and y after rebase period", async function () {
+              const { tokenFactory, deployer, underlyingToken, devToken1, devToken2, tester } = await loadFixture(deployTokenFixture);
+              const depositAmount = ethers.utils.parseEther('10')
+              const transferAmount = ethers.utils.parseEther('1')
+              const expectedBalance = '9333500000000000000';
+              const expectedBalanceAfterTransfer = '10333500000000000000';
+      
+              await tokenFactory.initialize(devToken1.address, devToken2.address);
+              
+              // give the tester address some underlying asset
+              await underlyingToken.transfer(tester.address, depositAmount)
+      
+              // deposit underlying token for the deployer(has 10 of x and 10 of y)
+              await underlyingToken.approve(tokenFactory.address, depositAmount);
+              await tokenFactory.deposit(depositAmount, deployer.address);
+            
+              // deposit underlying token for the tester(has 10 of x and 10 of y)
+              await underlyingToken.connect(tester).approve(tokenFactory.address, depositAmount);
+              await tokenFactory.connect(tester).deposit(depositAmount, tester.address);
+      
+              // to a transaction (has 10 of x and 9 of y)
+              await devToken2.connect(tester).transfer(deployer.address, transferAmount);       
+      
+              // trigger a rebase
+              await tokenFactory.rebase()
+      
+              // confirm user balances when rebase has taken place   
+              assert.equal(await devToken1.balanceOf(tester.address), expectedBalance);
+              assert.equal(await devToken2.balanceOf(tester.address), expectedBalance);
+      
+              // do a transaction to simulate the actual reflection of the rebase on chain
+              // now the tester account which is the receiver of this transaction should have 9.3335 balance after rebase
+              // but after getting this transfer he should have in 10.3335 for x and 9.3335 for y
+              await devToken1.transfer(tester.address, transferAmount);
+          
+              // confirm user balances after rebase has been applied on chain  
+              assert.equal(await devToken1.balanceOf(tester.address), expectedBalanceAfterTransfer);
+              assert.equal(await devToken2.balanceOf(tester.address), expectedBalance);
+            })
         })
 
         describe("Forbidden Functions", async function () {
