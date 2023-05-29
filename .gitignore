@@ -9,4 +9,8 @@ typechain-types
 cache
 artifacts
 deployments/localhost
+forge-cache
+out
+
+
 

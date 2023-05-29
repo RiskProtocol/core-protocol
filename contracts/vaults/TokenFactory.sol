@@ -140,7 +140,7 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable, BaseContract
     function maxDeposit(
         address
     ) public view virtual override returns (uint256) {
-        return (type(uint256).max) - 1;
+        return (type(uint256).max);
     }
 
     /** @dev See {IERC4626-previewDeposit}. */
@@ -166,7 +166,7 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable, BaseContract
 
     /** @dev See {IERC4626-maxMint}. */
     function maxMint(address) public view virtual override returns (uint256) {
-        return (type(uint256).max) - 1;
+        return (type(uint256).max);
     }
 
     /** @dev See {IERC4626-previewMint}. */
@@ -393,7 +393,7 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable, BaseContract
     function updateUserLastRebaseCount(address owner_) public {
         if (
             devTokenArray[0].unScaledbalanceOf(owner_) == 0 &&
-            devTokenArray[0].unScaledbalanceOf(owner_) == 0
+            devTokenArray[1].unScaledbalanceOf(owner_) == 0
         ) {
             lastRebaseCount[owner_] = getScallingFactorLength();
         }
