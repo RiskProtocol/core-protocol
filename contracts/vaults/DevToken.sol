@@ -4,6 +4,7 @@ pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/interfaces/IERC4626.sol";
+import "./../interfaces/IERC20Update.sol";
 import "./TokenFactory.sol";
 import "../external/ERC20Permit.sol";
 import "./BaseContract.sol";
@@ -20,7 +21,7 @@ error DevToken__ZeroDeposit();
 
 contract DevToken is ERC20Permit, BaseContract, IERC4626, ReentrancyGuard {
     TokenFactory private immutable tokenFactory;
-    IERC20 private immutable underlyingToken;
+    IERC20Update private immutable underlyingToken;
 
     modifier onlyTokenFactory() {
         if (msg.sender != address(tokenFactory))

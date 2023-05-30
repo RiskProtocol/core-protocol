@@ -110,7 +110,7 @@ contract TokenFactory is ERC20, ReentrancyGuard, Ownable, BaseContract {
         return baseTokenDecimals;
     }
 
-    function getBaseToken() public view virtual returns (IERC20) {
+    function getBaseToken() public view virtual returns (IERC20Update) {
         return baseToken;
     }
 

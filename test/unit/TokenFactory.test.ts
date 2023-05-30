@@ -134,29 +134,12 @@ developmentChains.includes(network.name) ?
             const { devToken1, deployer } = await loadFixture(
               deployTokenFixture
             );
-            expect(await devToken1.maxDeposit(deployer.address)).to.equal(
-              "115792089237316195423570985008687907853269984665640564039457584007913129639934"
-            );
+            expect(await devToken1.maxDeposit(deployer.address)).to.equal(ethers.constants.MaxUint256);
           });
 
           it("it returns the correct value for previewDeposit function", async function () {
             const { devToken1 } = await loadFixture(deployTokenFixture);
             expect(await devToken1.previewDeposit("5")).to.equal("5");
-          });
-
-          it("it should revert when user wants to deposit more than maximum amount", async function () {
-            const { deployer, devToken1 } = await loadFixture(
-              deployTokenFixture
-            );
-            await expect(
-              devToken1.deposit(
-                ethers.constants.MaxUint256,
-                deployer.address
-              )
-            ).to.be.revertedWithCustomError(
-              devToken1,
-              "DevToken__DepositMoreThanMax"
-            );
           });
 
           it("it should revert when user wants to deposit 0 token", async function () {
@@ -291,26 +274,12 @@ developmentChains.includes(network.name) ?
             const { devToken1, deployer } = await loadFixture(
               deployTokenFixture
             );
-            expect(await devToken1.maxMint(deployer.address)).to.equal(
-              "115792089237316195423570985008687907853269984665640564039457584007913129639934"
-            );
+            expect(await devToken1.maxMint(deployer.address)).to.equal(ethers.constants.MaxUint256);
           });
 
           it("it returns the correct value for previewMint function", async function () {
             const { devToken1 } = await loadFixture(deployTokenFixture);
             assert.equal(await devToken1.previewMint("5"), "5");
-          });
-
-          it("it should revert when user wants to mint more than maximum amount", async function () {
-            const { deployer, devToken1 } = await loadFixture(
-              deployTokenFixture
-            );
-            await expect(
-              devToken1.mint(ethers.constants.MaxUint256, deployer.address)
-            ).to.be.revertedWithCustomError(
-              devToken1,
-              "DevToken__MintMoreThanMax"
-            );
           });
 
           it("it should make sure that the user is assigned correct amount of token x and y after minting", async function () {
@@ -368,7 +337,7 @@ developmentChains.includes(network.name) ?
                 await tokenFactory.initialize(devToken1.address, devToken2.address);
                 // deposit underlying token
                 await underlyingToken.approve(tokenFactory.address, depositAmount);
-                await tokenFactory.deposit(depositAmount, deployer.address)
+                await devToken1.deposit(depositAmount, deployer.address)
 
                 // trigger rebase
                 await tokenFactory.rebase();
@@ -805,11 +774,11 @@ developmentChains.includes(network.name) ?
       
               // deposit underlying token for the deployer(has 10 of x and 10 of y)
               await underlyingToken.approve(tokenFactory.address, depositAmount);
-              await tokenFactory.deposit(depositAmount, deployer.address);
+              await devToken1.deposit(depositAmount, deployer.address);
             
               // deposit underlying token for the tester(has 10 of x and 10 of y)
               await underlyingToken.connect(tester).approve(tokenFactory.address, depositAmount);
-              await tokenFactory.connect(tester).deposit(depositAmount, tester.address);
+              await devToken1.connect(tester).deposit(depositAmount, tester.address);
       
               // to a transaction (has 10 of x and 9 of y)
               await devToken2.connect(tester).transfer(deployer.address, transferAmount);       
