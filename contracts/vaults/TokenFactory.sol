@@ -12,6 +12,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./DevToken.sol";
 import "./../libraries/PriceFeed.sol";
 import "./BaseContract.sol";
+import "./../interfaces/IERC20Update.sol";
 
 error TokenFactory__DepositMoreThanMax();
 error TokenFactory__MintMoreThanMax();
@@ -41,7 +42,7 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable, BaseContract
     DevToken[] private devTokenArray;
     AggregatorV3Interface private immutable priceFeed;
     mapping(address => uint256) private lastRebaseCount;
-    IERC20 private immutable baseToken;
+    IERC20Update private immutable baseToken;
     uint8 private immutable baseTokenDecimals;
     uint256 private immutable interval;
     uint256 private lastTimeStamp;
@@ -51,18 +52,24 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable, BaseContract
         _;
     }
 
+    modifier validateDepositAmount(uint256 assets, address receiver) {
+        if (assets == 0) revert TokenFactory__ZeroDeposit();
+        if (assets > maxDeposit(receiver))
+            revert TokenFactory__DepositMoreThanMax();
+        _;
+    }
+
     // Events
     event RebaseApplied(address userAddress, uint256 rebaseCount);
     event Rebase(uint256 rebaseCount);
 
     constructor(
-        IERC20 baseTokenAddress,
+        IERC20Update baseTokenAddress,
         address priceFeedAddress,
         uint256 rebaseInterval, // in seconds
         address sanctionsContract_
-    ) ERC20("RiskProtocolVault", "RPK")
-      BaseContract(sanctionsContract_) {
-        baseToken = IERC20(baseTokenAddress);
+    ) ERC20("RiskProtocolVault", "RPK") BaseContract(sanctionsContract_) {
+        baseToken = IERC20Update(baseTokenAddress);
         priceFeed = AggregatorV3Interface(priceFeedAddress);
         (bool success, uint8 assetDecimals) = _tryGetAssetDecimals(baseToken);
         baseTokenDecimals = success ? assetDecimals : super.decimals();
@@ -154,11 +161,24 @@ contract TokenFactory is ERC20, IERC4626, ReentrancyGuard, Ownable, BaseContract
     function deposit(
         uint256 assets,
         address receiver
-    ) public virtual override returns (uint256) {
-        if (assets == 0) revert TokenFactory__ZeroDeposit();
-        if (assets > maxDeposit(receiver))
-            revert TokenFactory__DepositMoreThanMax();
+    ) public validateDepositAmount(assets, receiver) virtual override returns (uint256) {       
         uint256 shares = previewDeposit(assets);
+        _deposit(_msgSender(), receiver, assets, shares);
+
+        return shares;
+    }
+
+    /** @dev See {IERC4626-deposit}. */
+    function depositWithPermit(
+        uint256 assets,
+        address receiver,
+        uint256 deadline,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) public validateDepositAmount(assets, receiver)  returns (uint256) {        
+        uint256 shares = previewDeposit(assets);
+        baseToken.permit(_msgSender(), address(this), shares, deadline, v, r, s);
         _deposit(_msgSender(), receiver, assets, shares);
 
         return shares;

@@ -21,12 +21,12 @@ developmentChains.includes(network.name) ?
             const chainId = 31337
             const [deployer, tester] = await ethers.getSigners();
 
-            const MockV3Aggregator = await ethers.getContractFactory('MockV3Aggregator', deployer)
-            const mockV3Aggregator = await MockV3Aggregator.deploy(DECIMALS, INITIAL_PRICE);
+            const MockV3AggregatorFactory = await ethers.getContractFactory('MockV3Aggregator', deployer)
+            const mockV3Aggregator = await MockV3AggregatorFactory.deploy(DECIMALS, INITIAL_PRICE);
             await mockV3Aggregator.deployed();
 
-            const MockERC20Token = await ethers.getContractFactory('MockERC20Token', deployer)
-            const underlyingToken = await MockERC20Token.deploy();
+            const MockERC20TokenWithPermit = await ethers.getContractFactory('MockERC20TokenWithPermit', deployer)
+            const underlyingToken = await MockERC20TokenWithPermit.deploy();
             await underlyingToken.deployed();
 
             // deploy sanctions list mock
@@ -34,22 +34,32 @@ developmentChains.includes(network.name) ?
             const sanctionsContract = await SanctionsList.deploy();
             await sanctionsContract.deployed();
 
-            const TokenFactory = await ethers.getContractFactory('TokenFactory', deployer)
-            const tokenFactory = await TokenFactory.deploy(underlyingToken.address, mockV3Aggregator.address, REBASE_INTERVAL, sanctionsContract.address);
+            const TokenFactoryFactory = await ethers.getContractFactory('TokenFactory', deployer)
+            const tokenFactory = await TokenFactoryFactory.deploy(underlyingToken.address, mockV3Aggregator.address, REBASE_INTERVAL, sanctionsContract.address);
             await tokenFactory.deployed();
 
+            // Underlying Asset without permit function 
+            const MockERC20TokenWithoutPermit = await ethers.getContractFactory('MockERC20TokenWithoutPermit', deployer)
+            const underlyingTokenWithoutPermit = await MockERC20TokenWithoutPermit.deploy();
+            await underlyingTokenWithoutPermit.deployed();
+
+            const TokenFactory1Factory = await ethers.getContractFactory('TokenFactory', deployer)
+            const tokenFactory1 = await TokenFactory1Factory.deploy(underlyingTokenWithoutPermit.address, mockV3Aggregator.address, REBASE_INTERVAL, sanctionsContract.address);
+            await tokenFactory1.deployed();
+            
+
             // deploy devtoken 1     
-            const DevToken1 = await ethers.getContractFactory("DevToken", deployer);
-            const devToken1 = await DevToken1.deploy(TOKEN1_NAME, TOKEN1_SYMBOL, tokenFactory.address, defaultOperators, sanctionsContract.address);
+            const DevToken1Factory = await ethers.getContractFactory("DevToken", deployer);
+            const devToken1 = await DevToken1Factory.deploy(TOKEN1_NAME, TOKEN1_SYMBOL, tokenFactory.address, defaultOperators, sanctionsContract.address);
             await devToken1.deployed();
 
             // deploy devtoken 2 
-            const DevToken2 = await ethers.getContractFactory("DevToken", deployer);
-            const devToken2 = await DevToken2.deploy(TOKEN2_NAME, TOKEN2_SYMBOL, tokenFactory.address, defaultOperators, sanctionsContract.address);
+            const DevToken2Factory = await ethers.getContractFactory("DevToken", deployer);
+            const devToken2 = await DevToken2Factory.deploy(TOKEN2_NAME, TOKEN2_SYMBOL, tokenFactory.address, defaultOperators, sanctionsContract.address);
             await devToken2.deployed();
 
             // Fixtures can return anything you consider useful for your tests
-            return { devToken1, devToken2, mockV3Aggregator, underlyingToken, tokenFactory, deployer, tester, chainId };
+            return { devToken1, devToken2, mockV3Aggregator, underlyingToken, tokenFactory, deployer, tester, chainId, tokenFactory1, underlyingTokenWithoutPermit };
         }
 
         describe("ERC20Permit", async function () {
@@ -108,7 +118,38 @@ developmentChains.includes(network.name) ?
                 await expect(devToken1.permit('0x0000000000000000000000000000000000000000', approve.spender, approve.value, deadline, '0x99', r, s)).to.be.reverted                
               })
 
+              it("it should revert when using depositWithPermit with a regular ERC20 token without permit", async function () {
+                const { tokenFactory1, deployer, tester, devToken1, devToken2, chainId } = await loadFixture(deployTokenFixture);
+                const depositAmount = ethers.utils.parseEther('6')
+                await tokenFactory1.initialize(devToken1.address, devToken2.address);
+                // await underlyingTokenWithoutPermit.approve(tokenFactory1.address, depositAmount);
 
+                // Create the approval request
+                const approve = {
+                    owner: deployer.address,
+                    spender: tester.address,
+                    value: 100,
+                }
+                              
+                // deadline as much as you want in the future
+                const deadline = 100000000000000
+
+                // Get the user's nonce
+                const nonce = await devToken1.nonces(deployer.address)
+
+                // Get the EIP712 digest
+                const digest = getPermitDigest(await devToken1.name(), devToken1.address, chainId, approve, nonce, deadline)
+            
+                // Sign it
+                // NOTE: Using web3.eth.sign will hash the message internally again which
+                // we do not want, so we're manually signing here
+                const ownerPrivateKey = process.env.TEST_PRIVATE_KEY!
+                const privateKey1Buffer = Buffer.from(ownerPrivateKey, 'hex')
+                const { v, r, s } = sign(digest, privateKey1Buffer)
+            
+
+                await expect(tokenFactory1.depositWithPermit(depositAmount, deployer.address, deadline, v, r, s)).to.be.reverted
+            })
         })
 
     })
