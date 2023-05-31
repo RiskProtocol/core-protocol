@@ -501,11 +501,13 @@ contract TokenFactory is
         uint256 initialAsset1ValueEth = asset1ValueEth;
         uint256 initialAsset2ValueEth = asset2ValueEth;
 
+        //calculate the net balance of users after the rebases are to be applied
         (asset1ValueEth, asset2ValueEth) = calculateMgmtFeeForRebase(
             owner_,
             asset1ValueEth,
             asset2ValueEth
         );
+        //verify if the user really had any pending mgmt fees
         if (
             initialAsset1ValueEth != asset1ValueEth ||
             initialAsset2ValueEth != asset2ValueEth
@@ -526,9 +528,11 @@ contract TokenFactory is
                 (initialAsset1ValueEth - asset1ValueEth),
                 (initialAsset2ValueEth - asset2ValueEth)
             );
+            //update user fee history
             userMgmtFeeHistory[owner_] = getMgmtFeeFactorLength() - 1;
         }
 
+        //normal rebase operations
         uint256 rollOverValue = calculateRollOverValue(owner_);
         lastRebaseCount[owner_] = getScallingFactorLength();
 
@@ -557,6 +561,7 @@ contract TokenFactory is
         uint256 asset1Balance = devTokenArray[0].unScaledbalanceOf(owner_);
         uint256 asset2Balance = devTokenArray[1].unScaledbalanceOf(owner_);
 
+        //Calculate the net balance of user after rebases are to be applied
         (asset1Balance, asset2Balance) = calculateMgmtFeeForRebase(
             owner_,
             asset1Balance,
