@@ -47,7 +47,7 @@ contract TokenFactory is ERC20, ReentrancyGuard, Ownable, BaseContract {
     event Withdraw(address caller, address receiver, address owner, uint256 assets, uint256 shares);
 
     modifier onlyDevTokens() {
-        if (msg.sender == address(devTokenArray[0]) || msg.sender == address(devTokenArray[1])) {
+        if (_msgSender() == address(devTokenArray[0]) || _msgSender() == address(devTokenArray[1])) {
             _;
         } else {
             revert TokenFactory__MethodNotAllowed();

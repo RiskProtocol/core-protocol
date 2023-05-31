@@ -24,13 +24,13 @@ contract DevToken is ERC20Permit, BaseContract, IERC4626, ReentrancyGuard {
     IERC20Update private immutable underlyingToken;
 
     modifier onlyTokenFactory() {
-        if (msg.sender != address(tokenFactory))
+        if (_msgSender() != address(tokenFactory))
             revert DevToken__NotTokenFactory();
         _;
     }
 
     modifier onlyAssetOwner(address assetOwner) {
-        if (assetOwner != msg.sender) revert DevToken__OnlyAssetOwner();
+        if (assetOwner != _msgSender()) revert DevToken__OnlyAssetOwner();
         _;
     }
 
@@ -115,8 +115,8 @@ contract DevToken is ERC20Permit, BaseContract, IERC4626, ReentrancyGuard {
     function transfer(
         address to,
         uint256 amount
-    ) public onlyNotSanctioned(to) onlyNotSanctioned(msg.sender) override(ERC777, IERC20) returns (bool) {
-        handlePendingRebase(msg.sender, to);
+    ) public onlyNotSanctioned(to) onlyNotSanctioned(_msgSender()) override(ERC777, IERC20) returns (bool) {
+        handlePendingRebase(_msgSender(), to);
         super.transfer(to, amount);
         return true;
     }
@@ -130,8 +130,8 @@ contract DevToken is ERC20Permit, BaseContract, IERC4626, ReentrancyGuard {
         address recipient,
         uint256 amount,
         bytes memory data
-    ) public onlyNotSanctioned(recipient) onlyNotSanctioned(msg.sender) override {
-        handlePendingRebase(msg.sender, recipient);
+    ) public onlyNotSanctioned(recipient) onlyNotSanctioned(_msgSender()) override {
+        handlePendingRebase(_msgSender(), recipient);
         super.send(recipient, amount, data);
     }
 
@@ -184,7 +184,7 @@ contract DevToken is ERC20Permit, BaseContract, IERC4626, ReentrancyGuard {
 
     /** @dev See {IERC4626-totalAssets}. */
     function totalAssets() public view virtual override returns (uint256) {
-        return underlyingToken.balanceOf(address(this));
+        return underlyingToken.balanceOf(address(tokenFactory));
     }
 
     /** @dev See {IERC4626-convertToShares}. */
@@ -236,7 +236,7 @@ contract DevToken is ERC20Permit, BaseContract, IERC4626, ReentrancyGuard {
         bytes32 s
     ) public validateDepositAmount(assets, receiver)  returns (uint256) {
         uint256 shares = previewDeposit(assets);
-        underlyingToken.permit(_msgSender(), address(this), shares, deadline, v, r, s);
+        underlyingToken.permit(_msgSender(), address(tokenFactory), shares, deadline, v, r, s);
         tokenFactory._deposit(_msgSender(), receiver, assets, shares);
 
         return shares;
