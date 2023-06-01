@@ -135,7 +135,11 @@ contract TokenFactory is ERC20, ReentrancyGuard, Ownable, BaseContract {
         address receiver,
         uint256 assets,
         uint256 shares
-    ) external virtual onlyNotSanctioned(caller) onlyDevTokens() {
+    ) external
+      virtual
+      onlyNotSanctioned(caller)
+      onlyNotSanctioned(receiver)
+      onlyDevTokens() {
         SafeERC20.safeTransferFrom(baseToken, caller, address(this), assets);
         updateUserLastRebaseCount(receiver);
         factoryMint(0, receiver, shares);
@@ -153,7 +157,11 @@ contract TokenFactory is ERC20, ReentrancyGuard, Ownable, BaseContract {
         address owner,
         uint256 assets,
         uint256 shares
-    ) external virtual onlyNotSanctioned(caller) onlyDevTokens() {
+    ) external
+      virtual
+      onlyNotSanctioned(caller)
+      onlyNotSanctioned(receiver)
+      onlyDevTokens() {
         factoryBurn(0, caller, assets);
         factoryBurn(1, caller, assets);
         SafeERC20.safeTransfer(baseToken, receiver, assets);
