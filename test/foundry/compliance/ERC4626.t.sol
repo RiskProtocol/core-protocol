@@ -2,7 +2,6 @@
 pragma solidity ^0.8.9;
 
 import {Test} from "forge-std/Test.sol";
-import "forge-std/console.sol";
 import "./../TestHelper.sol";
 
 contract ERC4626Test is Test, TestHelper {
@@ -47,11 +46,11 @@ contract ERC4626Test is Test, TestHelper {
         tokenFactory.initialize(vault, vault2);
     }
 
-    // function invariantMetadata() public {
-    //     assertEq(vault.name(), TOKEN1_NAME);
-    //     assertEq(vault.symbol(), TOKEN1_SYMBOL);
-    //     assertEq(vault.decimals(), 18);
-    // }
+    function invariantMetadata() public {
+        assertEq(vault.name(), TOKEN1_NAME);
+        assertEq(vault.symbol(), TOKEN1_SYMBOL);
+        assertEq(vault.decimals(), 18);
+    }
 
     function testMetadata() public {
         DevToken vlt = new DevToken(
@@ -66,7 +65,7 @@ contract ERC4626Test is Test, TestHelper {
         assertEq(address(vlt.asset()), address(underlying));
     }
 
-    function testSingleDepositWithdraw(uint128 amount) public {
+    function testFuzz_SingleDepositWithdraw(uint128 amount) public {
         if (amount == 0) amount = 1;
 
         uint256 aliceUnderlyingAmount = amount;
@@ -105,7 +104,7 @@ contract ERC4626Test is Test, TestHelper {
         assertEq(underlying.balanceOf(alice), alicePreDepositBal);
     }
 
-    function testSingleMintRedeem(uint128 amount) public {
+    function testFuzz_SingleMintRedeem(uint128 amount) public {
         if (amount == 0) amount = 1;
 
         uint256 aliceShareAmount = amount;
