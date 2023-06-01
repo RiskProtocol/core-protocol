@@ -117,5 +117,44 @@ contract TokenFactoryTest is Test, TestHelper  {
 
     function testFuzz_PreviewRedeem(uint256 amount) public {
         assertEq(devTokenX.previewRedeem(amount), amount);
-    }    
+    }
+
+        function testFuzz_DepositXWithdrawY(uint128 amount) public {
+        if (amount == 0) amount = 1;
+
+        uint256 aliceUnderlyingAmount = amount;
+
+        address alice = address(0xABCD);
+
+        mockERC20Token.transfer(alice, aliceUnderlyingAmount);
+
+        vm.prank(alice);
+
+        mockERC20Token.approve(address(tokenFactory), aliceUnderlyingAmount);
+
+        assertEq(mockERC20Token.allowance(alice, address(tokenFactory)), aliceUnderlyingAmount);
+
+        uint256 alicePreDepositBal = mockERC20Token.balanceOf(alice);
+
+        vm.prank(alice);
+        uint256 aliceShareAmount = devTokenX.deposit(aliceUnderlyingAmount, alice);
+
+        // Expect exchange rate to be 1:1 on initial deposit.
+        assertEq(aliceUnderlyingAmount, aliceShareAmount);
+        assertEq(devTokenX.previewWithdraw(aliceShareAmount), aliceUnderlyingAmount);
+        assertEq(devTokenY.previewDeposit(aliceUnderlyingAmount), aliceShareAmount);
+        assertEq(devTokenX.totalSupply(), aliceShareAmount);
+        assertEq(devTokenY.totalAssets(), aliceUnderlyingAmount);
+        assertEq(devTokenY.balanceOf(alice), aliceShareAmount);
+        assertEq(devTokenY.convertToAssets(devTokenX.balanceOf(alice)), aliceUnderlyingAmount);
+        assertEq(mockERC20Token.balanceOf(alice), alicePreDepositBal - aliceUnderlyingAmount);
+
+        vm.prank(alice);
+        devTokenY.withdraw(aliceUnderlyingAmount, alice, alice);
+
+        assertEq(devTokenX.totalAssets(), 0);
+        assertEq(devTokenX.balanceOf(alice), 0);
+        assertEq(devTokenY.convertToAssets(devTokenX.balanceOf(alice)), 0);
+        assertEq(mockERC20Token.balanceOf(alice), alicePreDepositBal);
+    }
 }
