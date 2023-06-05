@@ -46,12 +46,6 @@ contract ERC4626Test is Test, TestHelper {
         tokenFactory.initialize(vault, vault2);
     }
 
-    function invariantMetadata() public {
-        assertEq(vault.name(), TOKEN1_NAME);
-        assertEq(vault.symbol(), TOKEN1_SYMBOL);
-        assertEq(vault.decimals(), 18);
-    }
-
     function testMetadata() public {
         DevToken vlt = new DevToken(
             TOKEN1_NAME,
@@ -63,6 +57,7 @@ contract ERC4626Test is Test, TestHelper {
         assertEq(vlt.name(), TOKEN1_NAME);
         assertEq(vlt.symbol(), TOKEN1_SYMBOL);
         assertEq(address(vlt.asset()), address(underlying));
+        assertEq(vlt.decimals(), 18);
     }
 
     function testFuzz_SingleDepositWithdraw(uint128 amount) public {

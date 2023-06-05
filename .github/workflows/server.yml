@@ -38,4 +38,4 @@ jobs:
           version: nightly
 
       - name: Run tests
-        run: forge test --match-path test/foundry/fuzz/* -vvv
+        run: forge test --no-match-path "test/foundry/invariants/*.t.sol" -vvv
