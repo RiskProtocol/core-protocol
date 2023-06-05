@@ -144,7 +144,6 @@ developmentChains.includes(network.name)
               tester,
             } = await loadFixture(deployTokenFixture);
             const depositAmount = item.depositValue;
-            //const transferAmount = ethers.utils.parseEther("1");
 
             await tokenFactory.initialize(devToken1.address, devToken2.address);
 
@@ -198,15 +197,17 @@ developmentChains.includes(network.name)
             await time.setNextBlockTimestamp(nextRebaseTimeStamp);
             await tokenFactory.executeRebase(1, true);
 
-            await time.setNextBlockTimestamp(nextRebaseTimeStamp);
+            let block2 = await ethers.provider.getBlock("latest");
+            const now2 = block2.timestamp;
+
+            await time.setNextBlockTimestamp(now2);
             const fee = await tokenFactory.calculateManagementFee(
               userBal,
               true,
               0
             );
-
             //assume that user made tx, apply rebase
-            await time.setNextBlockTimestamp(nextRebaseTimeStamp);
+            await time.setNextBlockTimestamp(now2);
             await tokenFactory.applyRebase(deployer.address);
 
             const userBal2: bigint = await devToken1.balanceOf(

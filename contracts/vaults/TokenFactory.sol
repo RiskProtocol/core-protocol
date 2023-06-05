@@ -76,12 +76,13 @@ contract TokenFactory is
     bool private managementFeeEnabled;
     uint256[] private mgmtFeeSum;
 
-    struct PendingRebase {
+    struct ScheduledRebase {
+        //ScheduledRebase
         uint256 sequenceNumber;
         bool isNaturalRebase;
     }
 
-    PendingRebase[] private pendingRebases;
+    ScheduledRebase[] private scheduledRebases;
     uint256 private nextSequenceNumber;
 
     modifier onlyAssetOwner(address assetOwner) {
@@ -366,7 +367,7 @@ contract TokenFactory is
         //mgmtFeeslogic
         if (managementFeeEnabled) {
             uint256 fees = calculateManagementFee(shares, true, 0);
-            shares = shares - fees;
+            shares -= fees;
             factoryMint(0, address(this), fees);
             factoryMint(1, address(this), fees);
             emit Deposit(caller, address(this), fees, fees);
@@ -448,7 +449,7 @@ contract TokenFactory is
             revert TokenFactory__InvalidSequenceNumber();
         }
 
-        pendingRebases.push(PendingRebase(sequenceNumber, isNaturalRebase));
+        scheduledRebases.push(ScheduledRebase(sequenceNumber, isNaturalRebase));
 
         if (sequenceNumber == nextSequenceNumber) {
             rebase();
@@ -457,16 +458,16 @@ contract TokenFactory is
 
     function rebase() private {
         uint256 i = 0;
-        while (i < pendingRebases.length && i < 5) {
+        while (i < scheduledRebases.length && i < 5) {
             // a maximum of 5 rebases per transaction
-            PendingRebase memory pendingRebase = pendingRebases[i];
+            ScheduledRebase memory scheduledRebase = scheduledRebases[i];
 
-            if (pendingRebase.sequenceNumber != nextSequenceNumber) {
+            if (scheduledRebase.sequenceNumber != nextSequenceNumber) {
                 i++;
                 continue;
             }
             //rebase functionalities
-            if (pendingRebase.isNaturalRebase) {
+            if (scheduledRebase.isNaturalRebase) {
                 lastTimeStamp = block.timestamp;
             }
             uint256 rebasePrice = priceFeed.getPrice() / 10 ** decimals();
@@ -475,7 +476,7 @@ contract TokenFactory is
             scallingFactorX.push(
                 ((asset1Price * 10 ** decimals()) / 2) / divisor
             );
-            if (managementFeeEnabled && pendingRebase.isNaturalRebase) {
+            if (managementFeeEnabled && scheduledRebase.isNaturalRebase) {
                 mgmtFeesHistory.push(managementFeesRate);
                 updateManagementFeeSum();
             }
@@ -489,7 +490,7 @@ contract TokenFactory is
             removeRebase(i);
 
             // Do not increment i if we just removed an element from the array
-            if (i >= pendingRebases.length && i > 0) {
+            if (i >= scheduledRebases.length && i > 0) {
                 i--;
             }
         }
@@ -634,13 +635,13 @@ contract TokenFactory is
             .div(1 days);
 
         //User deposit or Withdrawal timestamp
-        uint256 userDepositTimeStamp = block.timestamp;
+        uint256 userTransacTimeStamp = block.timestamp;
 
         //Calculate the amount of time that the user will be in the system before next rebase
         //or calculate the time left before next rebase when the user exits the system
-        uint256 userDepositCycle;
-        if (nextRebaseTimeStamp > userDepositTimeStamp) {
-            userDepositCycle = nextRebaseTimeStamp - userDepositTimeStamp;
+        uint256 userDepositCycle = 0;
+        if (nextRebaseTimeStamp > userTransacTimeStamp) {
+            userDepositCycle = nextRebaseTimeStamp - userTransacTimeStamp;
         } else {
             userDepositCycle = 0;
         }
@@ -660,7 +661,7 @@ contract TokenFactory is
 
     //This method is used to calculate mgmt fees when applying a rebase
     function calculateMgmtFeeForRebase(
-        address owner_, //address of the owner
+        address owner_, //address of the owner of the holding tokens
         uint256 asset1ValueEth, // Self descriptive, first asset
         uint256 asset2ValueEth // Self descriptive, second asset
     ) private view returns (uint256, uint256) {
@@ -703,13 +704,17 @@ contract TokenFactory is
     }
 
     function removeRebase(uint256 index) private nonReentrant {
-        pendingRebases[index] = pendingRebases[pendingRebases.length - 1];
-        pendingRebases.pop();
+        scheduledRebases[index] = scheduledRebases[scheduledRebases.length - 1];
+        scheduledRebases.pop();
     }
 
     //  other getter methods
-    function getPendingRebases() public view returns (PendingRebase[] memory) {
-        return pendingRebases;
+    function getScheduledRebases()
+        public
+        view
+        returns (ScheduledRebase[] memory)
+    {
+        return scheduledRebases;
     }
 
     function getNextSequenceNumber() public view returns (uint256) {
