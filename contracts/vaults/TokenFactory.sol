@@ -17,6 +17,7 @@ import "@openzeppelin/contracts/token/ERC777/IERC777Sender.sol";
 import "./DevToken.sol";
 import "./../libraries/PriceFeed.sol";
 import "./BaseContract.sol";
+import "./../interfaces/IERC20Update.sol";
 
 error TokenFactory__DepositMoreThanMax();
 error TokenFactory__MintMoreThanMax();
@@ -64,7 +65,7 @@ contract TokenFactory is
     DevToken[] private devTokenArray;
     AggregatorV3Interface private immutable priceFeed;
     mapping(address => uint256) private lastRebaseCount;
-    IERC20 private immutable baseToken;
+    IERC20Update private immutable baseToken;
     uint8 private immutable baseTokenDecimals;
     uint256 private immutable interval;
     uint256 private lastTimeStamp;
@@ -90,6 +91,13 @@ contract TokenFactory is
         _;
     }
 
+    modifier validateDepositAmount(uint256 assets, address receiver) {
+        if (assets == 0) revert TokenFactory__ZeroDeposit();
+        if (assets > maxDeposit(receiver))
+            revert TokenFactory__DepositMoreThanMax();
+        _;
+    }
+
     // Events
     event RebaseApplied(address userAddress, uint256 rebaseCount);
     event Rebase(uint256 rebaseCount);
@@ -111,7 +119,7 @@ contract TokenFactory is
     );
 
     constructor(
-        IERC20 baseTokenAddress,
+        IERC20Update baseTokenAddress,
         address priceFeedAddress,
         uint256 rebaseInterval, // in seconds
         address sanctionsContract_
@@ -126,7 +134,7 @@ contract TokenFactory is
             TOKENS_SENDER_INTERFACE_HASH,
             address(this)
         );
-        baseToken = IERC20(baseTokenAddress);
+        baseToken = IERC20Update(baseTokenAddress);
         priceFeed = AggregatorV3Interface(priceFeedAddress);
         (bool success, uint8 assetDecimals) = _tryGetAssetDecimals(baseToken);
         baseTokenDecimals = success ? assetDecimals : super.decimals();
@@ -208,7 +216,7 @@ contract TokenFactory is
     function maxDeposit(
         address
     ) public view virtual override returns (uint256) {
-        return (type(uint256).max) - 1;
+        return (type(uint256).max);
     }
 
     /** @dev See {IERC4626-previewDeposit}. */
@@ -222,11 +230,38 @@ contract TokenFactory is
     function deposit(
         uint256 assets,
         address receiver
-    ) public virtual override returns (uint256) {
-        if (assets == 0) revert TokenFactory__ZeroDeposit();
-        if (assets > maxDeposit(receiver))
-            revert TokenFactory__DepositMoreThanMax();
+    )
+        public
+        virtual
+        override
+        validateDepositAmount(assets, receiver)
+        returns (uint256)
+    {
         uint256 shares = previewDeposit(assets);
+        _deposit(_msgSender(), receiver, assets, shares);
+
+        return shares;
+    }
+
+    /** @dev See {IERC4626-deposit}. */
+    function depositWithPermit(
+        uint256 assets,
+        address receiver,
+        uint256 deadline,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) public validateDepositAmount(assets, receiver) returns (uint256) {
+        uint256 shares = previewDeposit(assets);
+        baseToken.permit(
+            _msgSender(),
+            address(this),
+            shares,
+            deadline,
+            v,
+            r,
+            s
+        );
         _deposit(_msgSender(), receiver, assets, shares);
 
         return shares;
@@ -234,7 +269,7 @@ contract TokenFactory is
 
     /** @dev See {IERC4626-maxMint}. */
     function maxMint(address) public view virtual override returns (uint256) {
-        return (type(uint256).max) - 1;
+        return (type(uint256).max);
     }
 
     /** @dev See {IERC4626-previewMint}. */
@@ -577,7 +612,7 @@ contract TokenFactory is
     function updateUserLastRebaseCount(address owner_) public {
         if (
             devTokenArray[0].unScaledbalanceOf(owner_) == 0 &&
-            devTokenArray[0].unScaledbalanceOf(owner_) == 0
+            devTokenArray[1].unScaledbalanceOf(owner_) == 0
         ) {
             lastRebaseCount[owner_] = getScallingFactorLength();
         }

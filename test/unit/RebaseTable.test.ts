@@ -45,21 +45,21 @@ developmentChains.includes(network.name)
       async function deployTokenFixture() {
         const [deployer, tester] = await ethers.getSigners();
 
-        const MockV3Aggregator = await ethers.getContractFactory(
+        const MockV3AggregatorFactory = await ethers.getContractFactory(
           "MockV3Aggregator",
           deployer
         );
-        const mockV3Aggregator = await MockV3Aggregator.deploy(
+        const mockV3Aggregator = await MockV3AggregatorFactory.deploy(
           DECIMALS,
           INITIAL_PRICE
         );
         await mockV3Aggregator.deployed();
 
-        const MockERC20Token = await ethers.getContractFactory(
-          "MockERC20Token",
+        const MockERC20TokenWithPermit = await ethers.getContractFactory(
+          "MockERC20TokenWithPermit",
           deployer
         );
-        const underlyingToken = await MockERC20Token.deploy();
+        const underlyingToken = await MockERC20TokenWithPermit.deploy();
         await underlyingToken.deployed();
 
         // deploy sanctions list mock

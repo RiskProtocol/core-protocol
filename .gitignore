@@ -9,5 +9,9 @@ typechain-types
 cache
 artifacts
 deployments/localhost
+forge-cache
+out
+
+
 
 remix-compiler.config.js
