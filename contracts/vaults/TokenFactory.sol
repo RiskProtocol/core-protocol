@@ -503,7 +503,7 @@ contract TokenFactory is
             }
             //rebase functionalities
             if (scheduledRebase.isNaturalRebase) {
-                lastTimeStamp = block.timestamp;
+                lastTimeStamp += interval;
             }
             uint256 rebasePrice = priceFeed.getPrice() / 10 ** decimals();
             uint256 asset1Price = rebasePrice.ceilDiv(3); // this should be gotten from the oracle
@@ -696,13 +696,13 @@ contract TokenFactory is
 
     //This method is used to calculate mgmt fees when applying a rebase
     function calculateMgmtFeeForRebase(
-        address owner_, //address of the owner of the holding tokens
+        address tokensHolder, //address of the owner of the holding tokens
         uint256 asset1ValueEth, // Self descriptive, first asset
         uint256 asset2ValueEth // Self descriptive, second asset
     ) private view returns (uint256, uint256) {
         if (managementFeeEnabled) {
             uint256 numberOfFeesCycle = getMgmtFeeFactorLength() - 1; //through rebase only
-            uint256 numberOfUserFeeCycle = userMgmtFeeHistory[owner_]; //through rebase only
+            uint256 numberOfUserFeeCycle = userMgmtFeeHistory[tokensHolder]; //through rebase only
 
             //calculate if user missed any mgmt fees for previous rebases
             uint256 outstandingFeesCount = numberOfFeesCycle -

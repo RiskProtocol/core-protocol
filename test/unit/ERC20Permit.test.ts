@@ -210,7 +210,7 @@ developmentChains.includes(network.name)
               r,
               s
             )
-          ).to.be.reverted;
+          ).to.be.revertedWith("ERC20Permit: invalid signature");
 
           // It should revert if the deadline has occured
           await expect(
@@ -223,7 +223,7 @@ developmentChains.includes(network.name)
               r,
               s
             )
-          ).to.be.reverted;
+          ).to.be.revertedWith("ERC20Permit: expired deadline");
 
           // invalid ecrecover's return address(0x0), so we must also guarantee that
           // this case fails
@@ -237,7 +237,7 @@ developmentChains.includes(network.name)
               r,
               s
             )
-          ).to.be.reverted;
+          ).to.be.revertedWith("ECDSA: invalid signature");
         });
 
         it("it should revert when using depositWithPermit with a regular ERC20 token without permit", async function () {

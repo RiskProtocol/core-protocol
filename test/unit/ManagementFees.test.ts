@@ -343,11 +343,9 @@ developmentChains.includes(network.name)
             const rollOverValue: bigint =
               (asset1BalV2 * scallingFactorX_ + asset2BalV2 * scallingFactorY) /
               denominator;
-            let block = await ethers.provider.getBlock("latest");
-
-            const now: bigint = BigInt(block.timestamp);
+            const lastRebase = await tokenFactory.getLastTimeStamp();
             //contract call
-            const nextRebase = now + BigInt(REBASE_INTERVAL);
+            const nextRebase = BigInt(lastRebase) + BigInt(REBASE_INTERVAL);
             await time.setNextBlockTimestamp(nextRebase);
             await tokenFactory.executeRebase(1, true);
 
@@ -423,15 +421,16 @@ developmentChains.includes(network.name)
             const rollOverValue: bigint =
               (asset1BalV2 * scallingFactorX_ + asset2BalV2 * scallingFactorY) /
               denominator;
-            let block = await ethers.provider.getBlock("latest");
 
-            const now: bigint = BigInt(block.timestamp);
             //contract call
-            const nextRebase = now + BigInt(REBASE_INTERVAL);
+            // nextRebase = now + BigInt(REBASE_INTERVAL);
+            const lastRebase = await tokenFactory.getLastTimeStamp();
+            //contract call
+            const nextRebase = BigInt(lastRebase) + BigInt(REBASE_INTERVAL);
 
             //early rebase
-            const earlyRebase: bigint = now + BigInt(1000);
-            await time.setNextBlockTimestamp(earlyRebase);
+            const earlyRebase: bigint = BigInt(lastRebase) + BigInt(1000);
+            await time.setNextBlockTimestamp(BigNumber.from(earlyRebase));
             await tokenFactory.executeRebase(1, false);
 
             //normal rebase
