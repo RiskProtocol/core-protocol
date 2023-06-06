@@ -423,7 +423,6 @@ developmentChains.includes(network.name)
               denominator;
 
             //contract call
-            // nextRebase = now + BigInt(REBASE_INTERVAL);
             const lastRebase = await tokenFactory.getLastTimeStamp();
             //contract call
             const nextRebase = BigInt(lastRebase) + BigInt(REBASE_INTERVAL);
@@ -442,6 +441,103 @@ developmentChains.includes(network.name)
             );
             expect(rollOverValue).to.equal(
               await devToken2.balanceOf(deployer.address)
+            );
+          });
+          it(`It should not apply rebase to a new user`, async function () {
+            const {
+              tokenFactory,
+              deployer,
+              underlyingToken,
+              devToken1,
+              devToken2,
+              tester,
+            } = await loadFixture(deployTokenFixture);
+            const depositAmount = item.depositValue;
+
+            await tokenFactory.initialize(devToken1.address, devToken2.address);
+
+            // set the management fee to 0.2% and activating fees
+            await tokenFactory.setManagementFeeRate(200); //0.2 % per day
+            await tokenFactory.setManagementFeeState(true);
+
+            const lastRebase = await tokenFactory.getLastTimeStamp();
+            //contract call and make a rebase
+            const nextRebase = BigInt(lastRebase) + BigInt(REBASE_INTERVAL);
+            await time.setNextBlockTimestamp(nextRebase);
+            await tokenFactory.executeRebase(1, true);
+
+            // deposit underlying token
+            await underlyingToken.approve(tokenFactory.address, depositAmount);
+            await time.setNextBlockTimestamp(nextRebase);
+            await devToken1.mint(depositAmount, tester.address);
+
+            //calculate fees for that interval only
+            await time.setNextBlockTimestamp(nextRebase);
+            const fee = await tokenFactory.calculateManagementFee(
+              depositAmount,
+              true,
+              0
+            );
+
+            const userBal = await devToken1.balanceOf(tester.address);
+
+            // confirm user paid for only one interval
+            assert.equal(
+              BigInt(fee) + BigInt(userBal),
+              BigInt(item.depositValue)
+            );
+          });
+          it(`It should charge the user for all pending rebases, not just for the one he is depositing`, async function () {
+            const {
+              tokenFactory,
+              deployer,
+              underlyingToken,
+              devToken1,
+              devToken2,
+              tester,
+            } = await loadFixture(deployTokenFixture);
+            const depositAmount = item.depositValue;
+
+            await tokenFactory.initialize(devToken1.address, devToken2.address);
+
+            // set the management fee to 0.2% and activating fees
+            await tokenFactory.setManagementFeeRate(200); //0.2 % per day
+            await tokenFactory.setManagementFeeState(true);
+            const lastRebase = await tokenFactory.getLastTimeStamp();
+            //assume 10000 seconds have passed
+            const newTimeValue = BigInt(lastRebase) + BigInt(10000);
+
+            // deposit underlying token
+            await time.setNextBlockTimestamp(newTimeValue);
+            //calculate fees for that interval only
+            const fee = await tokenFactory.calculateManagementFee(
+              depositAmount,
+              true,
+              0
+            );
+            await underlyingToken.approve(tokenFactory.address, depositAmount);
+            await time.setNextBlockTimestamp(newTimeValue);
+            await devToken1.mint(depositAmount, tester.address);
+
+            //contract call and make 3 rebase
+            const nextRebase = BigInt(lastRebase) + BigInt(REBASE_INTERVAL);
+            await time.setNextBlockTimestamp(nextRebase);
+            await tokenFactory.executeRebase(1, true);
+
+            const secondRebase = BigInt(nextRebase) + BigInt(REBASE_INTERVAL);
+            await time.setNextBlockTimestamp(secondRebase);
+            await tokenFactory.executeRebase(2, true);
+
+            const thirdRebase = BigInt(secondRebase) + BigInt(REBASE_INTERVAL);
+            await time.setNextBlockTimestamp(thirdRebase);
+            await tokenFactory.executeRebase(3, true);
+
+            const userBal = await devToken1.balanceOf(tester.address);
+
+            // confirm user paid for more than one interval (3+1) in this case
+            assert.notEqual(
+              BigInt(fee) + BigInt(userBal),
+              BigInt(item.depositValue)
             );
           });
         });

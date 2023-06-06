@@ -218,6 +218,8 @@ contract TokenFactory is
         onlyNotSanctioned(receiver)
         onlyDevTokens
     {
+        rebaseCheck(receiver);
+
         SafeERC20.safeTransferFrom(baseToken, caller, address(this), assets);
         updateUserLastRebaseCount(receiver);
         //mgmtFeeslogic
@@ -251,6 +253,7 @@ contract TokenFactory is
         onlyNotSanctioned(receiver)
         onlyDevTokens
     {
+        rebaseCheck(receiver);
         //mgmt fees logic
         uint256 feesRefund = 0;
 
@@ -563,6 +566,16 @@ contract TokenFactory is
             }
         }
         return (asset1ValueEth, asset2ValueEth);
+    }
+
+    function rebaseCheck(address user) private {
+        //checks if a user is an existing user and apply user rebase when needed
+        if (
+            lastRebaseCount[user] != 0 &&
+            lastRebaseCount[user] != getScallingFactorLength()
+        ) {
+            applyRebase(user);
+        }
     }
 
     function removeRebase(uint256 index) private nonReentrant {
