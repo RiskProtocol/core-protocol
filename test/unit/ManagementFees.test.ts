@@ -153,7 +153,7 @@ developmentChains.includes(network.name)
 
             // deposit underlying token
             await underlyingToken.approve(tokenFactory.address, depositAmount);
-            await tokenFactory.mint(depositAmount, deployer.address);
+            await devToken1.mint(depositAmount, deployer.address);
 
             const userBal = await devToken1.balanceOf(deployer.address);
             const factBal = await devToken1.balanceOf(tokenFactory.address);
@@ -185,7 +185,7 @@ developmentChains.includes(network.name)
 
             // deposit underlying token
             await underlyingToken.approve(tokenFactory.address, depositAmount);
-            await tokenFactory.mint(depositAmount, deployer.address);
+            await devToken1.mint(depositAmount, deployer.address);
 
             const userBal: bigint = await devToken1.balanceOf(deployer.address);
             const factBal = await devToken1.balanceOf(tokenFactory.address);
@@ -236,7 +236,7 @@ developmentChains.includes(network.name)
 
             // deposit underlying token
             await underlyingToken.approve(tokenFactory.address, depositAmount);
-            await tokenFactory.mint(depositAmount, deployer.address);
+            await devToken2.mint(depositAmount, deployer.address);
 
             const withdrawAmount: bigint =
               (await devToken1.balanceOf(deployer.address)) >
@@ -260,7 +260,7 @@ developmentChains.includes(network.name)
             await time.setNextBlockTimestamp(now);
 
             // withdraw underlying token
-            await tokenFactory.withdraw(
+            await devToken1.withdraw(
               withdrawAmount,
               deployer.address,
               deployer.address
@@ -295,7 +295,7 @@ developmentChains.includes(network.name)
 
             // deposit underlying token
             await underlyingToken.approve(tokenFactory.address, depositAmount);
-            await tokenFactory.deposit(depositAmount, deployer.address);
+            await devToken1.deposit(depositAmount, deployer.address);
 
             // to a transaction
             await devToken1.transfer(tester.address, transferAmount);
@@ -373,7 +373,7 @@ developmentChains.includes(network.name)
 
             // deposit underlying token
             await underlyingToken.approve(tokenFactory.address, depositAmount);
-            await tokenFactory.deposit(depositAmount, deployer.address);
+            await devToken1.deposit(depositAmount, deployer.address);
 
             // to a transaction
             await devToken1.transfer(tester.address, transferAmount);

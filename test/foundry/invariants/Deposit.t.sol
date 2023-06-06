@@ -44,7 +44,7 @@ contract Deposit is Test, TestHelper  {
         tokenFactory.initialize(devTokenX, devTokenY);
 
         // invariant test
-        handler = new DepositHandler(tokenFactory, mockERC20Token);
+        handler = new DepositHandler(devTokenX, mockERC20Token);
         targetContract(address(handler));
     }
 

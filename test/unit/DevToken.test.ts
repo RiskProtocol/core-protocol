@@ -207,7 +207,7 @@ developmentChains.includes(network.name)
 
           await tokenFactory.initialize(devToken1.address, devToken2.address);
           await underlyingToken.approve(tokenFactory.address, depositAmount);
-          await tokenFactory.deposit(depositAmount, deployer.address);
+          await devToken1.deposit(depositAmount, deployer.address);
 
           // transfer token using send function
           await devToken1.send(tester.address, transferAmount, bytes);
@@ -236,7 +236,7 @@ developmentChains.includes(network.name)
 
           await tokenFactory.initialize(devToken1.address, devToken2.address);
           await underlyingToken.approve(tokenFactory.address, depositAmount);
-          await tokenFactory.deposit(depositAmount, deployer.address);
+          await devToken1.deposit(depositAmount, deployer.address);
 
           // trigger rebase
           await tokenFactory.executeRebase(1, true);
@@ -263,7 +263,7 @@ developmentChains.includes(network.name)
 
           await tokenFactory.initialize(devToken1.address, devToken2.address);
           await underlyingToken.approve(tokenFactory.address, depositAmount);
-          await tokenFactory.deposit(depositAmount, deployer.address);
+          await devToken1.deposit(depositAmount, deployer.address);
 
           // add tester to sanctions list
           await sanctionsContract.setSanction(tester.address, true);
@@ -300,7 +300,7 @@ developmentChains.includes(network.name)
           const depositAmount = ethers.utils.parseEther("6");
           await tokenFactory.initialize(devToken1.address, devToken2.address);
           await underlyingToken.approve(tokenFactory.address, depositAmount);
-          await tokenFactory.deposit(depositAmount, deployer.address);
+          await devToken1.deposit(depositAmount, deployer.address);
 
           // add tester to sanctions list
           await sanctionsContract.setSanction(tester.address, true);
@@ -324,6 +324,14 @@ developmentChains.includes(network.name)
           expect(notSanctioned).to.equal(false);
         });
       });
+      // remove tester from sanctions list
+      //       await sanctionsContract.setSanction(tester.address, false);
+      //       const notSanctioned = await sanctionsContract.isSanctioned(
+      //         tester.address
+      //       );
+      //       expect(notSanctioned).to.equal(false);
+      //     });
+      // })
 
       describe("Mint", async function () {
         it("should not allow other users to perform mint function except Token Factory", async function () {
@@ -332,7 +340,7 @@ developmentChains.includes(network.name)
           );
           const amount = ethers.utils.parseEther("1");
           await expect(
-            devToken1.connect(tester).mint(deployer.address, amount)
+            devToken1.connect(tester).mintAsset(deployer.address, amount)
           ).to.be.revertedWithCustomError(
             devToken1,
             "DevToken__NotTokenFactory"

@@ -1,12 +1,9 @@
-export const tokenFactoryAddress = "0xa195ACcEB1945163160CD5703Ed43E4f78176a54";
-export const devTokenXAddress = "0x6212cb549De37c25071cF506aB7E115D140D9e42";
-export const devTokenYAddress = "0x6F9679BdF5F180a139d01c598839a5df4860431b";
-export const underlyingTokenAddress =
-  "0xc0c5618f0F3Fa66b496F2940f373DC366d765BAe";
-export const uniswapV2RouterAddress =
-  "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D";
-export const uniswapV2FactoryAddress =
-  "0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f";
+export const tokenFactoryAddress = "0xC0BF43A4Ca27e0976195E6661b099742f10507e5";
+export const devTokenXAddress = "0x43cA9bAe8dF108684E5EAaA720C25e1b32B0A075";
+export const devTokenYAddress = "0x9D3DA37d36BB0B825CD319ed129c2872b893f538";
+export const underlyingTokenAddress = "0x97fd63D049089cd70D9D139ccf9338c81372DE68";
+export const uniswapV2RouterAddress = "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D";
+export const uniswapV2FactoryAddress = "0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f";
 
 export const tokenFactoryAbi = [
   {
@@ -22,57 +19,37 @@ export const tokenFactoryAbi = [
         type: "address",
       },
       {
-        internalType: "uint256",
-        name: "rebaseInterval",
-        type: "uint256",
+        "internalType": "uint256",
+        "name": "rebaseInterval",
+        "type": "uint256"
       },
+      {
+        "internalType": "address",
+        "name": "sanctionsContract_",
+        "type": "address"
+      }
     ],
     stateMutability: "nonpayable",
     type: "constructor",
   },
   {
-    inputs: [],
-    name: "TokenFactory__DepositMoreThanMax",
-    type: "error",
+    "inputs": [],
+    "name": "BaseContract__SanctionedAddress",
+    "type": "error"
   },
   {
-    inputs: [],
-    name: "TokenFactory__InvalidDivision",
-    type: "error",
+    "inputs": [],
+    "name": "TokenFactory__InvalidDivision",
+    "type": "error"
   },
   {
-    inputs: [],
-    name: "TokenFactory__MethodNotAllowed",
-    type: "error",
+    "inputs": [],
+    "name": "TokenFactory__MethodNotAllowed",
+    "type": "error"
   },
   {
-    inputs: [],
-    name: "TokenFactory__MintMoreThanMax",
-    type: "error",
-  },
-  {
-    inputs: [],
-    name: "TokenFactory__OnlyAssetOwner",
-    type: "error",
-  },
-  {
-    inputs: [],
-    name: "TokenFactory__RedeemMoreThanMax",
-    type: "error",
-  },
-  {
-    inputs: [],
-    name: "TokenFactory__WithdrawMoreThanMax",
-    type: "error",
-  },
-  {
-    inputs: [],
-    name: "TokenFactory__ZeroDeposit",
-    type: "error",
-  },
-  {
-    anonymous: false,
-    inputs: [
+    "anonymous": false,
+    "inputs": [
       {
         indexed: true,
         internalType: "address",
@@ -99,16 +76,16 @@ export const tokenFactoryAbi = [
     anonymous: false,
     inputs: [
       {
-        indexed: true,
-        internalType: "address",
-        name: "sender",
-        type: "address",
+        "indexed": false,
+        "internalType": "address",
+        "name": "caller",
+        "type": "address"
       },
       {
-        indexed: true,
-        internalType: "address",
-        name: "owner",
-        type: "address",
+        "indexed": false,
+        "internalType": "address",
+        "name": "receiver",
+        "type": "address"
       },
       {
         indexed: false,
@@ -130,10 +107,96 @@ export const tokenFactoryAbi = [
     anonymous: false,
     inputs: [
       {
-        indexed: true,
-        internalType: "address",
-        name: "previousOwner",
-        type: "address",
+        "indexed": false,
+        "internalType": "address",
+        "name": "operator",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "from",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "to",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "bytes",
+        "name": "userData",
+        "type": "bytes"
+      },
+      {
+        "indexed": false,
+        "internalType": "bytes",
+        "name": "operatorData",
+        "type": "bytes"
+      }
+    ],
+    "name": "Erc777TokenReceived",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "operator",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "from",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "to",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "bytes",
+        "name": "userData",
+        "type": "bytes"
+      },
+      {
+        "indexed": false,
+        "internalType": "bytes",
+        "name": "operatorData",
+        "type": "bytes"
+      }
+    ],
+    "name": "Erc777TokenSent",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "previousOwner",
+        "type": "address"
       },
       {
         indexed: true,
@@ -206,22 +269,22 @@ export const tokenFactoryAbi = [
     anonymous: false,
     inputs: [
       {
-        indexed: true,
-        internalType: "address",
-        name: "sender",
-        type: "address",
+        "indexed": false,
+        "internalType": "address",
+        "name": "caller",
+        "type": "address"
       },
       {
-        indexed: true,
-        internalType: "address",
-        name: "receiver",
-        type: "address",
+        "indexed": false,
+        "internalType": "address",
+        "name": "receiver",
+        "type": "address"
       },
       {
-        indexed: true,
-        internalType: "address",
-        name: "owner",
-        type: "address",
+        "indexed": false,
+        "internalType": "address",
+        "name": "owner",
+        "type": "address"
       },
       {
         indexed: false,
@@ -240,17 +303,91 @@ export const tokenFactoryAbi = [
     type: "event",
   },
   {
-    inputs: [
+    "inputs": [],
+    "name": "TOKENS_SENDER_INTERFACE_HASH",
+    "outputs": [
       {
-        internalType: "address",
-        name: "owner",
-        type: "address",
+        "internalType": "bytes32",
+        "name": "",
+        "type": "bytes32"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "caller",
+        "type": "address"
       },
       {
-        internalType: "address",
-        name: "spender",
-        type: "address",
+        "internalType": "address",
+        "name": "receiver",
+        "type": "address"
       },
+      {
+        "internalType": "uint256",
+        "name": "assets",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "shares",
+        "type": "uint256"
+      }
+    ],
+    "name": "_deposit",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "caller",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "receiver",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "owner",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "assets",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "shares",
+        "type": "uint256"
+      }
+    ],
+    "name": "_withdraw",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "owner",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "spender",
+        "type": "address"
+      }
     ],
     name: "allowance",
     outputs: [
@@ -301,20 +438,7 @@ export const tokenFactoryAbi = [
     type: "function",
   },
   {
-    inputs: [],
-    name: "asset",
-    outputs: [
-      {
-        internalType: "address",
-        name: "",
-        type: "address",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [
+    "inputs": [
       {
         internalType: "address",
         name: "",
@@ -335,13 +459,23 @@ export const tokenFactoryAbi = [
   {
     inputs: [
       {
-        internalType: "uint256",
-        name: "amount",
-        type: "uint256",
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
       },
+      {
+        "internalType": "bool",
+        "name": "isDefault",
+        "type": "bool"
+      },
+      {
+        "internalType": "uint256",
+        "name": "mgmtFee",
+        "type": "uint256"
+      }
     ],
-    name: "calculateManagementFee",
-    outputs: [
+    "name": "calculateManagementFee",
+    "outputs": [
       {
         internalType: "uint256",
         name: "",
@@ -354,18 +488,18 @@ export const tokenFactoryAbi = [
   {
     inputs: [
       {
-        internalType: "address",
-        name: "owner_",
-        type: "address",
-      },
+        "internalType": "address",
+        "name": "owner_",
+        "type": "address"
+      }
     ],
-    name: "calculateRollOverValue",
-    outputs: [
+    "name": "calculateRollOverValue",
+    "outputs": [
       {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
-      },
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
     ],
     stateMutability: "view",
     type: "function",
@@ -373,18 +507,23 @@ export const tokenFactoryAbi = [
   {
     inputs: [
       {
-        internalType: "uint256",
-        name: "shares",
-        type: "uint256",
+        "internalType": "bytes32",
+        "name": "interfaceHash",
+        "type": "bytes32"
       },
-    ],
-    name: "convertToAssets",
-    outputs: [
       {
-        internalType: "uint256",
-        name: "assets",
-        type: "uint256",
-      },
+        "internalType": "address",
+        "name": "account",
+        "type": "address"
+      }
+    ],
+    "name": "canImplementInterfaceForAddress",
+    "outputs": [
+      {
+        "internalType": "bytes32",
+        "name": "",
+        "type": "bytes32"
+      }
     ],
     stateMutability: "view",
     type: "function",
@@ -422,28 +561,17 @@ export const tokenFactoryAbi = [
     type: "function",
   },
   {
-    inputs: [
+    "inputs": [],
+    "name": "getBaseToken",
+    "outputs": [
       {
-        internalType: "address",
-        name: "spender",
-        type: "address",
-      },
-      {
-        internalType: "uint256",
-        name: "subtractedValue",
-        type: "uint256",
-      },
+        "internalType": "contract IERC20",
+        "name": "",
+        "type": "address"
+      }
     ],
-    name: "decreaseAllowance",
-    outputs: [
-      {
-        internalType: "bool",
-        name: "",
-        type: "bool",
-      },
-    ],
-    stateMutability: "nonpayable",
-    type: "function",
+    "stateMutability": "view",
+    "type": "function"
   },
   {
     inputs: [
@@ -528,9 +656,35 @@ export const tokenFactoryAbi = [
     type: "function",
   },
   {
-    inputs: [],
-    name: "getScallingFactorLength",
-    outputs: [
+    "inputs": [],
+    "name": "getLastTimeStamp",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getMgmtFeeFactorLength",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getPriceFeedAddress",
+    "outputs": [
       {
         internalType: "uint256",
         name: "",
@@ -634,15 +788,28 @@ export const tokenFactoryAbi = [
     type: "function",
   },
   {
+    "inputs": [],
+    "name": "managementFeesRate",
+    "outputs": [
+      {
+        "internalType": "uint32",
+        "name": "",
+        "type": "uint32"
+      }
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
     inputs: [
       {
-        internalType: "address",
-        name: "",
-        type: "address",
-      },
+        "internalType": "address",
+        "name": "owner_",
+        "type": "address"
+      }
     ],
-    name: "maxDeposit",
-    outputs: [
+    "name": "maxAmountToWithdraw",
+    "outputs": [
       {
         internalType: "uint256",
         name: "",
@@ -655,107 +822,39 @@ export const tokenFactoryAbi = [
   {
     inputs: [
       {
-        internalType: "address",
-        name: "",
-        type: "address",
-      },
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
     ],
-    name: "maxMint",
-    outputs: [
+    "name": "mgmtFeesHistory",
+    "outputs": [
       {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "address",
-        name: "owner_",
-        type: "address",
-      },
-    ],
-    name: "maxRedeem",
-    outputs: [
-      {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
-      },
+        "internalType": "uint32",
+        "name": "",
+        "type": "uint32"
+      }
     ],
     stateMutability: "view",
     type: "function",
   },
   {
-    inputs: [
+    "inputs": [],
+    "name": "mgmtFeesState",
+    "outputs": [
       {
-        internalType: "address",
-        name: "owner_",
-        type: "address",
-      },
-    ],
-    name: "maxWithdraw",
-    outputs: [
-      {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
-      },
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
     ],
     stateMutability: "view",
     type: "function",
   },
   {
-    inputs: [
-      {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
-      },
-    ],
-    name: "mgmtFeesHistory",
-    outputs: [
-      {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "uint256",
-        name: "shares",
-        type: "uint256",
-      },
-      {
-        internalType: "address",
-        name: "receiver",
-        type: "address",
-      },
-    ],
-    name: "mint",
-    outputs: [
-      {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
-      },
-    ],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "name",
-    outputs: [
+    "inputs": [],
+    "name": "name",
+    "outputs": [
       {
         internalType: "string",
         name: "",
@@ -779,15 +878,67 @@ export const tokenFactoryAbi = [
     type: "function",
   },
   {
+    "inputs": [],
+    "name": "rebase",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "renounceOwnership",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint32",
+        "name": "rate",
+        "type": "uint32"
+      }
+    ],
+    "name": "setManagementFeeRate",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
     inputs: [
       {
-        internalType: "uint256",
-        name: "assets",
-        type: "uint256",
-      },
+        "internalType": "bool",
+        "name": "state",
+        "type": "bool"
+      }
     ],
-    name: "previewDeposit",
-    outputs: [
+    "name": "setManagementFeeState",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    inputs: [
+      {
+        "internalType": "uint256",
+        "name": "scallingFactorX_",
+        "type": "uint256"
+      }
+    ],
+    "name": "subUnchecked",
+    "outputs": [
       {
         internalType: "uint256",
         name: "",
@@ -798,155 +949,93 @@ export const tokenFactoryAbi = [
     type: "function",
   },
   {
-    inputs: [
+    "inputs": [],
+    "name": "symbol",
+    "outputs": [
       {
-        internalType: "uint256",
-        name: "shares",
-        type: "uint256",
-      },
-    ],
-    name: "previewMint",
-    outputs: [
-      {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
-      },
+        "internalType": "string",
+        "name": "",
+        "type": "string"
+      }
     ],
     stateMutability: "view",
     type: "function",
   },
   {
-    inputs: [
+    "inputs": [
       {
-        internalType: "uint256",
-        name: "shares",
-        type: "uint256",
+        "internalType": "address",
+        "name": "operator",
+        "type": "address"
       },
-    ],
-    name: "previewRedeem",
-    outputs: [
       {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
+        "internalType": "address",
+        "name": "from",
+        "type": "address"
       },
+      {
+        "internalType": "address",
+        "name": "to",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bytes",
+        "name": "userData",
+        "type": "bytes"
+      },
+      {
+        "internalType": "bytes",
+        "name": "operatorData",
+        "type": "bytes"
+      }
     ],
-    stateMutability: "view",
-    type: "function",
+    "name": "tokensReceived",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
   },
   {
     inputs: [
       {
-        internalType: "uint256",
-        name: "assets",
-        type: "uint256",
+        "internalType": "address",
+        "name": "operator",
+        "type": "address"
       },
+      {
+        "internalType": "address",
+        "name": "from",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "to",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bytes",
+        "name": "userData",
+        "type": "bytes"
+      },
+      {
+        "internalType": "bytes",
+        "name": "operatorData",
+        "type": "bytes"
+      }
     ],
-    name: "previewWithdraw",
-    outputs: [
-      {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "rebase",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "uint256",
-        name: "shares",
-        type: "uint256",
-      },
-      {
-        internalType: "address",
-        name: "receiver",
-        type: "address",
-      },
-      {
-        internalType: "address",
-        name: "owner_",
-        type: "address",
-      },
-    ],
-    name: "redeem",
-    outputs: [
-      {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
-      },
-    ],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "renounceOwnership",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "uint32",
-        name: "rate",
-        type: "uint32",
-      },
-    ],
-    name: "setManagementFeeRate",
-    outputs: [
-      {
-        internalType: "bool",
-        name: "",
-        type: "bool",
-      },
-    ],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "uint256",
-        name: "scallingFactorX_",
-        type: "uint256",
-      },
-    ],
-    name: "subUnchecked",
-    outputs: [
-      {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "symbol",
-    outputs: [
-      {
-        internalType: "string",
-        name: "",
-        type: "string",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
+    "name": "tokensToSend",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
   },
   {
     inputs: [],
@@ -1056,51 +1145,22 @@ export const tokenFactoryAbi = [
   {
     inputs: [
       {
-        internalType: "address",
-        name: "",
-        type: "address",
-      },
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
     ],
-    name: "userMgmtFeeHistory",
-    outputs: [
+    "name": "userMgmtFeeHistory",
+    "outputs": [
       {
         internalType: "uint256",
         name: "",
         type: "uint256",
       },
     ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "uint256",
-        name: "assets",
-        type: "uint256",
-      },
-      {
-        internalType: "address",
-        name: "receiver",
-        type: "address",
-      },
-      {
-        internalType: "address",
-        name: "owner_",
-        type: "address",
-      },
-    ],
-    name: "withdraw",
-    outputs: [
-      {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
-      },
-    ],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
+    "stateMutability": "view",
+    "type": "function"
+  }
 ];
 export const devTokenAbi = [
   {
@@ -1121,27 +1181,67 @@ export const devTokenAbi = [
         type: "address",
       },
       {
-        internalType: "address[]",
-        name: "defaultOperators",
-        type: "address[]",
+        "internalType": "address[]",
+        "name": "defaultOperators",
+        "type": "address[]"
       },
+      {
+        "internalType": "address",
+        "name": "sanctionsContract_",
+        "type": "address"
+      }
     ],
     stateMutability: "nonpayable",
     type: "constructor",
   },
   {
-    inputs: [],
-    name: "DevToken__MethodNotAllowed",
-    type: "error",
+    "inputs": [],
+    "name": "BaseContract__SanctionedAddress",
+    "type": "error"
   },
   {
-    inputs: [],
-    name: "DevToken__NotTokenFactory",
-    type: "error",
+    "inputs": [],
+    "name": "DevToken__DepositMoreThanMax",
+    "type": "error"
   },
   {
-    anonymous: false,
-    inputs: [
+    "inputs": [],
+    "name": "DevToken__MethodNotAllowed",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "DevToken__MintMoreThanMax",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "DevToken__NotTokenFactory",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "DevToken__OnlyAssetOwner",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "DevToken__RedeemMoreThanMax",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "DevToken__WithdrawMoreThanMax",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "DevToken__ZeroDeposit",
+    "type": "error"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
       {
         indexed: true,
         internalType: "address",
@@ -1224,10 +1324,41 @@ export const devTokenAbi = [
     anonymous: false,
     inputs: [
       {
-        indexed: true,
-        internalType: "address",
-        name: "operator",
-        type: "address",
+        "indexed": true,
+        "internalType": "address",
+        "name": "sender",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "owner",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "assets",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "shares",
+        "type": "uint256"
+      }
+    ],
+    "name": "Deposit",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "operator",
+        "type": "address"
       },
       {
         indexed: true,
@@ -1345,9 +1476,46 @@ export const devTokenAbi = [
     type: "event",
   },
   {
-    inputs: [],
-    name: "DOMAIN_SEPARATOR",
-    outputs: [
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "sender",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "receiver",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "owner",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "assets",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "shares",
+        "type": "uint256"
+      }
+    ],
+    "name": "Withdraw",
+    "type": "event"
+  },
+  {
+    "inputs": [],
+    "name": "DOMAIN_SEPARATOR",
+    "outputs": [
       {
         internalType: "bytes32",
         name: "",
@@ -1419,7 +1587,20 @@ export const devTokenAbi = [
     type: "function",
   },
   {
-    inputs: [
+    "inputs": [],
+    "name": "asset",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
       {
         internalType: "address",
         name: "operator",
@@ -1469,9 +1650,47 @@ export const devTokenAbi = [
     type: "function",
   },
   {
-    inputs: [],
-    name: "decimals",
-    outputs: [
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "shares",
+        "type": "uint256"
+      }
+    ],
+    "name": "convertToAssets",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "assets",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "assets",
+        "type": "uint256"
+      }
+    ],
+    "name": "convertToShares",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "shares",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "decimals",
+    "outputs": [
       {
         internalType: "uint8",
         name: "",
@@ -1497,9 +1716,33 @@ export const devTokenAbi = [
   {
     inputs: [
       {
-        internalType: "address",
-        name: "account",
-        type: "address",
+        "internalType": "uint256",
+        "name": "assets",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "receiver",
+        "type": "address"
+      }
+    ],
+    "name": "deposit",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "account",
+        "type": "address"
       },
       {
         internalType: "uint256",
@@ -1513,7 +1756,27 @@ export const devTokenAbi = [
     type: "function",
   },
   {
-    inputs: [
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "to",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "devTransfer",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getTokenFactory",
+    "outputs": [
       {
         internalType: "address",
         name: "to",
@@ -1602,9 +1865,109 @@ export const devTokenAbi = [
   {
     inputs: [
       {
-        internalType: "address",
-        name: "receiver",
-        type: "address",
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "name": "maxDeposit",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "name": "maxMint",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "owner_",
+        "type": "address"
+      }
+    ],
+    "name": "maxRedeem",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "owner_",
+        "type": "address"
+      }
+    ],
+    "name": "maxWithdraw",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "shares",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "receiver",
+        "type": "address"
+      }
+    ],
+    "name": "mint",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "receiver",
+        "type": "address"
       },
       {
         internalType: "uint256",
@@ -1612,10 +1975,10 @@ export const devTokenAbi = [
         type: "uint256",
       },
     ],
-    name: "mint",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
+    "name": "mintAsset",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
   },
   {
     inputs: [],
@@ -1756,10 +2119,115 @@ export const devTokenAbi = [
   {
     inputs: [
       {
-        internalType: "address",
-        name: "operator",
-        type: "address",
+        "internalType": "uint256",
+        "name": "assets",
+        "type": "uint256"
+      }
+    ],
+    "name": "previewDeposit",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "shares",
+        "type": "uint256"
+      }
+    ],
+    "name": "previewMint",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "shares",
+        "type": "uint256"
+      }
+    ],
+    "name": "previewRedeem",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "assets",
+        "type": "uint256"
+      }
+    ],
+    "name": "previewWithdraw",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "shares",
+        "type": "uint256"
       },
+      {
+        "internalType": "address",
+        "name": "receiver",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "owner_",
+        "type": "address"
+      }
+    ],
+    "name": "redeem",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "operator",
+        "type": "address"
+      }
     ],
     name: "revokeOperator",
     outputs: [],
@@ -1803,9 +2271,9 @@ export const devTokenAbi = [
     type: "function",
   },
   {
-    inputs: [],
-    name: "totalSupply",
-    outputs: [
+    "inputs": [],
+    "name": "totalAssets",
+    "outputs": [
       {
         internalType: "uint256",
         name: "",
@@ -1816,17 +2284,30 @@ export const devTokenAbi = [
     type: "function",
   },
   {
-    inputs: [
+    "inputs": [],
+    "name": "totalSupply",
+    "outputs": [
       {
-        internalType: "address",
-        name: "to",
-        type: "address",
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "pure",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
       },
       {
-        internalType: "uint256",
-        name: "amount",
-        type: "uint256",
-      },
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
     ],
     name: "transfer",
     outputs: [
@@ -1842,9 +2323,9 @@ export const devTokenAbi = [
   {
     inputs: [
       {
-        internalType: "address",
-        name: "holder",
-        type: "address",
+        "internalType": "address",
+        "name": "sender",
+        "type": "address"
       },
       {
         internalType: "address",
@@ -1852,10 +2333,10 @@ export const devTokenAbi = [
         type: "address",
       },
       {
-        internalType: "uint256",
-        name: "amount",
-        type: "uint256",
-      },
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
     ],
     name: "transferFrom",
     outputs: [
@@ -1884,9 +2365,38 @@ export const devTokenAbi = [
         type: "uint256",
       },
     ],
-    stateMutability: "view",
-    type: "function",
+    "stateMutability": "view",
+    "type": "function"
   },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "assets",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "receiver",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "owner_",
+        "type": "address"
+      }
+    ],
+    "name": "withdraw",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  }
 ];
 export const uniswapV2RouterABI = [
   {

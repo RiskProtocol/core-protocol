@@ -284,7 +284,7 @@ developmentChains.includes(network.name)
           const { v, r, s } = sign(digest, privateKey1Buffer);
 
           await expect(
-            tokenFactory1.depositWithPermit(
+            devToken1.depositWithPermit(
               depositAmount,
               deployer.address,
               deadline,
