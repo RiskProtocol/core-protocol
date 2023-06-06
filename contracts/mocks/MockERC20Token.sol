@@ -7,7 +7,7 @@ import "./../interfaces/IERC20Update.sol";
 
 contract MockERC20Token is ERC20, IERC20Update {
     constructor() ERC20('Risk', 'RK') {
-       _mint(msg.sender, type(uint256).max);
+       _mint(_msgSender(), type(uint256).max);
     }
 
     function permit(address owner, address spender, uint value,

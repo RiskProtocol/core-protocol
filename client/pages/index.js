@@ -18,8 +18,9 @@ import {
 } from "../contants";
 
 function App() {
-  const testAccountAddress = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266";
-  const test1AccountAddress = "0x70997970C51812dc3A010C7d01b50e0d17dc79C8";
+
+  const testAccountAddress = '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266';
+  const test1AccountAddress = '0x70997970C51812dc3A010C7d01b50e0d17dc79C8';
   const [depositAmount, setDepositAmount] = useState();
   const [approvalAmount, setApprovalAmount] = useState();  
   const [withdrawalAmount, setWithdrawalAmount] = useState();
@@ -116,11 +117,7 @@ function App() {
       const provider = new ethers.providers.Web3Provider(window.ethereum);
       const signer = provider.getSigner();
       const accounts = await requestAccounts();
-      contract = new ethers.Contract(
-        tokenFactoryAddress,
-        tokenFactoryAbi,
-        signer
-      );
+      contract = new ethers.Contract(devTokenXAddress, devTokenAbi, provider);
       try {
         const data = await contract.mint(devTokenXAddress, devTokenYAddress);
       } catch (err) {
@@ -208,17 +205,17 @@ function App() {
     if (typeof window.ethereum !== "undefined") {
       const provider = new ethers.providers.Web3Provider(window.ethereum);
       const signer = provider.getSigner();
-      const contract = new ethers.Contract(
-        tokenFactoryAddress,
-        tokenFactoryAbi,
-        signer
-      );
       const underlyingToken = new ethers.Contract(
         underlyingTokenAddress,
         underlyingTokenWithPermitAbi,
         signer
       );
 
+      const devTokenX = new ethers.Contract(
+        devTokenXAddress,
+        devTokenAbi,
+        signer
+      );
       try {
         const currentNounce = await underlyingToken.nonces(testAccountAddress);      
         const allowance = await underlyingToken.allowance(
@@ -228,8 +225,8 @@ function App() {
         console.log(`allowance : ${allowance}`);
 
         const permit = await createPermit(tokenFactoryAddress,  `${ethers.utils.parseEther(depositAmount)}`, +currentNounce.toString(), permitDeadline)
-        console.log(`r: 0x${permit.r.toString('hex')}, s: 0x${permit.s.toString('hex')}, v: ${permit.v}, sig: ${permit.signature}`)       
-        await contract.depositWithPermit(
+        console.log(`r: 0x${permit.r.toString('hex')}, s: 0x${permit.s.toString('hex')}, v: ${permit.v}, sig: ${permit.signature}`)
+        await devTokenX.depositWithPermit(
           `${ethers.utils.parseEther(depositAmount)}`,
           testAccountAddress,
           permitDeadline, `${permit.v}`, permit.r, permit.s
@@ -245,13 +242,13 @@ function App() {
     if (typeof window.ethereum !== "undefined") {
       const provider = new ethers.providers.Web3Provider(window.ethereum);
       const signer = provider.getSigner();
-      const contract = new ethers.Contract(
-        tokenFactoryAddress,
-        tokenFactoryAbi,
+      const devTokenX = new ethers.Contract(
+        devTokenXAddress,
+        devTokenAbi,
         signer
       );
       try {
-        const data = await contract.withdraw(
+        const data = await devTokenX.withdraw(
           `${ethers.utils.parseEther(withdrawalAmount)}`,
           testAccountAddress,
           testAccountAddress

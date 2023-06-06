@@ -11,7 +11,8 @@ import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
     * Blockchain oracle is any device that interacts with the off chain(external) world to provide external
     data to smart contracts.
     * We will make use of chainlink(decentralized oracle network) to bring external data to our smart contract
-    specifically we will be making use of chainlink data feed(this can return different data eg prices of cyptocurrencies).
+    specifically we will be making use of chainlink data feed(this can
+    return different data eg prices of cyptocurrencies).
     * Chainlink keepers is used for decentralized event driven executions
     * Chainlink nodes can make API calls
     * Chainlink VRF is used to get provable random numbers
