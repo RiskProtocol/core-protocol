@@ -18,7 +18,6 @@ error DevToken__RedeemMoreThanMax();
 error DevToken__OnlyAssetOwner();
 error DevToken__ZeroDeposit();
 
-
 contract DevToken is ERC20Permit, BaseContract, IERC4626, ReentrancyGuard {
     TokenFactory private immutable tokenFactory;
     IERC20Update private immutable underlyingToken;
@@ -41,24 +40,27 @@ contract DevToken is ERC20Permit, BaseContract, IERC4626, ReentrancyGuard {
         _;
     }
 
-
     constructor(
         string memory tokenName,
         string memory tokenSymbol,
         address factoryAddress,
         address[] memory defaultOperators,
         address sanctionsContract_
-    ) ERC777(tokenName, tokenSymbol, defaultOperators)
-      ERC20Permit(tokenName)
-      BaseContract(sanctionsContract_) {
+    )
+        ERC777(tokenName, tokenSymbol, defaultOperators)
+        ERC20Permit(tokenName)
+        BaseContract(sanctionsContract_)
+    {
         tokenFactory = TokenFactory(factoryAddress);
         underlyingToken = tokenFactory.getBaseToken();
     }
 
-    function mintAsset(address receiver, uint256 amount) public onlyTokenFactory {
+    function mintAsset(
+        address receiver,
+        uint256 amount
+    ) public onlyTokenFactory {
         _mint(receiver, amount, "", "");
     }
-
 
     /**
      * @dev See {ERC20-decimals}.
@@ -66,33 +68,59 @@ contract DevToken is ERC20Permit, BaseContract, IERC4626, ReentrancyGuard {
      * Always returns 18, as per the
      * [ERC777 EIP](https://eips.ethereum.org/EIPS/eip-777#backward-compatibility).
      */
-    function decimals() public pure virtual override(ERC777, IERC20Metadata) returns (uint8) {
+    function decimals()
+        public
+        pure
+        virtual
+        override(ERC777, IERC20Metadata)
+        returns (uint8)
+    {
         return super.decimals();
     }
 
     /**
      * @dev See {IERC777-name}.
      */
-    function name() public view virtual override(ERC777, IERC20Metadata) returns (string memory) {
+    function name()
+        public
+        view
+        virtual
+        override(ERC777, IERC20Metadata)
+        returns (string memory)
+    {
         return super.name();
     }
 
     /**
      * @dev See {IERC777-symbol}.
      */
-    function symbol() public view virtual override(ERC777, IERC20Metadata) returns (string memory) {
+    function symbol()
+        public
+        view
+        virtual
+        override(ERC777, IERC20Metadata)
+        returns (string memory)
+    {
         return super.symbol();
     }
 
     /**
      * @dev See {IERC777-totalSupply}.
      */
-    function totalSupply() public view virtual override(ERC777, IERC20) returns (uint256) {
+    function totalSupply()
+        public
+        view
+        virtual
+        override(ERC777, IERC20)
+        returns (uint256)
+    {
         return super.totalSupply();
     }
 
     /** @dev See {IERC777-burn}. */
-    function burn(uint256 /* amount */, bytes memory /* data */
+    function burn(
+        uint256 /* amount */,
+        bytes memory /* data */
     ) public pure override(ERC777) {
         revert DevToken__MethodNotAllowed();
     }
@@ -113,12 +141,25 @@ contract DevToken is ERC20Permit, BaseContract, IERC4626, ReentrancyGuard {
 
     /** @dev See {IERC777-transfer}. */
     function transfer(
-        address to,
+        address recipient,
         uint256 amount
-    ) public onlyNotSanctioned(to) onlyNotSanctioned(_msgSender()) override(ERC777, IERC20) returns (bool) {
-        handlePendingRebase(_msgSender(), to);
-        super.transfer(to, amount);
+    )
+        public
+        override(ERC777, IERC20)
+        onlyNotSanctioned(recipient)
+        onlyNotSanctioned(_msgSender())
+        returns (bool)
+    {
+        handlePendingRebase(_msgSender(), recipient);
+        super.transfer(recipient, amount);
         return true;
+    }
+
+    function devTransfer(
+        address recipient,
+        uint256 amount
+    ) external onlyTokenFactory {
+        super.transfer(recipient, amount);
     }
 
     /**
@@ -130,13 +171,20 @@ contract DevToken is ERC20Permit, BaseContract, IERC4626, ReentrancyGuard {
         address recipient,
         uint256 amount,
         bytes memory data
-    ) public onlyNotSanctioned(recipient) onlyNotSanctioned(_msgSender()) override {
+    )
+        public
+        override
+        onlyNotSanctioned(recipient)
+        onlyNotSanctioned(_msgSender())
+    {
         handlePendingRebase(_msgSender(), recipient);
         super.send(recipient, amount, data);
     }
 
     /** @dev See {IERC777-balanceOf}. */
-    function balanceOf(address account) public view override(ERC777, IERC20) returns (uint256) {
+    function balanceOf(
+        address account
+    ) public view override(ERC777, IERC20) returns (uint256) {
         if (hasPendingRebase(account)) {
             return tokenFactory.calculateRollOverValue(account);
         } else {
@@ -162,7 +210,13 @@ contract DevToken is ERC20Permit, BaseContract, IERC4626, ReentrancyGuard {
         address sender,
         address recipient,
         uint256 amount
-    ) public onlyNotSanctioned(recipient) onlyNotSanctioned(sender) override(ERC777, IERC20) returns (bool) {
+    )
+        public
+        override(ERC777, IERC20)
+        onlyNotSanctioned(recipient)
+        onlyNotSanctioned(sender)
+        returns (bool)
+    {
         handlePendingRebase(sender, recipient);
         return super.transferFrom(sender, recipient, amount);
     }
@@ -219,7 +273,13 @@ contract DevToken is ERC20Permit, BaseContract, IERC4626, ReentrancyGuard {
     function deposit(
         uint256 assets,
         address receiver
-    ) public validateDepositAmount(assets, receiver) virtual override returns (uint256) {
+    )
+        public
+        virtual
+        override
+        validateDepositAmount(assets, receiver)
+        returns (uint256)
+    {
         uint256 shares = previewDeposit(assets);
         tokenFactory._deposit(_msgSender(), receiver, assets, shares);
 
@@ -234,9 +294,17 @@ contract DevToken is ERC20Permit, BaseContract, IERC4626, ReentrancyGuard {
         uint8 v,
         bytes32 r,
         bytes32 s
-    ) public validateDepositAmount(assets, receiver)  returns (uint256) {
+    ) public validateDepositAmount(assets, receiver) returns (uint256) {
         uint256 shares = previewDeposit(assets);
-        underlyingToken.permit(_msgSender(), address(tokenFactory), shares, deadline, v, r, s);
+        underlyingToken.permit(
+            _msgSender(),
+            address(tokenFactory),
+            shares,
+            deadline,
+            v,
+            r,
+            s
+        );
         tokenFactory._deposit(_msgSender(), receiver, assets, shares);
 
         return shares;
@@ -299,7 +367,10 @@ contract DevToken is ERC20Permit, BaseContract, IERC4626, ReentrancyGuard {
         returns (uint256)
     {
         // apply user pending rebase
-        if (tokenFactory.getUserLastRebaseCount(receiver) != tokenFactory.getScallingFactorLength()) {
+        if (
+            tokenFactory.getUserLastRebaseCount(receiver) !=
+            tokenFactory.getScallingFactorLength()
+        ) {
             tokenFactory.applyRebase(receiver);
         }
         if (assets > maxWithdraw(owner_))
@@ -339,11 +410,13 @@ contract DevToken is ERC20Permit, BaseContract, IERC4626, ReentrancyGuard {
         returns (uint256)
     {
         // apply user pending rebase
-        if (tokenFactory.getUserLastRebaseCount(receiver) != tokenFactory.getScallingFactorLength()) {
+        if (
+            tokenFactory.getUserLastRebaseCount(receiver) !=
+            tokenFactory.getScallingFactorLength()
+        ) {
             tokenFactory.applyRebase(receiver);
         }
-        if (shares > maxRedeem(owner_))
-            revert DevToken__RedeemMoreThanMax();
+        if (shares > maxRedeem(owner_)) revert DevToken__RedeemMoreThanMax();
         uint256 assets = previewRedeem(shares);
         tokenFactory._withdraw(_msgSender(), receiver, owner_, assets, shares);
 
