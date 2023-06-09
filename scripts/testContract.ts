@@ -8,8 +8,12 @@ async function main() {
 
     console.log(`Underlying token Balance for deployer: ${await UndelyingToken.balanceOf('0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266')}`)
  
-    console.log(`DevToken Address 1: ${await tokenFactory.getDevTokenAddress(0)}`)
-    console.log(`DevToken Address 2: ${await tokenFactory.getDevTokenAddress(1)}`)
+    console.log(
+      `SmartToken Address 1: ${await tokenFactory.getSmartTokenAddress(0)}`
+    );
+    console.log(
+      `SmartToken Address 2: ${await tokenFactory.getSmartTokenAddress(1)}`
+    );
     console.log(`Undelying token decimals: ${await tokenFactory.decimals()}`)
     console.log(`Factory Asset: ${await tokenFactory.asset()}`) 
     console.log(`Factory total Asset: ${await tokenFactory.totalAssets()}`) 

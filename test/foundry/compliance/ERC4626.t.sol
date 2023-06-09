@@ -6,8 +6,8 @@ import "./../TestHelper.sol";
 
 contract ERC4626Test is Test, TestHelper {
     MockERC20Token underlying;
-    DevToken vault;
-    DevToken vault2;
+    SmartToken vault;
+    SmartToken vault2;
 
     function setUp() public {
         vm.createSelectFork(vm.rpcUrl("mainnet"), 17268750);
@@ -26,7 +26,7 @@ contract ERC4626Test is Test, TestHelper {
             sanctionsContract
         );
 
-        vault = new DevToken(
+        vault = new SmartToken(
             TOKEN1_NAME,
             TOKEN1_SYMBOL,
             address(tokenFactory),
@@ -34,7 +34,7 @@ contract ERC4626Test is Test, TestHelper {
             sanctionsContract
         );
 
-        vault2 = new DevToken(
+        vault2 = new SmartToken(
             TOKEN2_NAME,
             TOKEN2_SYMBOL,
             address(tokenFactory),
@@ -47,7 +47,7 @@ contract ERC4626Test is Test, TestHelper {
     }
 
     function testMetadata() public {
-        DevToken vlt = new DevToken(
+        SmartToken vlt = new SmartToken(
             TOKEN1_NAME,
             TOKEN1_SYMBOL,
             address(tokenFactory),

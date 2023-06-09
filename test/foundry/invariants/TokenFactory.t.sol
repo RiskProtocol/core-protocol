@@ -22,7 +22,7 @@ contract TokenFactoryTest is Test, TestHelper  {
         );
 
         // deploy token X
-        devTokenX = new DevToken(
+        smartTokenX = new SmartToken(
             TOKEN1_NAME,
             TOKEN1_SYMBOL,
             address(tokenFactory),
@@ -30,7 +30,7 @@ contract TokenFactoryTest is Test, TestHelper  {
             sanctionsContract
         );
         // deploy token Y
-        devTokenY = new DevToken(
+        smartTokenY = new SmartToken(
             TOKEN2_NAME,
             TOKEN2_SYMBOL,
             address(tokenFactory),
@@ -39,7 +39,7 @@ contract TokenFactoryTest is Test, TestHelper  {
         );
 
         // initialize dev tokens in token factory
-        tokenFactory.initialize(devTokenX, devTokenY);      
+        tokenFactory.initialize(smartTokenX, smartTokenY);      
     }
 
     function invariant_RebaseInterval() public {
