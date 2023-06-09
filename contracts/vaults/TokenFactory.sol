@@ -295,7 +295,7 @@ contract TokenFactory is
         address receiver,
         uint256 amount
     ) private {
-        smartTokenArray[smartTokenIndex].devTransfer(receiver, amount);
+        smartTokenArray[smartTokenIndex].smartTransfer(receiver, amount);
     }
 
     function subUnchecked(

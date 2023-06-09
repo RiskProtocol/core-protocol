@@ -155,7 +155,7 @@ contract SmartToken is ERC20Permit, BaseContract, IERC4626, ReentrancyGuard {
         return true;
     }
 
-    function devTransfer(
+    function smartTransfer(
         address recipient,
         uint256 amount
     ) external onlyTokenFactory {

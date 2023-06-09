@@ -1738,7 +1738,7 @@ export const smartTokenAbi = [
         "type": "uint256"
       }
     ],
-    "name": "devTransfer",
+    "name": "smartTransfer",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
