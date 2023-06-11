@@ -15,3 +15,4 @@ jobs:
           SLACK_CHANNEL: github-actions
           SLACK_COLOR: ${{ job.status }}
           SLACK_USERNAME: Github Action
+          SLACK_ICON: https://riskprotocol.io/wp-content/uploads/2023/03/cropped-RP-Logo-3-32x32.png
