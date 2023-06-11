@@ -42,6 +42,7 @@ jobs:
 
   slackNotification:
     name: Slack Notification
+    if: always() && (steps.seedBuild.outcome == 'failure' || steps.allJobs.outcome == 'failure')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
