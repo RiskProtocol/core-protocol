@@ -16,8 +16,6 @@ env:
 jobs:
   tests:
     runs-on: ubuntu-latest
-    outputs:
-      output1: ${{ steps.step1.outputs.test }}
     steps:
       - uses: actions/checkout@v3
       - name: Install packages
@@ -55,6 +53,6 @@ jobs:
           SLACK_WEBHOOK: https://hooks.slack.com/services/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
           SLACK_CHANNEL: github-actions
           SLACK_TITLE: Failed
-          SLACK_COLOR: #7f1d1d
+          SLACK_COLOR: '#7f1d1d'
           SLACK_USERNAME: Github Action
           SLACK_ICON: https://riskprotocol.io/wp-content/uploads/2023/03/cropped-RP-Logo-3-32x32.png
