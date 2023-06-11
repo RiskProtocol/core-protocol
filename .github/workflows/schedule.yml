@@ -38,3 +38,21 @@ jobs:
 
       - name: Run tests
         run: forge test -vvv
+
+  slackNotification:
+    needs: [ tests ]
+    if: failure()
+    name: Slack Notification
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Slack Notification
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          STATUS: ${{needs.tests.outputs.output1}}
+          SLACK_WEBHOOK: https://hooks.slack.com/services/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
+          SLACK_CHANNEL: github-actions
+          SLACK_TITLE: Failed
+          SLACK_COLOR: '#dc2626'
+          SLACK_USERNAME: Github Action
+          SLACK_ICON: https://riskprotocol.io/wp-content/uploads/2023/03/cropped-RP-Logo-3-32x32.png
