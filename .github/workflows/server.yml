@@ -41,8 +41,9 @@ jobs:
         run: forge test --no-match-path "test/foundry/invariants/*.t.sol" -vvv
 
   slackNotification:
+    needs: [tests]
+    if: always()
     name: Slack Notification
-    if: always() && (steps.seedBuild.outcome == 'failure' || steps.allJobs.outcome == 'failure')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
