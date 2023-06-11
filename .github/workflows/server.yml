@@ -16,7 +16,8 @@ env:
 jobs:
   tests:
     runs-on: ubuntu-latest
-
+    outputs:
+      output1: ${{ steps.step1.outputs.test }}
     steps:
       - uses: actions/checkout@v3
       - name: Install packages
@@ -42,7 +43,7 @@ jobs:
 
   slackNotification:
     needs: [tests]
-    if: always()
+    if: failure()
     name: Slack Notification
     runs-on: ubuntu-latest
     steps:
@@ -50,6 +51,7 @@ jobs:
       - name: Slack Notification
         uses: rtCamp/action-slack-notify@v2
         env:
+          STATUS: ${{needs.tests.outputs.output1}}
           SLACK_WEBHOOK: https://hooks.slack.com/services/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
           SLACK_CHANNEL: github-actions
           SLACK_TITLE: ${{ needs.tests.outputs.job.status }}
