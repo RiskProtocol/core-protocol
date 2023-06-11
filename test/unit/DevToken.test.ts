@@ -164,7 +164,7 @@ developmentChains.includes(network.name)
             devToken2.burn(amount, bytes)
           ).to.be.revertedWithCustomError(
             devToken2,
-            "DevToken__MethodNotAllow"
+            "DevToken__MethodNotAllowed"
           );
         });
 
