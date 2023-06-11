@@ -1,0 +1,17 @@
+name: Slack Notify
+
+on: push
+
+jobs:
+  slackNotification:
+    name: Slack Notification
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Slack Notification
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: https://hooks.slack.com/services/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
+          SLACK_CHANNEL: github-actions
+          SLACK_COLOR: ${{ job.status }}
+          SLACK_USERNAME: Github Action
