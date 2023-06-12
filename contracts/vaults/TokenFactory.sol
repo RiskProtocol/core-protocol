@@ -192,7 +192,7 @@ contract TokenFactory is
 
     /**
      * @dev Returns the maximum amount of assets the owner can withdraw.
-     *
+     *      (ie this returns the smaller balance between token0 and token1)
      */
     function maxAmountToWithdraw(
         address owner_
@@ -209,6 +209,7 @@ contract TokenFactory is
 
     /**
      * @dev Returns the maximum amount of shares the account holds,
+     *      (ie this returns the bigger balance between token0 and token1)
      *      this is not the max value the owner can withdraw.
      */
     function maxSharesOwned(
