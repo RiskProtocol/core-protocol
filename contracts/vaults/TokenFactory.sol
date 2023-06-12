@@ -190,6 +190,10 @@ contract TokenFactory is
         return baseToken;
     }
 
+    /**
+     * @dev Returns the maximum amount of assets the owner can withdraw.
+     *
+     */
     function maxAmountToWithdraw(
         address owner_
     ) public view virtual returns (uint256) {
@@ -200,6 +204,23 @@ contract TokenFactory is
             return smartTokenArray[1].balanceOf(owner_);
         } else {
             return smartTokenArray[0].balanceOf(owner_);
+        }
+    }
+
+    /**
+     * @dev Returns the maximum amount of shares the account holds,
+     *      this is not the max value the owner can withdraw.
+     */
+    function maxSharesOwned(
+        address owner_
+    ) public view virtual returns (uint256) {
+        if (
+            smartTokenArray[0].balanceOf(owner_) >
+            smartTokenArray[1].balanceOf(owner_)
+        ) {
+            return smartTokenArray[0].balanceOf(owner_);
+        } else {
+            return smartTokenArray[1].balanceOf(owner_);
         }
     }
 
