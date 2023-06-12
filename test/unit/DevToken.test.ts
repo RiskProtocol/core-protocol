@@ -10,15 +10,6 @@ import {
   TOKEN2_SYMBOL,
   DECIMALS,
   INITIAL_PRICE,
-  developmentChains,
-  REBASE_INTERVAL,
-  TOKEN1_NAME,
-  TOKEN1_SYMBOL,
-  defaultOperators,
-  TOKEN2_NAME,
-  TOKEN2_SYMBOL,
-  DECIMALS,
-  INITIAL_PRICE,
 } from "../../helper-hardhat-config";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 

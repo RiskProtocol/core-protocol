@@ -260,11 +260,26 @@ developmentChains.includes(network.name)
 
       describe("Deposit", async function () {
         it("it returns the correct value for maxDeposit function", async function () {
-          const { smartToken1, deployer } = await loadFixture(
+          const { smartToken1, deployer, tokenFactory, smartToken2, underlyingToken } = await loadFixture(
             deployTokenFixture
           );
+          const depositAmount = ethers.constants.MaxUint256.div(2).add(1);
+
+          await tokenFactory.initialize(
+            smartToken1.address,
+            smartToken2.address
+          );
+
+          await underlyingToken.approve(tokenFactory.address, depositAmount);
+
+          await smartToken1.deposit(
+            depositAmount,
+            deployer.address
+          );
+          const maxDepositValue = ethers.constants.MaxUint256.sub(depositAmount);
+
           expect(await smartToken1.maxDeposit(deployer.address)).to.equal(
-            ethers.constants.MaxUint256
+            maxDepositValue
           );
         });
 
@@ -422,11 +437,21 @@ developmentChains.includes(network.name)
 
       describe("Minting", async function () {
         it("it returns the correct value for maxMint function", async function () {
-          const { smartToken1, deployer } = await loadFixture(
+          const { smartToken1, deployer, tokenFactory, smartToken2, underlyingToken } = await loadFixture(
             deployTokenFixture
           );
+          const mintAmount = ethers.constants.MaxUint256.div(2).add(1);
+
+          await tokenFactory.initialize(
+            smartToken1.address,
+            smartToken2.address
+          );
+          await underlyingToken.approve(tokenFactory.address, mintAmount);
+
+          await smartToken1.mint(mintAmount, deployer.address);
+
           expect(await smartToken1.maxMint(deployer.address)).to.equal(
-            ethers.constants.MaxUint256
+            ethers.constants.MaxUint256.sub(mintAmount)
           );
         });
 
@@ -1139,7 +1164,6 @@ developmentChains.includes(network.name)
           const isDefault = true;
 
           const lastTimeStamp = await tokenFactory.getLastTimeStamp();
-          console.log(`lastTimeStamp: ${lastTimeStamp}`);
 
           const nextRebaseTimeStamp: bigint = BigInt(
             Number(lastTimeStamp) + Number(REBASE_INTERVAL)
