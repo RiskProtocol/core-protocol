@@ -9,34 +9,34 @@ import "./TokenFactory.sol";
 import "../external/ERC20Permit.sol";
 import "./BaseContract.sol";
 
-error DevToken__NotTokenFactory();
-error DevToken__MethodNotAllowed();
-error DevToken__DepositMoreThanMax();
-error DevToken__MintMoreThanMax();
-error DevToken__WithdrawMoreThanMax();
-error DevToken__RedeemMoreThanMax();
-error DevToken__OnlyAssetOwner();
-error DevToken__ZeroDeposit();
+error SmartToken__NotTokenFactory();
+error SmartToken__MethodNotAllowed();
+error SmartToken__DepositMoreThanMax();
+error SmartToken__MintMoreThanMax();
+error SmartToken__WithdrawMoreThanMax();
+error SmartToken__RedeemMoreThanMax();
+error SmartToken__OnlyAssetOwner();
+error SmartToken__ZeroDeposit();
 
-contract DevToken is ERC20Permit, BaseContract, IERC4626, ReentrancyGuard {
+contract SmartToken is ERC20Permit, BaseContract, IERC4626, ReentrancyGuard {
     TokenFactory private immutable tokenFactory;
     IERC20Update private immutable underlyingToken;
 
     modifier onlyTokenFactory() {
         if (_msgSender() != address(tokenFactory))
-            revert DevToken__NotTokenFactory();
+            revert SmartToken__NotTokenFactory();
         _;
     }
 
     modifier onlyAssetOwner(address assetOwner) {
-        if (assetOwner != _msgSender()) revert DevToken__OnlyAssetOwner();
+        if (assetOwner != _msgSender()) revert SmartToken__OnlyAssetOwner();
         _;
     }
 
     modifier validateDepositAmount(uint256 assets, address receiver) {
-        if (assets == 0) revert DevToken__ZeroDeposit();
+        if (assets == 0) revert SmartToken__ZeroDeposit();
         if (assets > maxDeposit(receiver))
-            revert DevToken__DepositMoreThanMax();
+            revert SmartToken__DepositMoreThanMax();
         _;
     }
 
@@ -122,7 +122,7 @@ contract DevToken is ERC20Permit, BaseContract, IERC4626, ReentrancyGuard {
         uint256 /* amount */,
         bytes memory /* data */
     ) public pure override(ERC777) {
-        revert DevToken__MethodNotAllowed();
+        revert SmartToken__MethodNotAllowed();
     }
 
     /** @dev See {IERC777-operatorBurn}. */
@@ -132,7 +132,7 @@ contract DevToken is ERC20Permit, BaseContract, IERC4626, ReentrancyGuard {
         bytes memory /* data */,
         bytes memory /* operatorData */
     ) public pure override {
-        revert DevToken__MethodNotAllowed();
+        revert SmartToken__MethodNotAllowed();
     }
 
     function devBurn(address account, uint256 amount) public onlyTokenFactory {
@@ -155,7 +155,7 @@ contract DevToken is ERC20Permit, BaseContract, IERC4626, ReentrancyGuard {
         return true;
     }
 
-    function devTransfer(
+    function smartTransfer(
         address recipient,
         uint256 amount
     ) external onlyTokenFactory {
@@ -331,7 +331,7 @@ contract DevToken is ERC20Permit, BaseContract, IERC4626, ReentrancyGuard {
         uint256 shares,
         address receiver
     ) public virtual override returns (uint256) {
-        if (shares > maxMint(receiver)) revert DevToken__MintMoreThanMax();
+        if (shares > maxMint(receiver)) revert SmartToken__MintMoreThanMax();
 
         uint256 assets = previewMint(shares);
         tokenFactory._deposit(_msgSender(), receiver, assets, shares);
@@ -374,7 +374,7 @@ contract DevToken is ERC20Permit, BaseContract, IERC4626, ReentrancyGuard {
             tokenFactory.applyRebase(receiver);
         }
         if (assets > maxWithdraw(owner_))
-            revert DevToken__WithdrawMoreThanMax();
+            revert SmartToken__WithdrawMoreThanMax();
 
         uint256 shares = previewWithdraw(assets);
         tokenFactory._withdraw(_msgSender(), receiver, owner_, assets, shares);
@@ -416,7 +416,7 @@ contract DevToken is ERC20Permit, BaseContract, IERC4626, ReentrancyGuard {
         ) {
             tokenFactory.applyRebase(receiver);
         }
-        if (shares > maxRedeem(owner_)) revert DevToken__RedeemMoreThanMax();
+        if (shares > maxRedeem(owner_)) revert SmartToken__RedeemMoreThanMax();
         uint256 assets = previewRedeem(shares);
         tokenFactory._withdraw(_msgSender(), receiver, owner_, assets, shares);
 

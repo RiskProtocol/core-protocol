@@ -84,38 +84,38 @@ developmentChains.includes(network.name)
         );
         await tokenFactory1.deployed();
 
-        // deploy devtoken 1
-        const DevToken1Factory = await ethers.getContractFactory(
-          "DevToken",
+        // deploy smartToken 1
+        const SmartToken1Factory = await ethers.getContractFactory(
+          "SmartToken",
           deployer
         );
-        const devToken1 = await DevToken1Factory.deploy(
+        const smartToken1 = await SmartToken1Factory.deploy(
           TOKEN1_NAME,
           TOKEN1_SYMBOL,
           tokenFactory.address,
           defaultOperators,
           sanctionsContract.address
         );
-        await devToken1.deployed();
+        await smartToken1.deployed();
 
-        // deploy devtoken 2
-        const DevToken2Factory = await ethers.getContractFactory(
-          "DevToken",
+        // deploy smartToken 2
+        const SmartToken2Factory = await ethers.getContractFactory(
+          "SmartToken",
           deployer
         );
-        const devToken2 = await DevToken2Factory.deploy(
+        const smartToken2 = await SmartToken2Factory.deploy(
           TOKEN2_NAME,
           TOKEN2_SYMBOL,
           tokenFactory.address,
           defaultOperators,
           sanctionsContract.address
         );
-        await devToken2.deployed();
+        await smartToken2.deployed();
 
         // Fixtures can return anything you consider useful for your tests
         return {
-          devToken1,
-          devToken2,
+          smartToken1,
+          smartToken2,
           mockV3Aggregator,
           underlyingToken,
           tokenFactory,
@@ -129,21 +129,23 @@ developmentChains.includes(network.name)
 
       describe("ERC20Permit", async function () {
         it("initializes DOMAIN_SEPARATOR and PERMIT_TYPEHASH correctly", async () => {
-          const { devToken1, chainId } = await loadFixture(deployTokenFixture);
+          const { smartToken1, chainId } = await loadFixture(
+            deployTokenFixture
+          );
 
-          assert.equal(await devToken1._PERMIT_TYPEHASH(), PERMIT_TYPEHASH);
+          assert.equal(await smartToken1._PERMIT_TYPEHASH(), PERMIT_TYPEHASH);
           assert.equal(
-            await devToken1.DOMAIN_SEPARATOR(),
+            await smartToken1.DOMAIN_SEPARATOR(),
             getDomainSeparator(
-              await devToken1.name(),
-              devToken1.address,
+              await smartToken1.name(),
+              smartToken1.address,
               chainId
             )
           );
         });
 
         it("permits and emits Approval (replay safe)", async () => {
-          const { devToken1, chainId, deployer, tester } = await loadFixture(
+          const { smartToken1, chainId, deployer, tester } = await loadFixture(
             deployTokenFixture
           );
           // Create the approval request
@@ -160,12 +162,12 @@ developmentChains.includes(network.name)
           const invalidDeadline = 0;
 
           // Get the user's nonce
-          const nonce = await devToken1.nonces(deployer.address);
+          const nonce = await smartToken1.nonces(deployer.address);
 
           // Get the EIP712 digest
           const digest = getPermitDigest(
-            await devToken1.name(),
-            devToken1.address,
+            await smartToken1.name(),
+            smartToken1.address,
             chainId,
             approve,
             nonce,
@@ -180,7 +182,7 @@ developmentChains.includes(network.name)
           const { v, r, s } = sign(digest, privateKey1Buffer);
 
           // Approve it
-          const receipt = await devToken1.permit(
+          const receipt = await smartToken1.permit(
             approve.owner,
             approve.spender,
             approve.value,
@@ -192,16 +194,16 @@ developmentChains.includes(network.name)
 
           // It worked!
           // assert.equal(event.event, 'Approval')
-          assert.equal(await devToken1.nonces(deployer.address), 1);
+          assert.equal(await smartToken1.nonces(deployer.address), 1);
           assert.equal(
-            await devToken1.allowance(approve.owner, approve.spender),
+            await smartToken1.allowance(approve.owner, approve.spender),
             approve.value
           );
 
           // Re-using the same sig doesn't work since the nonce has been incremented
           // on the contract level for replay-protection
           await expect(
-            devToken1.permit(
+            smartToken1.permit(
               approve.owner,
               approve.spender,
               approve.value,
@@ -214,7 +216,7 @@ developmentChains.includes(network.name)
 
           // It should revert if the deadline has occured
           await expect(
-            devToken1.permit(
+            smartToken1.permit(
               approve.owner,
               approve.spender,
               approve.value,
@@ -228,7 +230,7 @@ developmentChains.includes(network.name)
           // invalid ecrecover's return address(0x0), so we must also guarantee that
           // this case fails
           await expect(
-            devToken1.permit(
+            smartToken1.permit(
               "0x0000000000000000000000000000000000000000",
               approve.spender,
               approve.value,
@@ -245,12 +247,15 @@ developmentChains.includes(network.name)
             tokenFactory1,
             deployer,
             tester,
-            devToken1,
-            devToken2,
+            smartToken1,
+            smartToken2,
             chainId,
           } = await loadFixture(deployTokenFixture);
           const depositAmount = ethers.utils.parseEther("6");
-          await tokenFactory1.initialize(devToken1.address, devToken2.address);
+          await tokenFactory1.initialize(
+            smartToken1.address,
+            smartToken2.address
+          );
           // await underlyingTokenWithoutPermit.approve(tokenFactory1.address, depositAmount);
 
           // Create the approval request
@@ -264,12 +269,12 @@ developmentChains.includes(network.name)
           const deadline = 100000000000000;
 
           // Get the user's nonce
-          const nonce = await devToken1.nonces(deployer.address);
+          const nonce = await smartToken1.nonces(deployer.address);
 
           // Get the EIP712 digest
           const digest = getPermitDigest(
-            await devToken1.name(),
-            devToken1.address,
+            await smartToken1.name(),
+            smartToken1.address,
             chainId,
             approve,
             nonce,
@@ -284,7 +289,7 @@ developmentChains.includes(network.name)
           const { v, r, s } = sign(digest, privateKey1Buffer);
 
           await expect(
-            devToken1.depositWithPermit(
+            smartToken1.depositWithPermit(
               depositAmount,
               deployer.address,
               deadline,

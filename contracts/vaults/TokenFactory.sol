@@ -13,7 +13,7 @@ import "@openzeppelin/contracts/token/ERC777/IERC777Recipient.sol";
 import "@openzeppelin/contracts/utils/introspection/ERC1820Implementer.sol";
 import "@openzeppelin/contracts/token/ERC777/IERC777Sender.sol";
 
-import "./DevToken.sol";
+import "./SmartToken.sol";
 import "./../libraries/PriceFeed.sol";
 import "./BaseContract.sol";
 import "./../interfaces/IERC20Update.sol";
@@ -54,7 +54,7 @@ contract TokenFactory is
         keccak256("ERC777TokensSender");
     // State variables
     uint256[] private scallingFactorX;
-    DevToken[] private devTokenArray;
+    SmartToken[] private smartTokenArray;
     AggregatorV3Interface private immutable priceFeed;
     mapping(address => uint256) private lastRebaseCount;
     IERC20Update private immutable baseToken;
@@ -111,10 +111,10 @@ contract TokenFactory is
         uint256 shares
     );
 
-    modifier onlyDevTokens() {
+    modifier onlySmartTokens() {
         if (
-            _msgSender() == address(devTokenArray[0]) ||
-            _msgSender() == address(devTokenArray[1])
+            _msgSender() == address(smartTokenArray[0]) ||
+            _msgSender() == address(smartTokenArray[1])
         ) {
             _;
         } else {
@@ -150,9 +150,9 @@ contract TokenFactory is
         nextSequenceNumber = 1;
     }
 
-    function initialize(DevToken token1, DevToken token2) external onlyOwner {
-        devTokenArray.push(token1);
-        devTokenArray.push(token2);
+    function initialize(SmartToken token1, SmartToken token2) external onlyOwner {
+        smartTokenArray.push(token1);
+        smartTokenArray.push(token2);
     }
 
     /**
@@ -194,12 +194,12 @@ contract TokenFactory is
         address owner_
     ) public view virtual returns (uint256) {
         if (
-            devTokenArray[0].balanceOf(owner_) >
-            devTokenArray[1].balanceOf(owner_)
+            smartTokenArray[0].balanceOf(owner_) >
+            smartTokenArray[1].balanceOf(owner_)
         ) {
-            return devTokenArray[1].balanceOf(owner_);
+            return smartTokenArray[1].balanceOf(owner_);
         } else {
-            return devTokenArray[0].balanceOf(owner_);
+            return smartTokenArray[0].balanceOf(owner_);
         }
     }
 
@@ -216,7 +216,7 @@ contract TokenFactory is
         virtual
         onlyNotSanctioned(caller)
         onlyNotSanctioned(receiver)
-        onlyDevTokens
+        onlySmartTokens
     {
         rebaseCheck(receiver);
 
@@ -251,7 +251,7 @@ contract TokenFactory is
         virtual
         onlyNotSanctioned(caller)
         onlyNotSanctioned(receiver)
-        onlyDevTokens
+        onlySmartTokens
     {
         rebaseCheck(receiver);
         //mgmt fees logic
@@ -274,28 +274,28 @@ contract TokenFactory is
     }
 
     function factoryMint(
-        uint256 devTokenIndex,
+        uint256 smartTokenIndex,
         address receiver,
         uint256 amount
     ) private {
-        uint256 assets = devTokenArray[devTokenIndex].previewMint(amount);
-        devTokenArray[devTokenIndex].mintAsset(receiver, assets);
+        uint256 assets = smartTokenArray[smartTokenIndex].previewMint(amount);
+        smartTokenArray[smartTokenIndex].mintAsset(receiver, assets);
     }
 
     function factoryBurn(
-        uint256 devTokenIndex,
+        uint256 smartTokenIndex,
         address owner_,
         uint256 amount
     ) private {
-        devTokenArray[devTokenIndex].devBurn(owner_, amount);
+        smartTokenArray[smartTokenIndex].devBurn(owner_, amount);
     }
 
     function factoryTransfer(
-        uint256 devTokenIndex,
+        uint256 smartTokenIndex,
         address receiver,
         uint256 amount
     ) private {
-        devTokenArray[devTokenIndex].devTransfer(receiver, amount);
+        smartTokenArray[smartTokenIndex].smartTransfer(receiver, amount);
     }
 
     function subUnchecked(
@@ -362,8 +362,8 @@ contract TokenFactory is
     }
 
     function applyRebase(address owner_) public {
-        uint256 asset1ValueEth = devTokenArray[0].unScaledbalanceOf(owner_);
-        uint256 asset2ValueEth = devTokenArray[1].unScaledbalanceOf(owner_);
+        uint256 asset1ValueEth = smartTokenArray[0].unScaledbalanceOf(owner_);
+        uint256 asset2ValueEth = smartTokenArray[1].unScaledbalanceOf(owner_);
         uint256 initialAsset1ValueEth = asset1ValueEth;
         uint256 initialAsset2ValueEth = asset2ValueEth;
 
@@ -424,8 +424,8 @@ contract TokenFactory is
         uint256 scallingFactorY = subUnchecked(scallingFactorX_);
         uint256 denominator = 10 ** decimals();
 
-        uint256 asset1Balance = devTokenArray[0].unScaledbalanceOf(owner_);
-        uint256 asset2Balance = devTokenArray[1].unScaledbalanceOf(owner_);
+        uint256 asset1Balance = smartTokenArray[0].unScaledbalanceOf(owner_);
+        uint256 asset2Balance = smartTokenArray[1].unScaledbalanceOf(owner_);
 
         //Calculate the net balance of user after rebases are to be applied
         (asset1Balance, asset2Balance) = calculateMgmtFeeForRebase(
@@ -441,8 +441,8 @@ contract TokenFactory is
 
     function updateUserLastRebaseCount(address owner_) public {
         if (
-            devTokenArray[0].unScaledbalanceOf(owner_) == 0 &&
-            devTokenArray[1].unScaledbalanceOf(owner_) == 0
+            smartTokenArray[0].unScaledbalanceOf(owner_) == 0 &&
+            smartTokenArray[1].unScaledbalanceOf(owner_) == 0
         ) {
             lastRebaseCount[owner_] = getScallingFactorLength();
         }
@@ -626,8 +626,8 @@ contract TokenFactory is
         return lastRebaseCount[userAddress];
     }
 
-    function getDevTokenAddress(uint256 index) public view returns (DevToken) {
-        return devTokenArray[index];
+    function getSmartTokenAddress(uint256 index) public view returns (SmartToken) {
+        return smartTokenArray[index];
     }
 
     function getInterval() public view returns (uint256) {

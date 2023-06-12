@@ -17,38 +17,62 @@ const func: DeployFunction = async ({ getNamedAccounts, deployments, network }) 
     const { deployer } = await getNamedAccounts()   
     const tokenFactory = await ethers.getContract("TokenFactory", deployer)
     
-    log("Deploying DevToken 1...")   
-    const DevToken1 = await deploy("DevToken", {
-        from: deployer,
-        args: [TOKEN1_NAME, TOKEN1_SYMBOL, tokenFactory.address, defaultOperators, sanctionsContractAddress],
-        log: true,
-        // we need to wait if on a live network so we can verify properly
-        waitConfirmations: networkConfig[network.name].blockConfirmations || 1,
-    })
-    log("DevToken 1 Deployed")
+    log("Deploying SmartToken 1...");
+    const SmartToken1 = await deploy("SmartToken", {
+      from: deployer,
+      args: [
+        TOKEN1_NAME,
+        TOKEN1_SYMBOL,
+        tokenFactory.address,
+        defaultOperators,
+        sanctionsContractAddress,
+      ],
+      log: true,
+      // we need to wait if on a live network so we can verify properly
+      waitConfirmations: networkConfig[network.name].blockConfirmations || 1,
+    });
+    log("SmartToken 1 Deployed");
     if (!developmentChains.includes(network.name) && process.env.ETHERSCAN_API_KEY) {
-        await verify(DevToken1.address, [TOKEN1_NAME, TOKEN1_SYMBOL, tokenFactory.address, defaultOperators, sanctionsContractAddress])
+        await verify(SmartToken1.address, [
+          TOKEN1_NAME,
+          TOKEN1_SYMBOL,
+          tokenFactory.address,
+          defaultOperators,
+          sanctionsContractAddress,
+        ]);
     }  
 
     log("----------------------------------")
 
-    log("Deploying DevToken 2...")
-    const DevToken2 = await deploy("DevToken", {
-        from: deployer,
-        args: [TOKEN2_NAME, TOKEN2_SYMBOL, tokenFactory.address, defaultOperators, sanctionsContractAddress],
-        log: true,
-        // we need to wait if on a live network so we can verify properly
-        waitConfirmations: networkConfig[network.name].blockConfirmations || 1,
-    })
-    log("DevToken 2 Deployed") 
+    log("Deploying SmartToken 2...");
+    const SmartToken2 = await deploy("SmartToken", {
+      from: deployer,
+      args: [
+        TOKEN2_NAME,
+        TOKEN2_SYMBOL,
+        tokenFactory.address,
+        defaultOperators,
+        sanctionsContractAddress,
+      ],
+      log: true,
+      // we need to wait if on a live network so we can verify properly
+      waitConfirmations: networkConfig[network.name].blockConfirmations || 1,
+    });
+    log("SmartToken 2 Deployed"); 
     if (!developmentChains.includes(network.name) && process.env.ETHERSCAN_API_KEY) {
-        await verify(DevToken2.address, [TOKEN2_NAME, TOKEN2_SYMBOL, tokenFactory.address, defaultOperators, sanctionsContractAddress])
+        await verify(SmartToken2.address, [
+          TOKEN2_NAME,
+          TOKEN2_SYMBOL,
+          tokenFactory.address,
+          defaultOperators,
+          sanctionsContractAddress,
+        ]);
     }  
     log("----------------------------------")
 
     log("Intializing Tokens in Token Factory...")
     // initialize tokens  
-    await tokenFactory.initialize(DevToken1.address, DevToken2.address)
+    await tokenFactory.initialize(SmartToken1.address, SmartToken2.address);
     log("Tokens Intializied!")
 };
 export default func;
