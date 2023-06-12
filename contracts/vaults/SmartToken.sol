@@ -257,9 +257,9 @@ contract SmartToken is ERC20Permit, BaseContract, IERC4626, ReentrancyGuard {
 
     /** @dev See {IERC4626-maxDeposit}. */
     function maxDeposit(
-        address
+        address account
     ) public view virtual override returns (uint256) {
-        return (type(uint256).max);
+        return type(uint256).max - tokenFactory.maxAmountToWithdraw(account);
     }
 
     /** @dev See {IERC4626-previewDeposit}. */
@@ -311,8 +311,8 @@ contract SmartToken is ERC20Permit, BaseContract, IERC4626, ReentrancyGuard {
     }
 
     /** @dev See {IERC4626-maxMint}. */
-    function maxMint(address) public view virtual override returns (uint256) {
-        return (type(uint256).max);
+    function maxMint(address account) public view virtual override returns (uint256) {
+        return type(uint256).max - tokenFactory.maxAmountToWithdraw(account);
     }
 
     /** @dev See {IERC4626-previewMint}. */
