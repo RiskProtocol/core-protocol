@@ -28,7 +28,6 @@ contract Deposit is Test, TestHelper  {
             TOKEN1_NAME,
             TOKEN1_SYMBOL,
             address(tokenFactory),
-            defaultOperators,
             sanctionsContract
         );
         // deploy token Y
@@ -36,7 +35,6 @@ contract Deposit is Test, TestHelper  {
             TOKEN2_NAME,
             TOKEN2_SYMBOL,
             address(tokenFactory),
-            defaultOperators,
             sanctionsContract
         );
 

@@ -5,7 +5,6 @@ import {
   REBASE_INTERVAL,
   TOKEN1_NAME,
   TOKEN1_SYMBOL,
-  defaultOperators,
   TOKEN2_NAME,
   TOKEN2_SYMBOL,
   DECIMALS,
@@ -67,7 +66,6 @@ developmentChains.includes(network.name)
           TOKEN1_NAME,
           TOKEN1_SYMBOL,
           tokenFactory.address,
-          defaultOperators,
           sanctionsContract.address
         );
         await smartToken1.deployed();
@@ -81,7 +79,6 @@ developmentChains.includes(network.name)
           TOKEN2_NAME,
           TOKEN2_SYMBOL,
           tokenFactory.address,
-          defaultOperators,
           sanctionsContract.address
         );
         await smartToken2.deployed();
@@ -129,7 +126,6 @@ developmentChains.includes(network.name)
           TOKEN1_NAME,
           TOKEN1_SYMBOL,
           tokenFactory3.address,
-          defaultOperators,
           sanctionsContract.address
         );
         await smartTokenX.deployed();
@@ -143,7 +139,6 @@ developmentChains.includes(network.name)
           TOKEN2_NAME,
           TOKEN2_SYMBOL,
           tokenFactory3.address,
-          defaultOperators,
           sanctionsContract.address
         );
         await smartTokenY.deployed();

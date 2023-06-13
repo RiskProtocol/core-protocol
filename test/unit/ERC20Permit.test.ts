@@ -5,7 +5,6 @@ import {
   REBASE_INTERVAL,
   TOKEN1_NAME,
   TOKEN1_SYMBOL,
-  defaultOperators,
   TOKEN2_NAME,
   TOKEN2_SYMBOL,
   DECIMALS,
@@ -13,9 +12,7 @@ import {
 } from "../../helper-hardhat-config";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import {
-  PERMIT_TYPEHASH,
   getPermitDigest,
-  getDomainSeparator,
   sign,
 } from "../../utils/signatures";
 import "dotenv/config";
@@ -93,7 +90,6 @@ developmentChains.includes(network.name)
           TOKEN1_NAME,
           TOKEN1_SYMBOL,
           tokenFactory.address,
-          defaultOperators,
           sanctionsContract.address
         );
         await smartToken1.deployed();
@@ -107,7 +103,6 @@ developmentChains.includes(network.name)
           TOKEN2_NAME,
           TOKEN2_SYMBOL,
           tokenFactory.address,
-          defaultOperators,
           sanctionsContract.address
         );
         await smartToken2.deployed();
@@ -128,22 +123,6 @@ developmentChains.includes(network.name)
       }
 
       describe("ERC20Permit", async function () {
-        it("initializes DOMAIN_SEPARATOR and PERMIT_TYPEHASH correctly", async () => {
-          const { smartToken1, chainId } = await loadFixture(
-            deployTokenFixture
-          );
-
-          assert.equal(await smartToken1._PERMIT_TYPEHASH(), PERMIT_TYPEHASH);
-          assert.equal(
-            await smartToken1.DOMAIN_SEPARATOR(),
-            getDomainSeparator(
-              await smartToken1.name(),
-              smartToken1.address,
-              chainId
-            )
-          );
-        });
-
         it("permits and emits Approval (replay safe)", async () => {
           const { smartToken1, chainId, deployer, tester } = await loadFixture(
             deployTokenFixture
