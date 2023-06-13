@@ -16,7 +16,6 @@ env:
 jobs:
   tests:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v3
       - name: Install packages
@@ -39,3 +38,20 @@ jobs:
 
       - name: Run tests
         run: forge test --no-match-path "test/foundry/invariants/*.t.sol" -vvv
+
+  slackNotification:
+    needs: [tests]
+    if: failure()
+    name: Slack Notification
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Slack Notification
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_CHANNEL: github-actions
+          SLACK_TITLE: Failed
+          SLACK_COLOR: '#dc2626'
+          SLACK_USERNAME: Github Action
+          SLACK_ICON: ${{ secrets.SLACK_ICON }}
