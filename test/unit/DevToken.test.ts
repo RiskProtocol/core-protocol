@@ -137,7 +137,7 @@ developmentChains.includes(network.name)
             devToken1.operatorBurn(deployer.address, amount, bytes, bytes)
           ).to.be.revertedWithCustomError(
             devToken1,
-            "DevToken__MethodNotAllowed"
+            "DevToken__MethodNotAllow"
           );
           await expect(
             devToken2.operatorBurn(deployer.address, amount, bytes, bytes)
