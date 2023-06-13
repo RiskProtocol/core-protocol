@@ -8,6 +8,7 @@ contract ERC4626Test is Test, TestHelper {
     MockERC20Token underlying;
     DevToken vault;
     DevToken vault2;
+    TokenFactory factoryWrapper;
 
     function setUp() public {
         vm.createSelectFork(vm.rpcUrl("mainnet"), 17268750);
@@ -18,42 +19,82 @@ contract ERC4626Test is Test, TestHelper {
 
         // deploy underlying asset
         underlying = new MockERC20Token();
+        tokenFactory = new TokenFactory();
 
-        tokenFactory = new TokenFactory(
+        proxy = new UUPSProxy(address(tokenFactory), "");
+        factoryWrapper = TokenFactory(address(proxy));
+        factoryWrapper.initialize(
             underlying,
             mockV3AggregatorAddress,
             REBASE_INTERVAL,
             sanctionsContract
         );
 
-        vault = new DevToken(
-            TOKEN1_NAME,
-            TOKEN1_SYMBOL,
-            address(tokenFactory),
-            defaultOperators,
-            sanctionsContract
+        // address(proxy).call(
+        //     abi.encodeWithSignature(
+        //         "initialize(address,address,unit256,address)",
+        //         underlying,
+        //         mockV3AggregatorAddress,
+        //         REBASE_INTERVAL,
+        //         sanctionsContract
+        //     )
+        // );
+
+        // console.log("The owner is ");
+
+        vault = new DevToken();
+        vaultProxy = new UUPSProxy(address(vault), "");
+        address(vaultProxy).call(
+            abi.encodeWithSignature(
+                "initialize(string,string,address,array,address)",
+                TOKEN1_NAME,
+                TOKEN1_SYMBOL,
+                address(tokenFactory),
+                defaultOperators,
+                sanctionsContract
+            )
         );
 
-        vault2 = new DevToken(
-            TOKEN2_NAME,
-            TOKEN2_SYMBOL,
-            address(tokenFactory),
-            defaultOperators,
-            sanctionsContract
+        vault2 = new DevToken();
+        vault2Proxy = new UUPSProxy(address(vault2), "");
+        address(vault2Proxy).call(
+            abi.encodeWithSignature(
+                "initialize(string,string,address,array,address)",
+                TOKEN2_NAME,
+                TOKEN2_SYMBOL,
+                address(tokenFactory),
+                defaultOperators,
+                sanctionsContract
+            )
         );
 
         // initialize dev tokens in token factory
-        tokenFactory.initialize(vault, vault2);
+        factoryWrapper.initializeSMART(vault, vault2);
+        // address(proxy).call(
+        //     abi.encodeWithSignature(
+        //         "initializeSMART(address,address)",
+        //         vault,
+        //         vault2
+        //     )
+        // );
     }
 
     function testMetadata() public {
-        DevToken vlt = new DevToken(
-            TOKEN1_NAME,
-            TOKEN1_SYMBOL,
-            address(tokenFactory),
-            defaultOperators,
-            sanctionsContract
+        //DevToken vlt = new DevToken();
+
+        DevToken vlt = new DevToken();
+        Proxy vltProxy = new UUPSProxy(address(vlt), "");
+        address(vltProxy).call(
+            abi.encodeWithSignature(
+                "initialize(string,string,address,array,address)",
+                TOKEN1_NAME,
+                TOKEN1_SYMBOL,
+                address(tokenFactory),
+                defaultOperators,
+                sanctionsContract
+            )
         );
+
         assertEq(vlt.name(), TOKEN1_NAME);
         assertEq(vlt.symbol(), TOKEN1_SYMBOL);
         assertEq(address(vlt.asset()), address(underlying));
@@ -73,7 +114,10 @@ contract ERC4626Test is Test, TestHelper {
 
         underlying.approve(address(tokenFactory), aliceUnderlyingAmount);
 
-        assertEq(underlying.allowance(alice, address(tokenFactory)), aliceUnderlyingAmount);
+        assertEq(
+            underlying.allowance(alice, address(tokenFactory)),
+            aliceUnderlyingAmount
+        );
 
         uint256 alicePreDepositBal = underlying.balanceOf(alice);
 
@@ -82,13 +126,22 @@ contract ERC4626Test is Test, TestHelper {
 
         // Expect exchange rate to be 1:1 on initial deposit.
         assertEq(aliceUnderlyingAmount, aliceShareAmount);
-        assertEq(vault.previewWithdraw(aliceShareAmount), aliceUnderlyingAmount);
+        assertEq(
+            vault.previewWithdraw(aliceShareAmount),
+            aliceUnderlyingAmount
+        );
         assertEq(vault.previewDeposit(aliceUnderlyingAmount), aliceShareAmount);
         assertEq(vault.totalSupply(), aliceShareAmount);
         assertEq(vault.totalAssets(), aliceUnderlyingAmount);
         assertEq(vault.balanceOf(alice), aliceShareAmount);
-        assertEq(vault.convertToAssets(vault.balanceOf(alice)), aliceUnderlyingAmount);
-        assertEq(underlying.balanceOf(alice), alicePreDepositBal - aliceUnderlyingAmount);
+        assertEq(
+            vault.convertToAssets(vault.balanceOf(alice)),
+            aliceUnderlyingAmount
+        );
+        assertEq(
+            underlying.balanceOf(alice),
+            alicePreDepositBal - aliceUnderlyingAmount
+        );
 
         vm.prank(alice);
         vault.withdraw(aliceUnderlyingAmount, alice, alice);
@@ -110,7 +163,10 @@ contract ERC4626Test is Test, TestHelper {
 
         vm.prank(alice);
         underlying.approve(address(tokenFactory), aliceShareAmount);
-        assertEq(underlying.allowance(alice, address(tokenFactory)), aliceShareAmount);
+        assertEq(
+            underlying.allowance(alice, address(tokenFactory)),
+            aliceShareAmount
+        );
 
         uint256 alicePreDepositBal = underlying.balanceOf(alice);
 
@@ -119,13 +175,22 @@ contract ERC4626Test is Test, TestHelper {
 
         // Expect exchange rate to be 1:1 on initial mint.
         assertEq(aliceShareAmount, aliceUnderlyingAmount);
-        assertEq(vault.previewWithdraw(aliceShareAmount), aliceUnderlyingAmount);
+        assertEq(
+            vault.previewWithdraw(aliceShareAmount),
+            aliceUnderlyingAmount
+        );
         assertEq(vault.previewDeposit(aliceUnderlyingAmount), aliceShareAmount);
         assertEq(vault.totalSupply(), aliceShareAmount);
         assertEq(vault.totalAssets(), aliceUnderlyingAmount);
         assertEq(vault.balanceOf(alice), aliceUnderlyingAmount);
-        assertEq(vault.convertToAssets(vault.balanceOf(alice)), aliceUnderlyingAmount);
-        assertEq(underlying.balanceOf(alice), alicePreDepositBal - aliceUnderlyingAmount);
+        assertEq(
+            vault.convertToAssets(vault.balanceOf(alice)),
+            aliceUnderlyingAmount
+        );
+        assertEq(
+            underlying.balanceOf(alice),
+            alicePreDepositBal - aliceUnderlyingAmount
+        );
 
         vm.prank(alice);
         vault.redeem(aliceShareAmount, alice, alice);
@@ -179,8 +244,14 @@ contract ERC4626Test is Test, TestHelper {
         assertEq(aliceShareAmount, 2000);
 
         assertEq(vault.balanceOf(alice), aliceShareAmount);
-        assertEq(vault.convertToAssets(vault.balanceOf(alice)), aliceUnderlyingAmount);
-        assertEq(vault.convertToShares(aliceUnderlyingAmount), vault.balanceOf(alice));
+        assertEq(
+            vault.convertToAssets(vault.balanceOf(alice)),
+            aliceUnderlyingAmount
+        );
+        assertEq(
+            vault.convertToShares(aliceUnderlyingAmount),
+            vault.balanceOf(alice)
+        );
 
         // Expect a 1:1 ratio before mutation.
         assertEq(aliceUnderlyingAmount, 2000);
@@ -197,8 +268,14 @@ contract ERC4626Test is Test, TestHelper {
         // Expect to have received the requested underlying amount.
         assertEq(bobUnderlyingAmount, 4000);
         assertEq(vault.balanceOf(bob), bobShareAmount);
-        assertEq(vault.convertToAssets(vault.balanceOf(bob)), bobUnderlyingAmount);
-        assertEq(vault.convertToShares(bobUnderlyingAmount), vault.balanceOf(bob));
+        assertEq(
+            vault.convertToAssets(vault.balanceOf(bob)),
+            bobUnderlyingAmount
+        );
+        assertEq(
+            vault.convertToShares(bobUnderlyingAmount),
+            vault.balanceOf(bob)
+        );
 
         // Expect a 1:1 ratio before mutation.
         assertEq(bobShareAmount, bobUnderlyingAmount);
@@ -215,7 +292,10 @@ contract ERC4626Test is Test, TestHelper {
     function testFailDepositWithNotEnoughApproval() public {
         underlying.transfer(address(this), 0.5e18);
         underlying.approve(address(tokenFactory), 0.5e18);
-        assertEq(underlying.allowance(address(this), address(tokenFactory)), 0.5e18);
+        assertEq(
+            underlying.allowance(address(this), address(tokenFactory)),
+            0.5e18
+        );
 
         vault.deposit(1e18, address(this));
     }

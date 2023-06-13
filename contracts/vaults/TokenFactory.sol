@@ -2,20 +2,25 @@
 
 pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/utils/math/Math.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+
+import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+// import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/utils/introspection/IERC1820Registry.sol";
-import "@openzeppelin/contracts/token/ERC777/IERC777Recipient.sol";
-import "@openzeppelin/contracts/utils/introspection/ERC1820Implementer.sol";
-import "@openzeppelin/contracts/token/ERC777/IERC777Sender.sol";
+import "@openzeppelin/contracts-upgradeable/utils/introspection/IERC1820RegistryUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/introspection/ERC1820ImplementerUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC777/IERC777RecipientUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC777/IERC777SenderUpgradeable.sol";
 
 import "./DevToken.sol";
 import "./../libraries/PriceFeed.sol";
 import "./BaseContract.sol";
+
 import "./../interfaces/IERC20Update.sol";
 
 error TokenFactory__MethodNotAllowed();
@@ -32,22 +37,22 @@ error TokenFactory__InvalidSequenceNumber();
  * The contract will implement periodic rebalancing
  */
 contract TokenFactory is
-    ERC20,
-    ReentrancyGuard,
-    Ownable,
+    ERC20Upgradeable,
+    ReentrancyGuardUpgradeable,
+    OwnableUpgradeable,
+    UUPSUpgradeable,
     BaseContract,
-    IERC777Recipient,
-    IERC777Sender,
-    ERC1820Implementer
+    IERC777RecipientUpgradeable,
+    IERC777SenderUpgradeable,
+    ERC1820ImplementerUpgradeable
 {
     using PriceFeed for AggregatorV3Interface;
-    using Math for uint256;
-    using SafeMath for uint256;
-    using SafeMath for uint8;
-    using SafeMath for uint32;
+    using MathUpgradeable for uint256;
+    using SafeMathUpgradeable for uint256;
+    using SafeMathUpgradeable for uint8;
+    using SafeMathUpgradeable for uint32;
 
-    IERC1820Registry private _erc1820 =
-        IERC1820Registry(0x1820a4B7618BdE71Dce8cdc73aAB6C95905faD24);
+    IERC1820RegistryUpgradeable private _erc1820;
     bytes32 private constant TOKENS_RECIPIENT_INTERFACE_HASH =
         keccak256("ERC777TokensRecipient");
     bytes32 private constant TOKENS_SENDER_INTERFACE_HASH =
@@ -55,11 +60,11 @@ contract TokenFactory is
     // State variables
     uint256[] private scallingFactorX;
     DevToken[] private devTokenArray;
-    AggregatorV3Interface private immutable priceFeed;
+    AggregatorV3Interface private priceFeed;
     mapping(address => uint256) private lastRebaseCount;
-    IERC20Update private immutable baseToken;
-    uint8 private immutable baseTokenDecimals;
-    uint256 private immutable interval;
+    IERC20Update private baseToken;
+    uint8 private baseTokenDecimals;
+    uint256 private interval;
     uint256 private lastTimeStamp;
     //management fees
     uint32 private constant MGMT_FEE_SCALING_FACTOR = 100000;
@@ -122,12 +127,22 @@ contract TokenFactory is
         }
     }
 
-    constructor(
+    function initialize(
         IERC20Update baseTokenAddress,
         address priceFeedAddress,
         uint256 rebaseInterval, // in seconds
         address sanctionsContract_
-    ) ERC20("RiskProtocolVault", "RPK") BaseContract(sanctionsContract_) {
+    ) public initializer {
+        //erc20
+        __ERC20_init("RiskProtocolVault", "RPK");
+        __BaseContract_init(sanctionsContract_);
+        __Ownable_init();
+        __UUPSUpgradeable_init();
+
+        //
+        _erc1820 = IERC1820RegistryUpgradeable(
+            0x1820a4B7618BdE71Dce8cdc73aAB6C95905faD24
+        );
         _erc1820.setInterfaceImplementer(
             address(this),
             TOKENS_RECIPIENT_INTERFACE_HASH,
@@ -150,7 +165,20 @@ contract TokenFactory is
         nextSequenceNumber = 1;
     }
 
-    function initialize(DevToken token1, DevToken token2) external onlyOwner {
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
+    function _authorizeUpgrade(
+        address
+    ) internal override(UUPSUpgradeable) onlyOwner {}
+
+    //note: renaming this method to avoid conflicts with upgradable initialize
+    function initializeSMART(
+        DevToken token1,
+        DevToken token2
+    ) external onlyOwner {
         devTokenArray.push(token1);
         devTokenArray.push(token2);
     }
@@ -163,7 +191,9 @@ contract TokenFactory is
     ) private view returns (bool, uint8) {
         (bool success, bytes memory encodedDecimals) = address(asset_)
             .staticcall(
-                abi.encodeWithSelector(IERC20Metadata.decimals.selector)
+                abi.encodeWithSelector(
+                    IERC20MetadataUpgradeable.decimals.selector
+                )
             );
         if (
             success &&

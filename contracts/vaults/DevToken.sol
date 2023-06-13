@@ -2,8 +2,13 @@
 
 pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/interfaces/IERC4626.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+
+import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/interfaces/IERC4626Upgradeable.sol";
+
 import "./../interfaces/IERC20Update.sol";
 import "./TokenFactory.sol";
 import "../external/ERC20Permit.sol";
@@ -18,9 +23,17 @@ error DevToken__RedeemMoreThanMax();
 error DevToken__OnlyAssetOwner();
 error DevToken__ZeroDeposit();
 
-contract DevToken is ERC20Permit, BaseContract, IERC4626, ReentrancyGuard {
-    TokenFactory private immutable tokenFactory;
-    IERC20Update private immutable underlyingToken;
+contract DevToken is
+    Initializable,
+    UUPSUpgradeable,
+    OwnableUpgradeable,
+    ERC20Permit,
+    BaseContract,
+    IERC4626Upgradeable,
+    ReentrancyGuardUpgradeable
+{
+    TokenFactory private tokenFactory;
+    IERC20Update private underlyingToken;
 
     modifier onlyTokenFactory() {
         if (_msgSender() != address(tokenFactory))
@@ -40,20 +53,30 @@ contract DevToken is ERC20Permit, BaseContract, IERC4626, ReentrancyGuard {
         _;
     }
 
-    constructor(
+    function initialize(
         string memory tokenName,
         string memory tokenSymbol,
         address factoryAddress,
         address[] memory defaultOperators,
         address sanctionsContract_
-    )
-        ERC777(tokenName, tokenSymbol, defaultOperators)
-        ERC20Permit(tokenName)
-        BaseContract(sanctionsContract_)
-    {
+    ) public initializer {
+        //initialize deriving contracts
+        __ERC777_init(tokenName, tokenSymbol, defaultOperators);
+        __ERC20Permit_init(tokenName);
+        __BaseContract_init(sanctionsContract_);
+        __Ownable_init();
+        __UUPSUpgradeable_init();
+        //
         tokenFactory = TokenFactory(factoryAddress);
         underlyingToken = tokenFactory.getBaseToken();
     }
+
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
+    function _authorizeUpgrade(address) internal override onlyOwner {}
 
     function mintAsset(
         address receiver,
@@ -72,7 +95,7 @@ contract DevToken is ERC20Permit, BaseContract, IERC4626, ReentrancyGuard {
         public
         pure
         virtual
-        override(ERC777, IERC20Metadata)
+        override(ERC777Upgradeable, IERC20MetadataUpgradeable)
         returns (uint8)
     {
         return super.decimals();
@@ -85,7 +108,7 @@ contract DevToken is ERC20Permit, BaseContract, IERC4626, ReentrancyGuard {
         public
         view
         virtual
-        override(ERC777, IERC20Metadata)
+        override(ERC777Upgradeable, IERC20MetadataUpgradeable)
         returns (string memory)
     {
         return super.name();
@@ -98,7 +121,7 @@ contract DevToken is ERC20Permit, BaseContract, IERC4626, ReentrancyGuard {
         public
         view
         virtual
-        override(ERC777, IERC20Metadata)
+        override(ERC777Upgradeable, IERC20MetadataUpgradeable)
         returns (string memory)
     {
         return super.symbol();
@@ -111,7 +134,7 @@ contract DevToken is ERC20Permit, BaseContract, IERC4626, ReentrancyGuard {
         public
         view
         virtual
-        override(ERC777, IERC20)
+        override(ERC777Upgradeable, IERC20Upgradeable)
         returns (uint256)
     {
         return super.totalSupply();
@@ -121,7 +144,7 @@ contract DevToken is ERC20Permit, BaseContract, IERC4626, ReentrancyGuard {
     function burn(
         uint256 /* amount */,
         bytes memory /* data */
-    ) public pure override(ERC777) {
+    ) public pure override(ERC777Upgradeable) {
         revert DevToken__MethodNotAllowed();
     }
 
@@ -145,7 +168,7 @@ contract DevToken is ERC20Permit, BaseContract, IERC4626, ReentrancyGuard {
         uint256 amount
     )
         public
-        override(ERC777, IERC20)
+        override(ERC777Upgradeable, IERC20Upgradeable)
         onlyNotSanctioned(recipient)
         onlyNotSanctioned(_msgSender())
         returns (bool)
@@ -184,7 +207,12 @@ contract DevToken is ERC20Permit, BaseContract, IERC4626, ReentrancyGuard {
     /** @dev See {IERC777-balanceOf}. */
     function balanceOf(
         address account
-    ) public view override(ERC777, IERC20) returns (uint256) {
+    )
+        public
+        view
+        override(ERC777Upgradeable, IERC20Upgradeable)
+        returns (uint256)
+    {
         if (hasPendingRebase(account)) {
             return tokenFactory.calculateRollOverValue(account);
         } else {
@@ -212,7 +240,7 @@ contract DevToken is ERC20Permit, BaseContract, IERC4626, ReentrancyGuard {
         uint256 amount
     )
         public
-        override(ERC777, IERC20)
+        override(ERC777Upgradeable, IERC20Upgradeable)
         onlyNotSanctioned(recipient)
         onlyNotSanctioned(sender)
         returns (bool)

@@ -1,5 +1,5 @@
 import { assert, expect } from "chai";
-import { ethers, network } from "hardhat";
+import { ethers, network, upgrades } from "hardhat";
 import {
   developmentChains,
   REBASE_INTERVAL,
@@ -74,34 +74,37 @@ developmentChains.includes(network.name)
           "TokenFactory",
           deployer
         );
-        const tokenFactory = await TokenFactory.deploy(
+
+        const tokenFactory = await upgrades.deployProxy(TokenFactory, [
           underlyingToken.address,
           mockV3Aggregator.address,
           REBASE_INTERVAL,
-          sanctionsContract.address
-        );
+          sanctionsContract.address,
+        ]);
         await tokenFactory.deployed();
 
         // deploy devtoken 1
         const DevToken1 = await ethers.getContractFactory("DevToken", deployer);
-        const devToken1 = await DevToken1.deploy(
+
+        const devToken1 = await upgrades.deployProxy(DevToken1, [
           TOKEN1_NAME,
           TOKEN1_SYMBOL,
           tokenFactory.address,
           defaultOperators,
-          sanctionsContract.address
-        );
+          sanctionsContract.address,
+        ]);
         await devToken1.deployed();
 
         // deploy devtoken 2
         const DevToken2 = await ethers.getContractFactory("DevToken", deployer);
-        const devToken2 = await DevToken2.deploy(
+
+        const devToken2 = await upgrades.deployProxy(DevToken2, [
           TOKEN2_NAME,
           TOKEN2_SYMBOL,
           tokenFactory.address,
           defaultOperators,
-          sanctionsContract.address
-        );
+          sanctionsContract.address,
+        ]);
         await devToken2.deployed();
 
         // other instances to mock fake underlying token
@@ -109,12 +112,13 @@ developmentChains.includes(network.name)
           "TokenFactory",
           tester
         );
-        const tokenFactory2 = await TokenFactory2.deploy(
+
+        const tokenFactory2 = await upgrades.deployProxy(TokenFactory2, [
           "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D",
           mockV3Aggregator.address,
           REBASE_INTERVAL,
-          sanctionsContract.address
-        );
+          sanctionsContract.address,
+        ]);
         await tokenFactory2.deployed();
 
         // Fixtures can return anything you consider useful for your tests
@@ -144,7 +148,10 @@ developmentChains.includes(network.name)
             const depositAmount = item.depositValue;
             const transferAmount = ethers.utils.parseEther("1");
 
-            await tokenFactory.initialize(devToken1.address, devToken2.address);
+            await tokenFactory.initializeSMART(
+              devToken1.address,
+              devToken2.address
+            );
 
             // deposit underlying token
             await underlyingToken.approve(tokenFactory.address, depositAmount);
@@ -183,7 +190,10 @@ developmentChains.includes(network.name)
 
           const depositAmount = ethers.utils.parseEther("1");
 
-          await tokenFactory.initialize(devToken1.address, devToken2.address);
+          await tokenFactory.initializeSMART(
+            devToken1.address,
+            devToken2.address
+          );
 
           // deposit underlying token
           await underlyingToken.approve(tokenFactory.address, depositAmount);
@@ -209,7 +219,10 @@ developmentChains.includes(network.name)
 
           const depositAmount = ethers.utils.parseEther("1");
 
-          await tokenFactory.initialize(devToken1.address, devToken2.address);
+          await tokenFactory.initializeSMART(
+            devToken1.address,
+            devToken2.address
+          );
 
           // deposit underlying token
           await underlyingToken.approve(tokenFactory.address, depositAmount);
@@ -238,7 +251,10 @@ developmentChains.includes(network.name)
 
           const depositAmount = ethers.utils.parseEther("1");
 
-          await tokenFactory.initialize(devToken1.address, devToken2.address);
+          await tokenFactory.initializeSMART(
+            devToken1.address,
+            devToken2.address
+          );
 
           // deposit underlying token
           await underlyingToken.approve(tokenFactory.address, depositAmount);
@@ -265,7 +281,10 @@ developmentChains.includes(network.name)
 
           const depositAmount = ethers.utils.parseEther("1");
 
-          await tokenFactory.initialize(devToken1.address, devToken2.address);
+          await tokenFactory.initializeSMART(
+            devToken1.address,
+            devToken2.address
+          );
 
           // deposit underlying token
           await underlyingToken.approve(tokenFactory.address, depositAmount);

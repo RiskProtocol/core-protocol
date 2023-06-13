@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 
 pragma solidity ^0.8.9;
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 // Link to Sanction List https://go.chainalysis.com/chainalysis-oracle-docs.html
 interface SanctionsList {
@@ -9,9 +10,8 @@ interface SanctionsList {
 
 error BaseContract__SanctionedAddress();
 
-
-contract BaseContract {
-    address private immutable sanctionsContract;
+contract BaseContract is Initializable {
+    address private sanctionsContract;
 
     modifier onlyNotSanctioned(address addressToCheck) {
         SanctionsList sanctionsList = SanctionsList(sanctionsContract);
@@ -20,7 +20,14 @@ contract BaseContract {
         _;
     }
 
-    constructor(address sanctionsContract_) {
+    function __BaseContract_init(
+        address sanctionsContract_
+    ) public initializer {
         sanctionsContract = sanctionsContract_;
+    }
+
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
     }
 }

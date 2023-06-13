@@ -3,43 +3,39 @@ pragma solidity ^0.8.9;
 
 import "./../TestHelper.sol";
 
-contract TokenFactoryTest is Test, TestHelper  {
-
-    function setUp() public {        
+contract TokenFactoryTest is Test, TestHelper {
+    function setUp() public {
         vm.createSelectFork(vm.rpcUrl("mainnet"), 17268750);
-       
+
         // deploy chainlink mock
         mockV3Aggregator = new MockV3Aggregator(DECIMALS, INITIAL_PRICE);
         address mockV3AggregatorAddress = address(mockV3Aggregator);
 
         // deploy underlying asset
         mockERC20Token = new MockERC20Token();
-        tokenFactory = new TokenFactory(
-            mockERC20Token,
-            mockV3AggregatorAddress,
-            REBASE_INTERVAL,
-            sanctionsContract
-        );
+        tokenFactory = new TokenFactory();
+        // mockERC20Token,
+        // mockV3AggregatorAddress,
+        // REBASE_INTERVAL,
+        // sanctionsContract
 
         // deploy token X
-        devTokenX = new DevToken(
-            TOKEN1_NAME,
-            TOKEN1_SYMBOL,
-            address(tokenFactory),
-            defaultOperators,
-            sanctionsContract
-        );
+        devTokenX = new DevToken();
+        // TOKEN1_NAME,
+        // TOKEN1_SYMBOL,
+        // address(tokenFactory),
+        // defaultOperators,
+        // sanctionsContract
         // deploy token Y
-        devTokenY = new DevToken(
-            TOKEN2_NAME,
-            TOKEN2_SYMBOL,
-            address(tokenFactory),
-            defaultOperators,
-            sanctionsContract
-        );
+        devTokenY = new DevToken();
+        // TOKEN2_NAME,
+        // TOKEN2_SYMBOL,
+        // address(tokenFactory),
+        // defaultOperators,
+        // sanctionsContract
 
         // initialize dev tokens in token factory
-        tokenFactory.initialize(devTokenX, devTokenY); 
+        tokenFactory.initializeSMART(devTokenX, devTokenY);
     }
 
     function testFuzz_ConvertToShares(uint256 amount) public {
@@ -88,7 +84,7 @@ contract TokenFactoryTest is Test, TestHelper  {
         devTokenX.deposit(amount, address(0xaa));
 
         uint256 userCurrentBalance = mockERC20Token.balanceOf(address(0xaa));
-        uint256 expectedBalance = userCurrentBalance + amount;  
+        uint256 expectedBalance = userCurrentBalance + amount;
 
         // withdraw underlying token
         devTokenX.withdraw(amount, address(0xaa), address(0xaa));
@@ -119,7 +115,7 @@ contract TokenFactoryTest is Test, TestHelper  {
         assertEq(devTokenX.previewRedeem(amount), amount);
     }
 
-        function testFuzz_DepositXWithdrawY(uint128 amount) public {
+    function testFuzz_DepositXWithdrawY(uint128 amount) public {
         if (amount == 0) amount = 1;
 
         uint256 aliceUnderlyingAmount = amount;
@@ -132,22 +128,40 @@ contract TokenFactoryTest is Test, TestHelper  {
 
         mockERC20Token.approve(address(tokenFactory), aliceUnderlyingAmount);
 
-        assertEq(mockERC20Token.allowance(alice, address(tokenFactory)), aliceUnderlyingAmount);
+        assertEq(
+            mockERC20Token.allowance(alice, address(tokenFactory)),
+            aliceUnderlyingAmount
+        );
 
         uint256 alicePreDepositBal = mockERC20Token.balanceOf(alice);
 
         vm.prank(alice);
-        uint256 aliceShareAmount = devTokenX.deposit(aliceUnderlyingAmount, alice);
+        uint256 aliceShareAmount = devTokenX.deposit(
+            aliceUnderlyingAmount,
+            alice
+        );
 
         // Expect exchange rate to be 1:1 on initial deposit.
         assertEq(aliceUnderlyingAmount, aliceShareAmount);
-        assertEq(devTokenX.previewWithdraw(aliceShareAmount), aliceUnderlyingAmount);
-        assertEq(devTokenY.previewDeposit(aliceUnderlyingAmount), aliceShareAmount);
+        assertEq(
+            devTokenX.previewWithdraw(aliceShareAmount),
+            aliceUnderlyingAmount
+        );
+        assertEq(
+            devTokenY.previewDeposit(aliceUnderlyingAmount),
+            aliceShareAmount
+        );
         assertEq(devTokenX.totalSupply(), aliceShareAmount);
         assertEq(devTokenY.totalAssets(), aliceUnderlyingAmount);
         assertEq(devTokenY.balanceOf(alice), aliceShareAmount);
-        assertEq(devTokenY.convertToAssets(devTokenX.balanceOf(alice)), aliceUnderlyingAmount);
-        assertEq(mockERC20Token.balanceOf(alice), alicePreDepositBal - aliceUnderlyingAmount);
+        assertEq(
+            devTokenY.convertToAssets(devTokenX.balanceOf(alice)),
+            aliceUnderlyingAmount
+        );
+        assertEq(
+            mockERC20Token.balanceOf(alice),
+            alicePreDepositBal - aliceUnderlyingAmount
+        );
 
         vm.prank(alice);
         devTokenY.withdraw(aliceUnderlyingAmount, alice, alice);

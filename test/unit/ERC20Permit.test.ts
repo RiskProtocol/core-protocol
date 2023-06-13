@@ -1,5 +1,5 @@
 import { assert, expect } from "chai";
-import { ethers, network } from "hardhat";
+import { ethers, network, upgrades } from "hardhat";
 import {
   developmentChains,
   REBASE_INTERVAL,
@@ -55,12 +55,13 @@ developmentChains.includes(network.name)
           "TokenFactory",
           deployer
         );
-        const tokenFactory = await TokenFactory.deploy(
+
+        const tokenFactory = await upgrades.deployProxy(TokenFactory, [
           underlyingToken.address,
           mockV3Aggregator.address,
           REBASE_INTERVAL,
-          sanctionsContract.address
-        );
+          sanctionsContract.address,
+        ]);
         await tokenFactory.deployed();
 
         // Underlying Asset without permit function
@@ -76,12 +77,13 @@ developmentChains.includes(network.name)
           "TokenFactory",
           deployer
         );
-        const tokenFactory1 = await TokenFactory1Factory.deploy(
+
+        const tokenFactory1 = await upgrades.deployProxy(TokenFactory1Factory, [
           underlyingTokenWithoutPermit.address,
           mockV3Aggregator.address,
           REBASE_INTERVAL,
-          sanctionsContract.address
-        );
+          sanctionsContract.address,
+        ]);
         await tokenFactory1.deployed();
 
         // deploy devtoken 1
@@ -89,13 +91,14 @@ developmentChains.includes(network.name)
           "DevToken",
           deployer
         );
-        const devToken1 = await DevToken1Factory.deploy(
+
+        const devToken1 = await upgrades.deployProxy(DevToken1Factory, [
           TOKEN1_NAME,
           TOKEN1_SYMBOL,
           tokenFactory.address,
           defaultOperators,
-          sanctionsContract.address
-        );
+          sanctionsContract.address,
+        ]);
         await devToken1.deployed();
 
         // deploy devtoken 2
@@ -103,13 +106,14 @@ developmentChains.includes(network.name)
           "DevToken",
           deployer
         );
-        const devToken2 = await DevToken2Factory.deploy(
+
+        const devToken2 = await upgrades.deployProxy(DevToken2Factory, [
           TOKEN2_NAME,
           TOKEN2_SYMBOL,
           tokenFactory.address,
           defaultOperators,
-          sanctionsContract.address
-        );
+          sanctionsContract.address,
+        ]);
         await devToken2.deployed();
 
         // Fixtures can return anything you consider useful for your tests
@@ -250,7 +254,10 @@ developmentChains.includes(network.name)
             chainId,
           } = await loadFixture(deployTokenFixture);
           const depositAmount = ethers.utils.parseEther("6");
-          await tokenFactory1.initialize(devToken1.address, devToken2.address);
+          await tokenFactory1.initializeSMART(
+            devToken1.address,
+            devToken2.address
+          );
           // await underlyingTokenWithoutPermit.approve(tokenFactory1.address, depositAmount);
 
           // Create the approval request

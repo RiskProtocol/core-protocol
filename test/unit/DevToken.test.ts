@@ -1,5 +1,5 @@
 import { assert, expect } from "chai";
-import { ethers, network } from "hardhat";
+import { ethers, network, upgrades } from "hardhat";
 import {
   developmentChains,
   REBASE_INTERVAL,
@@ -56,35 +56,41 @@ developmentChains.includes(network.name)
           "TokenFactory",
           deployer
         );
-        const tokenFactory = await TokenFactory.deploy(
+
+        const tokenFactory = await upgrades.deployProxy(TokenFactory, [
           underlyingToken.address,
           mockV3Aggregator.address,
           REBASE_INTERVAL,
-          sanctionsContract.address
-        );
+          sanctionsContract.address,
+        ]);
+
         await tokenFactory.deployed();
 
         // deploy devtoken 1
         const DevToken1 = await ethers.getContractFactory("DevToken", deployer);
-        const devToken1 = await DevToken1.deploy(
+        const devToken1 = await upgrades.deployProxy(DevToken1, [
           TOKEN1_NAME,
           TOKEN1_SYMBOL,
           tokenFactory.address,
           defaultOperators,
-          sanctionsContract.address
-        );
+          sanctionsContract.address,
+        ]);
+
         await devToken1.deployed();
 
         // deploy devtoken 2
         const DevToken2 = await ethers.getContractFactory("DevToken", deployer);
-        const devToken2 = await DevToken2.deploy(
+        const devToken2 = await upgrades.deployProxy(DevToken2, [
           TOKEN2_NAME,
           TOKEN2_SYMBOL,
           tokenFactory.address,
           defaultOperators,
-          sanctionsContract.address
-        );
+          sanctionsContract.address,
+        ]);
+
         await devToken2.deployed();
+
+        console.log(`OWNER IS ${await tokenFactory.owner()}`);
 
         // Fixtures can return anything you consider useful for your tests
         return {
@@ -205,7 +211,10 @@ developmentChains.includes(network.name)
           const expectedBalance = ethers.utils.parseEther("5");
           const bytes = new Uint8Array([0x01, 0x02, 0x03, 0x04]);
 
-          await tokenFactory.initialize(devToken1.address, devToken2.address);
+          await tokenFactory.initializeSMART(
+            devToken1.address,
+            devToken2.address
+          );
           await underlyingToken.approve(tokenFactory.address, depositAmount);
           await devToken1.deposit(depositAmount, deployer.address);
 
@@ -234,7 +243,10 @@ developmentChains.includes(network.name)
           const transferAmount = ethers.utils.parseEther("1");
           const bytes = new Uint8Array([0x01, 0x02, 0x03, 0x04]);
 
-          await tokenFactory.initialize(devToken1.address, devToken2.address);
+          await tokenFactory.initializeSMART(
+            devToken1.address,
+            devToken2.address
+          );
           await underlyingToken.approve(tokenFactory.address, depositAmount);
           await devToken1.deposit(depositAmount, deployer.address);
 
@@ -261,7 +273,10 @@ developmentChains.includes(network.name)
           const transferAmount = ethers.utils.parseEther("1");
           const bytes = new Uint8Array([0x01, 0x02, 0x03, 0x04]);
 
-          await tokenFactory.initialize(devToken1.address, devToken2.address);
+          await tokenFactory.initializeSMART(
+            devToken1.address,
+            devToken2.address
+          );
           await underlyingToken.approve(tokenFactory.address, depositAmount);
           await devToken1.deposit(depositAmount, deployer.address);
 
@@ -298,7 +313,10 @@ developmentChains.includes(network.name)
             sanctionsContract,
           } = await loadFixture(deployTokenFixture);
           const depositAmount = ethers.utils.parseEther("6");
-          await tokenFactory.initialize(devToken1.address, devToken2.address);
+          await tokenFactory.initializeSMART(
+            devToken1.address,
+            devToken2.address
+          );
           await underlyingToken.approve(tokenFactory.address, depositAmount);
           await devToken1.deposit(depositAmount, deployer.address);
 
