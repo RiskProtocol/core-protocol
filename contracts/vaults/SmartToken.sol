@@ -4,9 +4,10 @@ pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/interfaces/IERC4626.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
 import "./../interfaces/IERC20Update.sol";
 import "./TokenFactory.sol";
-import "../external/ERC20Permit.sol";
 import "./BaseContract.sol";
 
 error SmartToken__NotTokenFactory();
@@ -18,7 +19,7 @@ error SmartToken__RedeemMoreThanMax();
 error SmartToken__OnlyAssetOwner();
 error SmartToken__ZeroDeposit();
 
-contract SmartToken is ERC20Permit, BaseContract, IERC4626, ReentrancyGuard {
+contract SmartToken is BaseContract, IERC4626, ERC20, ERC20Permit, ReentrancyGuard {
     TokenFactory private immutable tokenFactory;
     IERC20Update private immutable underlyingToken;
 
@@ -44,10 +45,9 @@ contract SmartToken is ERC20Permit, BaseContract, IERC4626, ReentrancyGuard {
         string memory tokenName,
         string memory tokenSymbol,
         address factoryAddress,
-        address[] memory defaultOperators,
         address sanctionsContract_
     )
-        ERC777(tokenName, tokenSymbol, defaultOperators)
+        ERC20(tokenName, tokenSymbol)
         ERC20Permit(tokenName)
         BaseContract(sanctionsContract_)
     {
@@ -59,93 +59,20 @@ contract SmartToken is ERC20Permit, BaseContract, IERC4626, ReentrancyGuard {
         address receiver,
         uint256 amount
     ) public onlyTokenFactory {
-        _mint(receiver, amount, "", "");
+        _mint(receiver, amount);
     }
 
-    /**
-     * @dev See {ERC20-decimals}.
-     *
-     * Always returns 18, as per the
-     * [ERC777 EIP](https://eips.ethereum.org/EIPS/eip-777#backward-compatibility).
-     */
-    function decimals()
-        public
-        pure
-        virtual
-        override(ERC777, IERC20Metadata)
-        returns (uint8)
-    {
-        return super.decimals();
+    function burn(address account, uint256 amount) public onlyTokenFactory {
+        _burn(account, amount);
     }
 
-    /**
-     * @dev See {IERC777-name}.
-     */
-    function name()
-        public
-        view
-        virtual
-        override(ERC777, IERC20Metadata)
-        returns (string memory)
-    {
-        return super.name();
-    }
-
-    /**
-     * @dev See {IERC777-symbol}.
-     */
-    function symbol()
-        public
-        view
-        virtual
-        override(ERC777, IERC20Metadata)
-        returns (string memory)
-    {
-        return super.symbol();
-    }
-
-    /**
-     * @dev See {IERC777-totalSupply}.
-     */
-    function totalSupply()
-        public
-        view
-        virtual
-        override(ERC777, IERC20)
-        returns (uint256)
-    {
-        return super.totalSupply();
-    }
-
-    /** @dev See {IERC777-burn}. */
-    function burn(
-        uint256 /* amount */,
-        bytes memory /* data */
-    ) public pure override(ERC777) {
-        revert SmartToken__MethodNotAllowed();
-    }
-
-    /** @dev See {IERC777-operatorBurn}. */
-    function operatorBurn(
-        address /* account */,
-        uint256 /* amount */,
-        bytes memory /* data */,
-        bytes memory /* operatorData */
-    ) public pure override {
-        revert SmartToken__MethodNotAllowed();
-    }
-
-    function devBurn(address account, uint256 amount) public onlyTokenFactory {
-        _burn(account, amount, "", "");
-    }
-
-    /** @dev See {IERC777-transfer}. */
+    /** @dev See {IERC20-transfer}. */
     function transfer(
         address recipient,
         uint256 amount
     )
         public
-        override(ERC777, IERC20)
+        override(ERC20, IERC20)
         onlyNotSanctioned(recipient)
         onlyNotSanctioned(_msgSender())
         returns (bool)
@@ -162,29 +89,10 @@ contract SmartToken is ERC20Permit, BaseContract, IERC4626, ReentrancyGuard {
         super.transfer(recipient, amount);
     }
 
-    /**
-     * @dev See {IERC777-send}.
-     *
-     * Also emits a {IERC20-Transfer} event for ERC20 compatibility.
-     */
-    function send(
-        address recipient,
-        uint256 amount,
-        bytes memory data
-    )
-        public
-        override
-        onlyNotSanctioned(recipient)
-        onlyNotSanctioned(_msgSender())
-    {
-        handlePendingRebase(_msgSender(), recipient);
-        super.send(recipient, amount, data);
-    }
-
-    /** @dev See {IERC777-balanceOf}. */
+    /** @dev See {IERC20-balanceOf}. */
     function balanceOf(
         address account
-    ) public view override(ERC777, IERC20) returns (uint256) {
+    ) public view override(ERC20, IERC20) returns (uint256) {
         if (hasPendingRebase(account)) {
             return tokenFactory.calculateRollOverValue(account);
         } else {
@@ -212,7 +120,7 @@ contract SmartToken is ERC20Permit, BaseContract, IERC4626, ReentrancyGuard {
         uint256 amount
     )
         public
-        override(ERC777, IERC20)
+        override(ERC20, IERC20)
         onlyNotSanctioned(recipient)
         onlyNotSanctioned(sender)
         returns (bool)

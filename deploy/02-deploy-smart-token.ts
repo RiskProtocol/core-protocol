@@ -6,7 +6,6 @@ import {
     TOKEN1_SYMBOL,
     TOKEN2_NAME,
     TOKEN2_SYMBOL,
-    defaultOperators,
     sanctionsContractAddress
 } from '../helper-hardhat-config';
 import { verify } from '../utils/verify';
@@ -24,7 +23,6 @@ const func: DeployFunction = async ({ getNamedAccounts, deployments, network }) 
         TOKEN1_NAME,
         TOKEN1_SYMBOL,
         tokenFactory.address,
-        defaultOperators,
         sanctionsContractAddress,
       ],
       log: true,
@@ -37,7 +35,6 @@ const func: DeployFunction = async ({ getNamedAccounts, deployments, network }) 
           TOKEN1_NAME,
           TOKEN1_SYMBOL,
           tokenFactory.address,
-          defaultOperators,
           sanctionsContractAddress,
         ]);
     }  
@@ -51,7 +48,6 @@ const func: DeployFunction = async ({ getNamedAccounts, deployments, network }) 
         TOKEN2_NAME,
         TOKEN2_SYMBOL,
         tokenFactory.address,
-        defaultOperators,
         sanctionsContractAddress,
       ],
       log: true,
@@ -64,7 +60,6 @@ const func: DeployFunction = async ({ getNamedAccounts, deployments, network }) 
           TOKEN2_NAME,
           TOKEN2_SYMBOL,
           tokenFactory.address,
-          defaultOperators,
           sanctionsContractAddress,
         ]);
     }  

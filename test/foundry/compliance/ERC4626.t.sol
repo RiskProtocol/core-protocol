@@ -30,7 +30,6 @@ contract ERC4626Test is Test, TestHelper {
             TOKEN1_NAME,
             TOKEN1_SYMBOL,
             address(tokenFactory),
-            defaultOperators,
             sanctionsContract
         );
 
@@ -38,7 +37,6 @@ contract ERC4626Test is Test, TestHelper {
             TOKEN2_NAME,
             TOKEN2_SYMBOL,
             address(tokenFactory),
-            defaultOperators,
             sanctionsContract
         );
 
@@ -51,7 +49,6 @@ contract ERC4626Test is Test, TestHelper {
             TOKEN1_NAME,
             TOKEN1_SYMBOL,
             address(tokenFactory),
-            defaultOperators,
             sanctionsContract
         );
         assertEq(vlt.name(), TOKEN1_NAME);

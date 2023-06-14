@@ -21,7 +21,6 @@ abstract contract TestHelper {
     string public TOKEN1_SYMBOL = "R1";
     string public TOKEN2_NAME = "RistP Two";
     string public TOKEN2_SYMBOL = "R2";
-    address[] public defaultOperators;
     address public deployer = 0xe738696676571D9b74C81716E4aE797c2440d306;
     address public sanctionsContract = 0x40C57923924B5c5c5455c48D93317139ADDaC8fb; //polygon network
 }
