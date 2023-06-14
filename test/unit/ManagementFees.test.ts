@@ -95,8 +95,8 @@ developmentChains.includes(network.name)
           TOKEN1_NAME,
           TOKEN1_SYMBOL,
           tokenFactory.address,
-          sanctionsContract.address
-        );
+          sanctionsContract.address,
+        ]);
         await smartToken1.deployed();
 
         // deploy smartToken 2
@@ -109,8 +109,8 @@ developmentChains.includes(network.name)
           TOKEN2_NAME,
           TOKEN2_SYMBOL,
           tokenFactory.address,
-          sanctionsContract.address
-        );
+          sanctionsContract.address,
+        ]);
         await smartToken2.deployed();
 
         // other instances to mock fake underlying token
@@ -155,11 +155,9 @@ developmentChains.includes(network.name)
             const depositAmount = item.depositValue;
 
             await tokenFactory.initializeSMART(
-              
               smartToken1.address,
-             
+
               smartToken2.address
-            
             );
 
             // set the management fee to 0.2% and activating fees
@@ -194,11 +192,9 @@ developmentChains.includes(network.name)
             //const transferAmount = ethers.utils.parseEther("1");
 
             await tokenFactory.initializeSMART(
-              
               smartToken1.address,
-             
+
               smartToken2.address
-            
             );
 
             // set the management fee to 0.2% and activating fees
@@ -253,11 +249,9 @@ developmentChains.includes(network.name)
             const depositAmount: bigint = BigInt(item.depositValue);
 
             await tokenFactory.initializeSMART(
-              
               smartToken1.address,
-             
+
               smartToken2.address
-            
             );
 
             // set the management fee to 0.2% and activating fees
@@ -322,11 +316,9 @@ developmentChains.includes(network.name)
             const transferAmount = ethers.utils.parseEther("1");
 
             await tokenFactory.initializeSMART(
-              
               smartToken1.address,
-             
+
               smartToken2.address
-            
             );
 
             // deposit underlying token
@@ -406,11 +398,9 @@ developmentChains.includes(network.name)
             const transferAmount = ethers.utils.parseEther("1");
 
             await tokenFactory.initializeSMART(
-              
               smartToken1.address,
-             
+
               smartToken2.address
-            
             );
 
             // deposit underlying token
@@ -497,11 +487,9 @@ developmentChains.includes(network.name)
             const depositAmount = item.depositValue;
 
             await tokenFactory.initializeSMART(
-              
               smartToken1.address,
-             
+
               smartToken2.address
-            
             );
 
             // set the management fee to 0.2% and activating fees
@@ -547,11 +535,9 @@ developmentChains.includes(network.name)
             const depositAmount = item.depositValue;
 
             await tokenFactory.initializeSMART(
-              
               smartToken1.address,
-             
+
               smartToken2.address
-            
             );
 
             // set the management fee to 0.2% and activating fees

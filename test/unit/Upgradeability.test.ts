@@ -60,34 +60,32 @@ developmentChains.includes(network.name)
         await tokenFactory.deployed();
 
         // deploy devtoken 1
-        const DevToken1Factory = await ethers.getContractFactory(
-          "DevToken",
+        const SmartToken1Factory = await ethers.getContractFactory(
+          "SmartToken",
           deployer
         );
 
-        const devToken1 = await upgrades.deployProxy(DevToken1Factory, [
+        const SmartToken1 = await upgrades.deployProxy(SmartToken1Factory, [
           TOKEN1_NAME,
           TOKEN1_SYMBOL,
           tokenFactory.address,
-          defaultOperators,
           sanctionsContract.address,
         ]);
-        await devToken1.deployed();
+        await SmartToken1.deployed();
 
-        // deploy devtoken 2
-        const DevToken2Factory = await ethers.getContractFactory(
-          "DevToken",
+        // deploy Smarttoken 2
+        const SmartToken2Factory = await ethers.getContractFactory(
+          "SmartToken",
           deployer
         );
 
-        const devToken2 = await upgrades.deployProxy(DevToken2Factory, [
+        const SmartToken2 = await upgrades.deployProxy(SmartToken2Factory, [
           TOKEN2_NAME,
           TOKEN2_SYMBOL,
           tokenFactory.address,
-          defaultOperators,
           sanctionsContract.address,
         ]);
-        await devToken2.deployed();
+        await SmartToken2.deployed();
 
         // other instances to mock fake underlying token
         const TokenFactory2 = await ethers.getContractFactory(
@@ -125,40 +123,38 @@ developmentChains.includes(network.name)
         ]);
         await tokenFactory3.deployed();
 
-        // deploy devtoken 1  for the token factory without permit
-        const DevTokenXFactory = await ethers.getContractFactory(
-          "DevToken",
+        // deploy Smarttoken 1  for the token factory without permit
+        const SmartTokenXFactory = await ethers.getContractFactory(
+          "SmartToken",
           deployer
         );
 
-        const devTokenX = await upgrades.deployProxy(DevTokenXFactory, [
+        const SmartTokenX = await upgrades.deployProxy(SmartTokenXFactory, [
           TOKEN1_NAME,
           TOKEN1_SYMBOL,
           tokenFactory3.address,
-          defaultOperators,
           sanctionsContract.address,
         ]);
-        await devTokenX.deployed();
+        await SmartTokenX.deployed();
 
-        // deploy devtoken 2  for the token factory without permit
-        const DevTokenYFactory = await ethers.getContractFactory(
-          "DevToken",
+        // deploy Smarttoken 2  for the token factory without permit
+        const SmartTokenYFactory = await ethers.getContractFactory(
+          "SmartToken",
           deployer
         );
 
-        const devTokenY = await upgrades.deployProxy(DevTokenYFactory, [
+        const SmartTokenY = await upgrades.deployProxy(SmartTokenYFactory, [
           TOKEN2_NAME,
           TOKEN2_SYMBOL,
           tokenFactory3.address,
-          defaultOperators,
           sanctionsContract.address,
         ]);
-        await devTokenY.deployed();
+        await SmartTokenY.deployed();
 
         // Fixtures can return anything you consider useful for your tests
         return {
-          devToken1,
-          devToken2,
+          SmartToken1,
+          SmartToken2,
           mockV3Aggregator,
           underlyingToken,
           tokenFactory,
@@ -167,8 +163,8 @@ developmentChains.includes(network.name)
           tokenFactory2,
           underlyingTokenWithoutPermit,
           tokenFactory3,
-          devTokenX,
-          devTokenY,
+          SmartTokenX,
+          SmartTokenY,
           sanctionsContract,
         };
       }
@@ -179,13 +175,13 @@ developmentChains.includes(network.name)
             tokenFactory,
             deployer,
             underlyingToken,
-            devToken1,
-            devToken2,
+            SmartToken1,
+            SmartToken2,
             tester,
           } = await loadFixture(deployTokenFixture);
           await tokenFactory.initializeSMART(
-            devToken1.address,
-            devToken2.address
+            SmartToken1.address,
+            SmartToken2.address
           );
           const newTokenFactory = await ethers.getContractFactory(
             "TokenFactory",
@@ -196,8 +192,8 @@ developmentChains.includes(network.name)
             newTokenFactory
           );
           expect(await tokenFactory.getInterval()).to.equal(REBASE_INTERVAL);
-          expect(await tokenFactory.getDevTokenAddress(0)).to.equal(
-            devToken1.address
+          expect(await tokenFactory.getSmartTokenAddress(0)).to.equal(
+            SmartToken1.address
           );
         });
         it(`it not allow non owners to upgrade`, async function () {
@@ -205,13 +201,13 @@ developmentChains.includes(network.name)
             tokenFactory,
             deployer,
             underlyingToken,
-            devToken1,
-            devToken2,
+            SmartToken1,
+            SmartToken2,
             tester,
           } = await loadFixture(deployTokenFixture);
           await tokenFactory.initializeSMART(
-            devToken1.address,
-            devToken2.address
+            SmartToken1.address,
+            SmartToken2.address
           );
           const newTokenFactory = await ethers.getContractFactory(
             "TokenFactory",

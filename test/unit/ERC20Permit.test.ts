@@ -11,10 +11,7 @@ import {
   INITIAL_PRICE,
 } from "../../helper-hardhat-config";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
-import {
-  getPermitDigest,
-  sign,
-} from "../../utils/signatures";
+import { getPermitDigest, sign } from "../../utils/signatures";
 import "dotenv/config";
 
 developmentChains.includes(network.name)
@@ -93,8 +90,8 @@ developmentChains.includes(network.name)
           TOKEN1_NAME,
           TOKEN1_SYMBOL,
           tokenFactory.address,
-          sanctionsContract.address
-        );
+          sanctionsContract.address,
+        ]);
         await smartToken1.deployed();
 
         // deploy smartToken 2
@@ -107,8 +104,8 @@ developmentChains.includes(network.name)
           TOKEN2_NAME,
           TOKEN2_SYMBOL,
           tokenFactory.address,
-          sanctionsContract.address
-        );
+          sanctionsContract.address,
+        ]);
         await smartToken2.deployed();
 
         // Fixtures can return anything you consider useful for your tests
@@ -236,11 +233,9 @@ developmentChains.includes(network.name)
           } = await loadFixture(deployTokenFixture);
           const depositAmount = ethers.utils.parseEther("6");
           await tokenFactory1.initializeSMART(
-            
             smartToken1.address,
-           
+
             smartToken2.address
-          
           );
           // await underlyingTokenWithoutPermit.approve(tokenFactory1.address, depositAmount);
 
