@@ -6,6 +6,9 @@ import "../handlers/DepositHandler.sol";
 
 contract Deposit is Test, TestHelper {
     DepositHandler handler;
+    TokenFactory factoryWrapper;
+    SmartToken smartTokenXWrapper;
+    SmartToken smartTokenYWrapper;
 
     function setUp() public {
         vm.createSelectFork(vm.rpcUrl("mainnet"), 17268750);
@@ -17,38 +20,50 @@ contract Deposit is Test, TestHelper {
         // deploy underlying asset
         mockERC20Token = new MockERC20Token();
         tokenFactory = new TokenFactory();
-        // mockERC20Token,
-        // mockV3AggregatorAddress,
-        // REBASE_INTERVAL,
-        // sanctionsContract
+        tokenFactory = new TokenFactory();
+        factoryProxy = new UUPSProxy(address(tokenFactory), "");
+        factoryWrapper = TokenFactory(address(factoryProxy));
+        factoryWrapper.initialize(
+            mockERC20Token,
+            mockV3AggregatorAddress,
+            REBASE_INTERVAL,
+            sanctionsContract
+        );
 
         // deploy token X
-        smartTokenX = new SmartToken(
+        smartTokenX = new SmartToken();
+
+        vaultProxy = new UUPSProxy(address(smartTokenX), "");
+        smartTokenXWrapper = SmartToken(address(vaultProxy));
+        smartTokenXWrapper.initialize(
             TOKEN1_NAME,
             TOKEN1_SYMBOL,
-            address(tokenFactory),
+            address(factoryWrapper),
             sanctionsContract
         );
         // deploy token Y
-        smartTokenY = new SmartToken(
+        smartTokenY = new SmartToken();
+        vault2Proxy = new UUPSProxy(address(smartTokenY), "");
+        smartTokenYWrapper = SmartToken(address(vault2Proxy));
+        smartTokenYWrapper.initialize(
             TOKEN2_NAME,
             TOKEN2_SYMBOL,
-            address(tokenFactory),
+            address(factoryWrapper),
             sanctionsContract
         );
 
         // initialize dev tokens in token factory
-        tokenFactory.initialize(smartTokenX, smartTokenY);
+        factoryWrapper.initializeSMART(smartTokenXWrapper, smartTokenYWrapper);
 
         // invariant test
-        handler = new DepositHandler(smartTokenX, mockERC20Token);
+        handler = new DepositHandler(smartTokenXWrapper, mockERC20Token);
         targetContract(address(handler));
     }
 
     // total supply of token x and y should be the same as total
     // deposit provided that rebase/withdrwal has not taken place
-    function invariant_TotalDeposit() public {        
-        assertEq(handler.totalDeposit(), smartTokenX.totalSupply());
-        assertEq(handler.totalDeposit(), smartTokenY.totalSupply());
+    function invariant_TotalDeposit() public {
+        assertEq(handler.totalDeposit(), smartTokenXWrapper.totalSupply());
+        assertEq(handler.totalDeposit(), smartTokenYWrapper.totalSupply());
     }
 }

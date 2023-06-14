@@ -4,4 +4,4 @@
 yarn test
 yarn lint
 yarn hardhat compile
-#forge test --match-path test/foundry/fuzz/* -vvv
+forge test --match-path test/foundry/fuzz/* -vvv

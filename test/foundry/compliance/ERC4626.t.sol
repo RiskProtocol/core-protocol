@@ -8,6 +8,9 @@ contract ERC4626Test is Test, TestHelper {
     MockERC20Token underlying;
     SmartToken vault;
     SmartToken vault2;
+    TokenFactory factoryWrapper;
+    SmartToken vaultWrapper1;
+    SmartToken vaultWrapper2;
 
     function setUp() public {
         vm.createSelectFork(vm.rpcUrl("mainnet"), 17268750);
@@ -20,8 +23,8 @@ contract ERC4626Test is Test, TestHelper {
         underlying = new MockERC20Token();
         tokenFactory = new TokenFactory();
 
-        proxy = new UUPSProxy(address(tokenFactory), "");
-        factoryWrapper = TokenFactory(address(proxy));
+        factoryProxy = new UUPSProxy(address(tokenFactory), "");
+        factoryWrapper = TokenFactory(address(factoryProxy));
         factoryWrapper.initialize(
             underlying,
             mockV3AggregatorAddress,
@@ -29,43 +32,45 @@ contract ERC4626Test is Test, TestHelper {
             sanctionsContract
         );
 
-        vault = new SmartToken(
+        vault = new SmartToken();
+        vaultProxy = new UUPSProxy(address(vault), "");
+        vaultWrapper1 = SmartToken(address(vaultProxy));
+        vaultWrapper1.initialize(
             TOKEN1_NAME,
             TOKEN1_SYMBOL,
-            address(tokenFactory),
+            address(factoryWrapper),
             sanctionsContract
         );
 
-        vault2 = new SmartToken(
+        vault2 = new SmartToken();
+        vault2Proxy = new UUPSProxy(address(vault2), "");
+        vaultWrapper2 = SmartToken(address(vault2Proxy));
+        vaultWrapper2.initialize(
             TOKEN2_NAME,
             TOKEN2_SYMBOL,
-            address(tokenFactory),
+            address(factoryWrapper),
             sanctionsContract
         );
 
         // initialize dev tokens in token factory
-        factoryWrapper.initializeSMART(vault, vault2);
-        // address(proxy).call(
-        //     abi.encodeWithSignature(
-        //         "initializeSMART(address,address)",
-        //         vault,
-        //         vault2
-        //     )
-        // );
+        factoryWrapper.initializeSMART(vaultWrapper1, vaultWrapper2);
     }
 
     function testMetadata() public {
-        SmartToken vlt = new SmartToken(
+        SmartToken vlt = new SmartToken();
+        UUPSProxy vltProxy = new UUPSProxy(address(vlt), "");
+        SmartToken vltWrapper = SmartToken(address(vltProxy));
+        vltWrapper.initialize(
             TOKEN1_NAME,
             TOKEN1_SYMBOL,
-            address(tokenFactory),
+            address(factoryWrapper),
             sanctionsContract
         );
 
-        assertEq(vlt.name(), TOKEN1_NAME);
-        assertEq(vlt.symbol(), TOKEN1_SYMBOL);
-        assertEq(address(vlt.asset()), address(underlying));
-        assertEq(vlt.decimals(), 18);
+        assertEq(vltWrapper.name(), TOKEN1_NAME);
+        assertEq(vltWrapper.symbol(), TOKEN1_SYMBOL);
+        assertEq(address(vltWrapper.asset()), address(underlying));
+        assertEq(vltWrapper.decimals(), 18);
     }
 
     function testFuzz_SingleDepositWithdraw(uint128 amount) public {
@@ -79,30 +84,36 @@ contract ERC4626Test is Test, TestHelper {
 
         vm.prank(alice);
 
-        underlying.approve(address(tokenFactory), aliceUnderlyingAmount);
+        underlying.approve(address(factoryWrapper), aliceUnderlyingAmount);
 
         assertEq(
-            underlying.allowance(alice, address(tokenFactory)),
+            underlying.allowance(alice, address(factoryWrapper)),
             aliceUnderlyingAmount
         );
 
         uint256 alicePreDepositBal = underlying.balanceOf(alice);
 
         vm.prank(alice);
-        uint256 aliceShareAmount = vault.deposit(aliceUnderlyingAmount, alice);
+        uint256 aliceShareAmount = vaultWrapper1.deposit(
+            aliceUnderlyingAmount,
+            alice
+        );
 
         // Expect exchange rate to be 1:1 on initial deposit.
         assertEq(aliceUnderlyingAmount, aliceShareAmount);
         assertEq(
-            vault.previewWithdraw(aliceShareAmount),
+            vaultWrapper1.previewWithdraw(aliceShareAmount),
             aliceUnderlyingAmount
         );
-        assertEq(vault.previewDeposit(aliceUnderlyingAmount), aliceShareAmount);
-        assertEq(vault.totalSupply(), aliceShareAmount);
-        assertEq(vault.totalAssets(), aliceUnderlyingAmount);
-        assertEq(vault.balanceOf(alice), aliceShareAmount);
         assertEq(
-            vault.convertToAssets(vault.balanceOf(alice)),
+            vaultWrapper1.previewDeposit(aliceUnderlyingAmount),
+            aliceShareAmount
+        );
+        assertEq(vaultWrapper1.totalSupply(), aliceShareAmount);
+        assertEq(vaultWrapper1.totalAssets(), aliceUnderlyingAmount);
+        assertEq(vaultWrapper1.balanceOf(alice), aliceShareAmount);
+        assertEq(
+            vaultWrapper1.convertToAssets(vaultWrapper1.balanceOf(alice)),
             aliceUnderlyingAmount
         );
         assertEq(
@@ -111,11 +122,14 @@ contract ERC4626Test is Test, TestHelper {
         );
 
         vm.prank(alice);
-        vault.withdraw(aliceUnderlyingAmount, alice, alice);
+        vaultWrapper1.withdraw(aliceUnderlyingAmount, alice, alice);
 
-        assertEq(vault.totalAssets(), 0);
-        assertEq(vault.balanceOf(alice), 0);
-        assertEq(vault.convertToAssets(vault.balanceOf(alice)), 0);
+        assertEq(vaultWrapper1.totalAssets(), 0);
+        assertEq(vaultWrapper1.balanceOf(alice), 0);
+        assertEq(
+            vaultWrapper1.convertToAssets(vaultWrapper1.balanceOf(alice)),
+            0
+        );
         assertEq(underlying.balanceOf(alice), alicePreDepositBal);
     }
 
@@ -129,29 +143,35 @@ contract ERC4626Test is Test, TestHelper {
         underlying.transfer(alice, aliceShareAmount);
 
         vm.prank(alice);
-        underlying.approve(address(tokenFactory), aliceShareAmount);
+        underlying.approve(address(factoryWrapper), aliceShareAmount);
         assertEq(
-            underlying.allowance(alice, address(tokenFactory)),
+            underlying.allowance(alice, address(factoryWrapper)),
             aliceShareAmount
         );
 
         uint256 alicePreDepositBal = underlying.balanceOf(alice);
 
         vm.prank(alice);
-        uint256 aliceUnderlyingAmount = vault.mint(aliceShareAmount, alice);
+        uint256 aliceUnderlyingAmount = vaultWrapper1.mint(
+            aliceShareAmount,
+            alice
+        );
 
         // Expect exchange rate to be 1:1 on initial mint.
         assertEq(aliceShareAmount, aliceUnderlyingAmount);
         assertEq(
-            vault.previewWithdraw(aliceShareAmount),
+            vaultWrapper1.previewWithdraw(aliceShareAmount),
             aliceUnderlyingAmount
         );
-        assertEq(vault.previewDeposit(aliceUnderlyingAmount), aliceShareAmount);
-        assertEq(vault.totalSupply(), aliceShareAmount);
-        assertEq(vault.totalAssets(), aliceUnderlyingAmount);
-        assertEq(vault.balanceOf(alice), aliceUnderlyingAmount);
         assertEq(
-            vault.convertToAssets(vault.balanceOf(alice)),
+            vaultWrapper1.previewDeposit(aliceUnderlyingAmount),
+            aliceShareAmount
+        );
+        assertEq(vaultWrapper1.totalSupply(), aliceShareAmount);
+        assertEq(vaultWrapper1.totalAssets(), aliceUnderlyingAmount);
+        assertEq(vaultWrapper1.balanceOf(alice), aliceUnderlyingAmount);
+        assertEq(
+            vaultWrapper1.convertToAssets(vaultWrapper1.balanceOf(alice)),
             aliceUnderlyingAmount
         );
         assertEq(
@@ -160,11 +180,14 @@ contract ERC4626Test is Test, TestHelper {
         );
 
         vm.prank(alice);
-        vault.redeem(aliceShareAmount, alice, alice);
+        vaultWrapper1.redeem(aliceShareAmount, alice, alice);
 
-        assertEq(vault.totalAssets(), 0);
-        assertEq(vault.balanceOf(alice), 0);
-        assertEq(vault.convertToAssets(vault.balanceOf(alice)), 0);
+        assertEq(vaultWrapper1.totalAssets(), 0);
+        assertEq(vaultWrapper1.balanceOf(alice), 0);
+        assertEq(
+            vaultWrapper1.convertToAssets(vaultWrapper1.balanceOf(alice)),
+            0
+        );
         assertEq(underlying.balanceOf(alice), alicePreDepositBal);
     }
 
@@ -189,59 +212,63 @@ contract ERC4626Test is Test, TestHelper {
         underlying.transfer(alice, 4000);
 
         vm.prank(alice);
-        underlying.approve(address(tokenFactory), 4000);
+        underlying.approve(address(factoryWrapper), 4000);
 
-        assertEq(underlying.allowance(alice, address(tokenFactory)), 4000);
+        assertEq(underlying.allowance(alice, address(factoryWrapper)), 4000);
 
         underlying.transfer(bob, 7001);
 
         vm.prank(bob);
-        underlying.approve(address(tokenFactory), 7001);
+        underlying.approve(address(factoryWrapper), 7001);
 
-        assertEq(underlying.allowance(bob, address(tokenFactory)), 7001);
+        assertEq(underlying.allowance(bob, address(factoryWrapper)), 7001);
 
         // 1. Alice mints 2000 shares (costs 2000 tokens)
         vm.prank(alice);
 
-        uint256 aliceUnderlyingAmount = vault.mint(2000, alice);
+        uint256 aliceUnderlyingAmount = vaultWrapper1.mint(2000, alice);
 
-        uint256 aliceShareAmount = vault.previewDeposit(aliceUnderlyingAmount);
+        uint256 aliceShareAmount = vaultWrapper1.previewDeposit(
+            aliceUnderlyingAmount
+        );
 
         // Expect to have received the requested mint amount.
         assertEq(aliceShareAmount, 2000);
 
-        assertEq(vault.balanceOf(alice), aliceShareAmount);
+        assertEq(vaultWrapper1.balanceOf(alice), aliceShareAmount);
         assertEq(
-            vault.convertToAssets(vault.balanceOf(alice)),
+            vaultWrapper1.convertToAssets(vaultWrapper1.balanceOf(alice)),
             aliceUnderlyingAmount
         );
         assertEq(
-            vault.convertToShares(aliceUnderlyingAmount),
-            vault.balanceOf(alice)
+            vaultWrapper1.convertToShares(aliceUnderlyingAmount),
+            vaultWrapper1.balanceOf(alice)
         );
 
         // Expect a 1:1 ratio before mutation.
         assertEq(aliceUnderlyingAmount, 2000);
 
         // Sanity check.
-        assertEq(vault.totalSupply(), aliceShareAmount);
-        assertEq(vault.totalAssets(), aliceUnderlyingAmount);
+        assertEq(vaultWrapper1.totalSupply(), aliceShareAmount);
+        assertEq(vaultWrapper1.totalAssets(), aliceUnderlyingAmount);
 
         // 2. Bob deposits 4000 tokens (mints 4000 shares)
         vm.prank(bob);
-        uint256 bobShareAmount = vault.deposit(4000, bob);
-        uint256 bobUnderlyingAmount = vault.previewWithdraw(bobShareAmount);
+        uint256 bobShareAmount = vaultWrapper1.deposit(4000, bob);
+        uint256 bobUnderlyingAmount = vaultWrapper1.previewWithdraw(
+            bobShareAmount
+        );
 
         // Expect to have received the requested underlying amount.
         assertEq(bobUnderlyingAmount, 4000);
-        assertEq(vault.balanceOf(bob), bobShareAmount);
+        assertEq(vaultWrapper1.balanceOf(bob), bobShareAmount);
         assertEq(
-            vault.convertToAssets(vault.balanceOf(bob)),
+            vaultWrapper1.convertToAssets(vaultWrapper1.balanceOf(bob)),
             bobUnderlyingAmount
         );
         assertEq(
-            vault.convertToShares(bobUnderlyingAmount),
-            vault.balanceOf(bob)
+            vaultWrapper1.convertToShares(bobUnderlyingAmount),
+            vaultWrapper1.balanceOf(bob)
         );
 
         // Expect a 1:1 ratio before mutation.
@@ -250,68 +277,73 @@ contract ERC4626Test is Test, TestHelper {
         // Sanity check.
         uint256 preMutationShareBal = aliceShareAmount + bobShareAmount;
         uint256 preMutationBal = aliceUnderlyingAmount + bobUnderlyingAmount;
-        assertEq(vault.totalSupply(), preMutationShareBal);
-        assertEq(vault.totalAssets(), preMutationBal);
-        assertEq(vault.totalSupply(), 6000);
-        assertEq(vault.totalAssets(), 6000);
+        assertEq(vaultWrapper1.totalSupply(), preMutationShareBal);
+        assertEq(vaultWrapper1.totalAssets(), preMutationBal);
+        assertEq(vaultWrapper1.totalSupply(), 6000);
+        assertEq(vaultWrapper1.totalAssets(), 6000);
     }
 
     function testFailDepositWithNotEnoughApproval() public {
         underlying.transfer(address(this), 0.5e18);
-        underlying.approve(address(tokenFactory), 0.5e18);
+        underlying.approve(address(factoryWrapper), 0.5e18);
         assertEq(
-            underlying.allowance(address(this), address(tokenFactory)),
+            underlying.allowance(address(this), address(factoryWrapper)),
             0.5e18
         );
 
-        vault.deposit(1e18, address(this));
+        vaultWrapper1.deposit(1e18, address(this));
     }
 
     function testFailWithdrawWithNotEnoughUnderlyingAmount() public {
         underlying.transfer(address(this), 0.5e18);
-        underlying.approve(address(tokenFactory), 0.5e18);
+        underlying.approve(address(factoryWrapper), 0.5e18);
 
-        vault.deposit(0.5e18, address(this));
+        vaultWrapper1.deposit(0.5e18, address(this));
 
-        vault.withdraw(1e18, address(this), address(this));
+        vaultWrapper1.withdraw(1e18, address(this), address(this));
     }
 
     function testFailRedeemWithNotEnoughShareAmount() public {
         underlying.transfer(address(this), 0.5e18);
-        underlying.approve(address(tokenFactory), 0.5e18);
+        underlying.approve(address(factoryWrapper), 0.5e18);
 
-        vault.deposit(0.5e18, address(this));
+        vaultWrapper1.deposit(0.5e18, address(this));
 
-        vault.redeem(1e18, address(this), address(this));
+        vaultWrapper1.redeem(1e18, address(this), address(this));
     }
 
     function testFailWithdrawWithNoUnderlyingAmount() public {
-        vault.withdraw(1e18, address(this), address(this));
+        vaultWrapper1.withdraw(1e18, address(this), address(this));
     }
 
     function testFailRedeemWithNoShareAmount() public {
-        vault.redeem(1e18, address(this), address(this));
+        vaultWrapper1.redeem(1e18, address(this), address(this));
     }
 
     function testFailDepositWithNoApproval() public {
-        vault.deposit(1e18, address(this));
+        vaultWrapper1.deposit(1e18, address(this));
     }
 
     function testFailMintWithNoApproval() public {
-        vault.mint(1e18, address(this));
+        vaultWrapper1.mint(1e18, address(this));
     }
 
     function testFailDepositZero() public {
-        vault.deposit(0, address(this));
+        vaultWrapper1.deposit(0, address(this));
     }
 
     function testWithdrawZero() public {
-        vault.withdraw(0, address(this), address(this));
+        vaultWrapper1.withdraw(0, address(this), address(this));
 
-        assertEq(vault.balanceOf(address(this)), 0);
-        assertEq(vault.convertToAssets(vault.balanceOf(address(this))), 0);
-        assertEq(vault.totalSupply(), 0);
-        assertEq(vault.totalAssets(), 0);
+        assertEq(vaultWrapper1.balanceOf(address(this)), 0);
+        assertEq(
+            vaultWrapper1.convertToAssets(
+                vaultWrapper1.balanceOf(address(this))
+            ),
+            0
+        );
+        assertEq(vaultWrapper1.totalSupply(), 0);
+        assertEq(vaultWrapper1.totalAssets(), 0);
     }
 
     function testVaultInteractionsForSomeoneElse() public {
@@ -322,40 +354,40 @@ contract ERC4626Test is Test, TestHelper {
         underlying.transfer(bob, 1e18);
 
         vm.prank(alice);
-        underlying.approve(address(tokenFactory), 1e18);
+        underlying.approve(address(factoryWrapper), 1e18);
 
         vm.prank(bob);
-        underlying.approve(address(tokenFactory), 1e18);
+        underlying.approve(address(factoryWrapper), 1e18);
 
         // alice deposits 1e18 for bob
         vm.prank(alice);
-        vault.deposit(1e18, bob);
+        vaultWrapper1.deposit(1e18, bob);
 
-        assertEq(vault.balanceOf(alice), 0);
-        assertEq(vault.balanceOf(bob), 1e18);
+        assertEq(vaultWrapper1.balanceOf(alice), 0);
+        assertEq(vaultWrapper1.balanceOf(bob), 1e18);
         assertEq(underlying.balanceOf(alice), 0);
 
         // bob mint 1e18 for alice
         vm.prank(bob);
-        vault.mint(1e18, alice);
-        assertEq(vault.balanceOf(alice), 1e18);
-        assertEq(vault.balanceOf(bob), 1e18);
+        vaultWrapper1.mint(1e18, alice);
+        assertEq(vaultWrapper1.balanceOf(alice), 1e18);
+        assertEq(vaultWrapper1.balanceOf(bob), 1e18);
         assertEq(underlying.balanceOf(bob), 0);
 
         // alice redeem 1e18 for bob
         vm.prank(alice);
-        vault.redeem(1e18, bob, alice);
+        vaultWrapper1.redeem(1e18, bob, alice);
 
-        assertEq(vault.balanceOf(alice), 0);
-        assertEq(vault.balanceOf(bob), 1e18);
+        assertEq(vaultWrapper1.balanceOf(alice), 0);
+        assertEq(vaultWrapper1.balanceOf(bob), 1e18);
         assertEq(underlying.balanceOf(bob), 1e18);
 
         // bob withdraw 1e18 for alice
         vm.prank(bob);
-        vault.withdraw(1e18, alice, bob);
+        vaultWrapper1.withdraw(1e18, alice, bob);
 
-        assertEq(vault.balanceOf(alice), 0);
-        assertEq(vault.balanceOf(bob), 0);
+        assertEq(vaultWrapper1.balanceOf(alice), 0);
+        assertEq(vaultWrapper1.balanceOf(bob), 0);
         assertEq(underlying.balanceOf(alice), 1e18);
     }
 }

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.9;
 
-import {PRBTest} from "@prb/test/PRBTest.sol";
 import "forge-std/Test.sol";
 
 import "forge-std/console.sol";
@@ -10,7 +9,6 @@ import "../../contracts/mocks/MockV3Aggregator.sol";
 import "../../contracts/mocks/MockERC20Token.sol";
 import "../../contracts/vaults/SmartToken.sol";
 import "../../contracts/mocks/MockUUPSProxy.sol";
-import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 abstract contract TestHelper {
     MockV3Aggregator public mockV3Aggregator;
@@ -19,6 +17,7 @@ abstract contract TestHelper {
     SmartToken public smartTokenX;
     SmartToken public smartTokenY;
     UUPSProxy public proxy;
+    UUPSProxy public factoryProxy;
     UUPSProxy public vaultProxy;
     UUPSProxy public vault2Proxy;
 
