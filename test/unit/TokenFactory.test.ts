@@ -5,7 +5,6 @@ import {
   REBASE_INTERVAL,
   TOKEN1_NAME,
   TOKEN1_SYMBOL,
-  defaultOperators,
   TOKEN2_NAME,
   TOKEN2_SYMBOL,
   DECIMALS,
@@ -59,35 +58,33 @@ developmentChains.includes(network.name)
         ]);
         await tokenFactory.deployed();
 
-        // deploy devtoken 1
-        const DevToken1Factory = await ethers.getContractFactory(
-          "DevToken",
+        // deploy smartToken 1
+        const SmartToken1Factory = await ethers.getContractFactory(
+          "SmartToken",
           deployer
         );
 
-        const devToken1 = await upgrades.deployProxy(DevToken1Factory, [
+        const smartToken1 = await upgrades.deployProxy(SmartToken1Factory, [
           TOKEN1_NAME,
           TOKEN1_SYMBOL,
           tokenFactory.address,
-          defaultOperators,
-          sanctionsContract.address,
-        ]);
-        await devToken1.deployed();
+          sanctionsContract.address
+        );
+        await smartToken1.deployed();
 
-        // deploy devtoken 2
-        const DevToken2Factory = await ethers.getContractFactory(
-          "DevToken",
+        // deploy smartToken 2
+        const SmartToken2Factory = await ethers.getContractFactory(
+          "SmartToken",
           deployer
         );
 
-        const devToken2 = await upgrades.deployProxy(DevToken2Factory, [
+        const smartToken2 = await upgrades.deployProxy(SmartToken2Factory, [
           TOKEN2_NAME,
           TOKEN2_SYMBOL,
           tokenFactory.address,
-          defaultOperators,
-          sanctionsContract.address,
-        ]);
-        await devToken2.deployed();
+          sanctionsContract.address
+        );
+        await smartToken2.deployed();
 
         // other instances to mock fake underlying token
         const TokenFactory2 = await ethers.getContractFactory(
@@ -125,40 +122,38 @@ developmentChains.includes(network.name)
         ]);
         await tokenFactory3.deployed();
 
-        // deploy devtoken 1  for the token factory without permit
-        const DevTokenXFactory = await ethers.getContractFactory(
-          "DevToken",
+        // deploy smartToken 1  for the token factory without permit
+        const SmartTokenXFactory = await ethers.getContractFactory(
+          "SmartToken",
           deployer
         );
 
-        const devTokenX = await upgrades.deployProxy(DevTokenXFactory, [
+        const smartTokenX = await upgrades.deployProxy(SmartTokenXFactory, [
           TOKEN1_NAME,
           TOKEN1_SYMBOL,
           tokenFactory3.address,
-          defaultOperators,
-          sanctionsContract.address,
-        ]);
-        await devTokenX.deployed();
+          sanctionsContract.address
+        );
+        await smartTokenX.deployed();
 
-        // deploy devtoken 2  for the token factory without permit
-        const DevTokenYFactory = await ethers.getContractFactory(
-          "DevToken",
+        // deploy smartToken 2  for the token factory without permit
+        const SmartTokenYFactory = await ethers.getContractFactory(
+          "SmartToken",
           deployer
         );
 
-        const devTokenY = await upgrades.deployProxy(DevTokenYFactory, [
+        const smartTokenY = await upgrades.deployProxy(SmartTokenYFactory, [
           TOKEN2_NAME,
           TOKEN2_SYMBOL,
           tokenFactory3.address,
-          defaultOperators,
-          sanctionsContract.address,
-        ]);
-        await devTokenY.deployed();
+          sanctionsContract.address
+        );
+        await smartTokenY.deployed();
 
         // Fixtures can return anything you consider useful for your tests
         return {
-          devToken1,
-          devToken2,
+          smartToken1,
+          smartToken2,
           mockV3Aggregator,
           underlyingToken,
           tokenFactory,
@@ -167,18 +162,18 @@ developmentChains.includes(network.name)
           tokenFactory2,
           underlyingTokenWithoutPermit,
           tokenFactory3,
-          devTokenX,
-          devTokenY,
+          smartTokenX,
+          smartTokenY,
           sanctionsContract,
         };
       }
 
       describe("Constructor(Initializer)", async function () {
         it("sets the address of the underlying token correctly", async function () {
-          const { devToken1, underlyingToken } = await loadFixture(
+          const { smartToken1, underlyingToken } = await loadFixture(
             deployTokenFixture
           );
-          const result = await devToken1.asset();
+          const result = await smartToken1.asset();
           assert.equal(result, underlyingToken.address);
         });
 
@@ -199,31 +194,37 @@ developmentChains.includes(network.name)
 
       describe("Initialize dev tokens", async function () {
         it("it intializes the dev tokens with the correct adderesses", async function () {
-          const { devToken1, devToken2, tokenFactory } = await loadFixture(
+          const { smartToken1, smartToken2, tokenFactory } = await loadFixture(
             deployTokenFixture
           );
           await tokenFactory.initializeSMART(
-            devToken1.address,
-            devToken2.address
+            
+            smartToken1.address,
+           
+            smartToken2.address
+          
           );
-          const devToken1address = await tokenFactory.getDevTokenAddress(0);
-          const devToken2address = await tokenFactory.getDevTokenAddress(1);
+          const smartToken1address = await tokenFactory.getSmartTokenAddress(0);
+          const smartToken2address = await tokenFactory.getSmartTokenAddress(1);
 
-          assert.equal(devToken1address, devToken1.address);
-          assert.equal(devToken2address, devToken2.address);
+          assert.equal(smartToken1address, smartToken1.address);
+          assert.equal(smartToken2address, smartToken2.address);
         });
 
-        it("it should ensure that unauthorized user cannot initialize devtokens", async function () {
-          const { devToken1, devToken2, tokenFactory, tester } =
+        it("it should ensure that unauthorized user cannot initialize smartTokens", async function () {
+          const { smartToken1, smartToken2, tokenFactory, tester } =
             await loadFixture(deployTokenFixture);
           await tokenFactory.initializeSMART(
-            devToken1.address,
-            devToken2.address
+            
+            smartToken1.address,
+           
+            smartToken2.address
+          
           );
           await expect(
             tokenFactory
               .connect(tester)
-              .initializeSMART(devToken1.address, devToken2.address)
+              .initializeSMART(smartToken1.address, smartToken2.address)
           ).to.be.reverted;
         });
       });
@@ -240,49 +241,71 @@ developmentChains.includes(network.name)
         });
 
         it("it returns the correct asset", async function () {
-          const { underlyingToken, devToken1 } = await loadFixture(
+          const { underlyingToken, smartToken1 } = await loadFixture(
             deployTokenFixture
           );
-          assert.equal(await devToken1.asset(), underlyingToken.address);
+          assert.equal(await smartToken1.asset(), underlyingToken.address);
         });
 
         it("it returns the correct totalAssets in the token factory", async function () {
-          const { underlyingToken, tokenFactory, devToken1 } =
+          const { underlyingToken, tokenFactory, smartToken1 } =
             await loadFixture(deployTokenFixture);
-          expect(await devToken1.totalAssets()).to.equal(
+          expect(await smartToken1.totalAssets()).to.equal(
             await underlyingToken.balanceOf(tokenFactory.address)
           );
         });
 
         it("it returns the correct value for convertToShares function", async function () {
-          const { devToken1 } = await loadFixture(deployTokenFixture);
-          assert.equal(await devToken1.convertToShares("5"), "5");
+          const { smartToken1 } = await loadFixture(deployTokenFixture);
+          assert.equal(await smartToken1.convertToShares("5"), "5");
         });
 
         it("it returns the correct value for convertToAssets function", async function () {
-          const { devToken1 } = await loadFixture(deployTokenFixture);
-          assert.equal(await devToken1.convertToAssets("5"), "5");
+          const { smartToken1 } = await loadFixture(deployTokenFixture);
+          assert.equal(await smartToken1.convertToAssets("5"), "5");
         });
       });
 
       describe("Deposit", async function () {
         it("it returns the correct value for maxDeposit function", async function () {
-          const { devToken1, deployer } = await loadFixture(deployTokenFixture);
-          expect(await devToken1.maxDeposit(deployer.address)).to.equal(
-            ethers.constants.MaxUint256
+          const { smartToken1, deployer, tokenFactory, smartToken2, underlyingToken } = await loadFixture(
+            deployTokenFixture
+          );
+          const depositAmount = ethers.constants.MaxUint256.div(2).add(1);
+
+          await tokenFactory.initialize(
+            smartToken1.address,
+            smartToken2.address
+          );
+
+          await underlyingToken.approve(tokenFactory.address, depositAmount);
+
+          await smartToken1.deposit(
+            depositAmount,
+            deployer.address
+          );
+          const maxDepositValue = ethers.constants.MaxUint256.sub(depositAmount);
+
+          expect(await smartToken1.maxDeposit(deployer.address)).to.equal(
+            maxDepositValue
           );
         });
 
         it("it returns the correct value for previewDeposit function", async function () {
-          const { devToken1 } = await loadFixture(deployTokenFixture);
-          expect(await devToken1.previewDeposit("5")).to.equal("5");
+          const { smartToken1 } = await loadFixture(deployTokenFixture);
+          expect(await smartToken1.previewDeposit("5")).to.equal("5");
         });
 
         it("it should revert when user wants to deposit 0 token", async function () {
-          const { deployer, devToken1 } = await loadFixture(deployTokenFixture);
+          const { deployer, smartToken1 } = await loadFixture(
+            deployTokenFixture
+          );
           await expect(
-            devToken1.deposit("0", deployer.address)
-          ).to.be.revertedWithCustomError(devToken1, "DevToken__ZeroDeposit");
+            smartToken1.deposit("0", deployer.address)
+          ).to.be.revertedWithCustomError(
+            smartToken1,
+            "SmartToken__ZeroDeposit"
+          );
         });
 
         it("it should allow user to deposit acceptable amount of the underlying token successfully", async function () {
@@ -290,17 +313,20 @@ developmentChains.includes(network.name)
             tokenFactory,
             deployer,
             underlyingToken,
-            devToken1,
-            devToken2,
+            smartToken1,
+            smartToken2,
           } = await loadFixture(deployTokenFixture);
           const depositAmount = ethers.utils.parseEther("6");
           await tokenFactory.initializeSMART(
-            devToken1.address,
-            devToken2.address
+            
+            smartToken1.address,
+           
+            smartToken2.address
+          
           );
           await underlyingToken.approve(tokenFactory.address, depositAmount);
           await expect(
-            devToken1.deposit(depositAmount, deployer.address)
+            smartToken1.deposit(depositAmount, deployer.address)
           ).to.emit(tokenFactory, "Deposit");
         });
 
@@ -309,13 +335,16 @@ developmentChains.includes(network.name)
             tokenFactory,
             deployer,
             underlyingToken,
-            devToken1,
-            devToken2,
+            smartToken1,
+            smartToken2,
           } = await loadFixture(deployTokenFixture);
           const depositAmount = ethers.utils.parseEther("6");
           await tokenFactory.initializeSMART(
-            devToken1.address,
-            devToken2.address
+            
+            smartToken1.address,
+           
+            smartToken2.address
+          
           );
           await underlyingToken.approve(tokenFactory.address, depositAmount);
           await expect(
@@ -336,22 +365,25 @@ developmentChains.includes(network.name)
             tokenFactory,
             deployer,
             underlyingToken,
-            devToken1,
-            devToken2,
+            smartToken1,
+            smartToken2,
           } = await loadFixture(deployTokenFixture);
           const depositAmount = ethers.utils.parseEther("6");
           await tokenFactory.initializeSMART(
-            devToken1.address,
-            devToken2.address
+            
+            smartToken1.address,
+           
+            smartToken2.address
+          
           );
           await underlyingToken.approve(tokenFactory.address, depositAmount);
-          await devToken1.deposit(depositAmount, deployer.address);
+          await smartToken1.deposit(depositAmount, deployer.address);
 
           expect(depositAmount).to.equal(
-            await devToken1.balanceOf(deployer.address)
+            await smartToken1.balanceOf(deployer.address)
           );
           expect(depositAmount).to.equal(
-            await devToken2.balanceOf(deployer.address)
+            await smartToken2.balanceOf(deployer.address)
           );
         });
 
@@ -360,8 +392,8 @@ developmentChains.includes(network.name)
             tokenFactory,
             deployer,
             underlyingToken,
-            devToken1,
-            devToken2,
+            smartToken1,
+            smartToken2,
           } = await loadFixture(deployTokenFixture);
           const depositAmount = ethers.utils.parseEther("6");
           const userCurrentBalance = await underlyingToken.balanceOf(
@@ -370,11 +402,14 @@ developmentChains.includes(network.name)
           const expectedBalance = userCurrentBalance - +depositAmount;
 
           await tokenFactory.initializeSMART(
-            devToken1.address,
-            devToken2.address
+            
+            smartToken1.address,
+           
+            smartToken2.address
+          
           );
           await underlyingToken.approve(tokenFactory.address, depositAmount);
-          await devToken1.deposit(depositAmount, deployer.address);
+          await smartToken1.deposit(depositAmount, deployer.address);
 
           assert.equal(
             await underlyingToken.balanceOf(deployer.address),
@@ -387,14 +422,17 @@ developmentChains.includes(network.name)
             tokenFactory,
             deployer,
             underlyingToken,
-            devToken1,
-            devToken2,
+            smartToken1,
+            smartToken2,
             sanctionsContract,
           } = await loadFixture(deployTokenFixture);
           const depositAmount = ethers.utils.parseEther("6");
           await tokenFactory.initializeSMART(
-            devToken1.address,
-            devToken2.address
+            
+            smartToken1.address,
+           
+            smartToken2.address
+          
           );
           await underlyingToken.approve(tokenFactory.address, depositAmount);
 
@@ -405,7 +443,7 @@ developmentChains.includes(network.name)
           );
           expect(sanctioned).to.equal(true);
           await expect(
-            devToken1.deposit(depositAmount, deployer.address)
+            smartToken1.deposit(depositAmount, deployer.address)
           ).to.be.revertedWithCustomError(
             tokenFactory,
             "BaseContract__SanctionedAddress"
@@ -422,15 +460,27 @@ developmentChains.includes(network.name)
 
       describe("Minting", async function () {
         it("it returns the correct value for maxMint function", async function () {
-          const { devToken1, deployer } = await loadFixture(deployTokenFixture);
-          expect(await devToken1.maxMint(deployer.address)).to.equal(
-            ethers.constants.MaxUint256
+          const { smartToken1, deployer, tokenFactory, smartToken2, underlyingToken } = await loadFixture(
+            deployTokenFixture
+          );
+          const mintAmount = ethers.constants.MaxUint256.div(2).add(1);
+
+          await tokenFactory.initialize(
+            smartToken1.address,
+            smartToken2.address
+          );
+          await underlyingToken.approve(tokenFactory.address, mintAmount);
+
+          await smartToken1.mint(mintAmount, deployer.address);
+
+          expect(await smartToken1.maxMint(deployer.address)).to.equal(
+            ethers.constants.MaxUint256.sub(mintAmount)
           );
         });
 
         it("it returns the correct value for previewMint function", async function () {
-          const { devToken1 } = await loadFixture(deployTokenFixture);
-          assert.equal(await devToken1.previewMint("5"), "5");
+          const { smartToken1 } = await loadFixture(deployTokenFixture);
+          assert.equal(await smartToken1.previewMint("5"), "5");
         });
 
         it("it should make sure that the user is assigned correct amount of token x and y after minting", async function () {
@@ -438,22 +488,25 @@ developmentChains.includes(network.name)
             tokenFactory,
             deployer,
             underlyingToken,
-            devToken1,
-            devToken2,
+            smartToken1,
+            smartToken2,
           } = await loadFixture(deployTokenFixture);
           const depositAmount = ethers.utils.parseEther("6");
           await tokenFactory.initializeSMART(
-            devToken1.address,
-            devToken2.address
+            
+            smartToken1.address,
+           
+            smartToken2.address
+          
           );
           await underlyingToken.approve(tokenFactory.address, depositAmount);
-          await devToken1.mint(depositAmount, deployer.address);
+          await smartToken1.mint(depositAmount, deployer.address);
 
           expect(depositAmount).to.equal(
-            await devToken1.balanceOf(deployer.address)
+            await smartToken1.balanceOf(deployer.address)
           );
           expect(depositAmount).to.equal(
-            await devToken2.balanceOf(deployer.address)
+            await smartToken2.balanceOf(deployer.address)
           );
         });
       });
@@ -464,27 +517,30 @@ developmentChains.includes(network.name)
             tokenFactory,
             deployer,
             underlyingToken,
-            devToken1,
-            devToken2,
+            smartToken1,
+            smartToken2,
             tester,
           } = await loadFixture(deployTokenFixture);
           const depositAmount = ethers.utils.parseEther("6");
           await tokenFactory.initializeSMART(
-            devToken1.address,
-            devToken2.address
+            
+            smartToken1.address,
+           
+            smartToken2.address
+          
           );
           await underlyingToken.approve(tokenFactory.address, depositAmount);
-          await devToken1.deposit(depositAmount, deployer.address);
-          await devToken1.transfer(tester.address, depositAmount);
+          await smartToken1.deposit(depositAmount, deployer.address);
+          await smartToken1.transfer(tester.address, depositAmount);
 
-          expect(await devToken1.maxWithdraw(deployer.address)).to.equal(
-            await devToken1.balanceOf(deployer.address)
+          expect(await smartToken1.maxWithdraw(deployer.address)).to.equal(
+            await smartToken1.balanceOf(deployer.address)
           );
         });
 
         it("it returns the correct value for previewWithdraw function", async function () {
-          const { devToken1 } = await loadFixture(deployTokenFixture);
-          expect(await devToken1.previewWithdraw("5")).to.equal("5");
+          const { smartToken1 } = await loadFixture(deployTokenFixture);
+          expect(await smartToken1.previewWithdraw("5")).to.equal("5");
         });
 
         it("it should apply pending rebase if a user wants to withdraw", async function () {
@@ -492,31 +548,34 @@ developmentChains.includes(network.name)
             tokenFactory,
             deployer,
             underlyingToken,
-            devToken1,
-            devToken2,
+            smartToken1,
+            smartToken2,
           } = await loadFixture(deployTokenFixture);
           const depositAmount = ethers.utils.parseEther("6");
 
           await tokenFactory.initializeSMART(
-            devToken1.address,
-            devToken2.address
+            
+            smartToken1.address,
+           
+            smartToken2.address
+          
           );
           // deposit underlying token
           await underlyingToken.approve(tokenFactory.address, depositAmount);
-          await devToken1.deposit(depositAmount, deployer.address);
+          await smartToken1.deposit(depositAmount, deployer.address);
 
           // trigger rebase
           await tokenFactory.executeRebase(1, true);
 
           await expect(
-            devToken1.withdraw(
+            smartToken1.withdraw(
               ethers.constants.MaxUint256,
               deployer.address,
               deployer.address
             )
           ).to.be.revertedWithCustomError(
-            devToken1,
-            "DevToken__WithdrawMoreThanMax"
+            smartToken1,
+            "SmartToken__WithdrawMoreThanMax"
           );
         });
 
@@ -525,24 +584,27 @@ developmentChains.includes(network.name)
             tokenFactory,
             deployer,
             underlyingToken,
-            devToken1,
-            devToken2,
+            smartToken1,
+            smartToken2,
           } = await loadFixture(deployTokenFixture);
           const depositAmount = ethers.utils.parseEther("6");
 
           await tokenFactory.initializeSMART(
-            devToken1.address,
-            devToken2.address
+            
+            smartToken1.address,
+           
+            smartToken2.address
+          
           );
           // deposit underlying token
           await underlyingToken.approve(tokenFactory.address, depositAmount);
-          await devToken1.deposit(depositAmount, deployer.address);
+          await smartToken1.deposit(depositAmount, deployer.address);
 
           // trigger rebase
           await tokenFactory.executeRebase(1, true);
 
           await expect(
-            devToken1.withdraw(
+            smartToken1.withdraw(
               depositAmount,
               deployer.address,
               deployer.address
@@ -555,19 +617,22 @@ developmentChains.includes(network.name)
             tokenFactory,
             deployer,
             underlyingToken,
-            devToken1,
-            devToken2,
+            smartToken1,
+            smartToken2,
           } = await loadFixture(deployTokenFixture);
           const depositAmount = ethers.utils.parseEther("6");
 
           await tokenFactory.initializeSMART(
-            devToken1.address,
-            devToken2.address
+            
+            smartToken1.address,
+           
+            smartToken2.address
+          
           );
 
           // deposit underlying token
           await underlyingToken.approve(tokenFactory.address, depositAmount);
-          await devToken1.deposit(depositAmount, deployer.address);
+          await smartToken1.deposit(depositAmount, deployer.address);
 
           // get user balance before withdrawal
           const initialBalance = await underlyingToken.balanceOf(
@@ -576,7 +641,7 @@ developmentChains.includes(network.name)
           const expectedBalance = +initialBalance + +depositAmount;
 
           // withdraw underlying token
-          await devToken1.withdraw(
+          await smartToken1.withdraw(
             depositAmount,
             deployer.address,
             deployer.address
@@ -593,19 +658,22 @@ developmentChains.includes(network.name)
             tokenFactory,
             deployer,
             underlyingToken,
-            devToken1,
-            devToken2,
+            smartToken1,
+            smartToken2,
           } = await loadFixture(deployTokenFixture);
           const depositAmount = ethers.utils.parseEther("6");
 
           await tokenFactory.initializeSMART(
-            devToken1.address,
-            devToken2.address
+            
+            smartToken1.address,
+           
+            smartToken2.address
+          
           );
 
           // deposit underlying token
           await underlyingToken.approve(tokenFactory.address, depositAmount);
-          await devToken1.deposit(depositAmount, deployer.address);
+          await smartToken1.deposit(depositAmount, deployer.address);
 
           // get user balance before withdrawal
           const initialBalance = await underlyingToken.balanceOf(
@@ -632,40 +700,43 @@ developmentChains.includes(network.name)
             tokenFactory,
             deployer,
             underlyingToken,
-            devToken1,
-            devToken2,
+            smartToken1,
+            smartToken2,
           } = await loadFixture(deployTokenFixture);
           const depositAmount = ethers.utils.parseEther("6");
 
           await tokenFactory.initializeSMART(
-            devToken1.address,
-            devToken2.address
+            
+            smartToken1.address,
+           
+            smartToken2.address
+          
           );
 
           // deposit underlying token
           await underlyingToken.approve(tokenFactory.address, depositAmount);
-          await devToken1.deposit(depositAmount, deployer.address);
+          await smartToken1.deposit(depositAmount, deployer.address);
 
           // get user token x and y balance before withdrawal
-          const initialBalanceA = await devToken1.balanceOf(deployer.address);
-          const initialBalanceB = await devToken2.balanceOf(deployer.address);
+          const initialBalanceA = await smartToken1.balanceOf(deployer.address);
+          const initialBalanceB = await smartToken2.balanceOf(deployer.address);
 
           const expectedBalanceA = +initialBalanceA - +depositAmount;
           const expectedBalanceB = +initialBalanceB - +depositAmount;
 
           // withdraw underlying token
-          await devToken1.withdraw(
+          await smartToken1.withdraw(
             depositAmount,
             deployer.address,
             deployer.address
           );
 
           assert.equal(
-            await devToken1.balanceOf(deployer.address),
+            await smartToken1.balanceOf(deployer.address),
             expectedBalanceA
           );
           assert.equal(
-            await devToken2.balanceOf(deployer.address),
+            await smartToken2.balanceOf(deployer.address),
             expectedBalanceB
           );
         });
@@ -675,27 +746,34 @@ developmentChains.includes(network.name)
             tokenFactory,
             deployer,
             underlyingToken,
-            devToken1,
-            devToken2,
+            smartToken1,
+            smartToken2,
             tester,
           } = await loadFixture(deployTokenFixture);
           const depositAmount = ethers.utils.parseEther("6");
 
           await tokenFactory.initializeSMART(
-            devToken1.address,
-            devToken2.address
+            
+            smartToken1.address,
+           
+            smartToken2.address
+          
           );
 
           // deposit underlying token
           await underlyingToken.approve(tokenFactory.address, depositAmount);
-          await devToken1.deposit(depositAmount, deployer.address);
+          await smartToken1.deposit(depositAmount, deployer.address);
 
           // withdraw underlying token
           await expect(
-            devToken1.withdraw(depositAmount, deployer.address, tester.address)
+            smartToken1.withdraw(
+              depositAmount,
+              deployer.address,
+              tester.address
+            )
           ).to.be.revertedWithCustomError(
-            devToken1,
-            "DevToken__OnlyAssetOwner"
+            smartToken1,
+            "SmartToken__OnlyAssetOwner"
           );
         });
 
@@ -704,25 +782,28 @@ developmentChains.includes(network.name)
             tokenFactory,
             deployer,
             underlyingToken,
-            devToken1,
-            devToken2,
+            smartToken1,
+            smartToken2,
           } = await loadFixture(deployTokenFixture);
           const depositAmount = ethers.utils.parseEther("6");
 
           await tokenFactory.initializeSMART(
-            devToken1.address,
-            devToken2.address
+            
+            smartToken1.address,
+           
+            smartToken2.address
+          
           );
           // deposit underlying token
           await underlyingToken.approve(tokenFactory.address, depositAmount);
-          await devToken1.deposit(depositAmount, deployer.address);
-          await devToken1.withdraw(
+          await smartToken1.deposit(depositAmount, deployer.address);
+          await smartToken1.withdraw(
             depositAmount,
             deployer.address,
             deployer.address
           );
           await expect(
-            devToken1.withdraw(
+            smartToken1.withdraw(
               depositAmount,
               deployer.address,
               deployer.address
@@ -735,19 +816,22 @@ developmentChains.includes(network.name)
             tokenFactory,
             deployer,
             underlyingToken,
-            devToken1,
-            devToken2,
+            smartToken1,
+            smartToken2,
             sanctionsContract,
           } = await loadFixture(deployTokenFixture);
           const depositAmount = ethers.utils.parseEther("6");
 
           await tokenFactory.initializeSMART(
-            devToken1.address,
-            devToken2.address
+            
+            smartToken1.address,
+           
+            smartToken2.address
+          
           );
           // deposit underlying token
           await underlyingToken.approve(tokenFactory.address, depositAmount);
-          await devToken1.deposit(depositAmount, deployer.address);
+          await smartToken1.deposit(depositAmount, deployer.address);
 
           // add user to sanctions list
           await sanctionsContract.setSanction(deployer.address, true);
@@ -757,7 +841,7 @@ developmentChains.includes(network.name)
           expect(sanctioned).to.equal(true);
 
           await expect(
-            devToken1.withdraw(
+            smartToken1.withdraw(
               depositAmount,
               deployer.address,
               deployer.address
@@ -782,47 +866,53 @@ developmentChains.includes(network.name)
             tokenFactory,
             deployer,
             underlyingToken,
-            devToken1,
-            devToken2,
+            smartToken1,
+            smartToken2,
             tester,
           } = await loadFixture(deployTokenFixture);
           const depositAmount = ethers.utils.parseEther("6");
           await tokenFactory.initializeSMART(
-            devToken1.address,
-            devToken2.address
+            
+            smartToken1.address,
+           
+            smartToken2.address
+          
           );
           await underlyingToken.approve(tokenFactory.address, depositAmount);
-          await devToken1.deposit(depositAmount, deployer.address);
-          await devToken2.transfer(tester.address, depositAmount);
+          await smartToken1.deposit(depositAmount, deployer.address);
+          await smartToken2.transfer(tester.address, depositAmount);
 
-          expect(await devToken1.maxRedeem(deployer.address)).to.equal(
-            await devToken2.balanceOf(deployer.address)
+          expect(await smartToken1.maxRedeem(deployer.address)).to.equal(
+            await smartToken2.balanceOf(deployer.address)
           );
         });
 
         it("it returns the correct value for previewRedeem function", async function () {
-          const { devToken1 } = await loadFixture(deployTokenFixture);
-          assert.equal(await devToken1.previewRedeem("5"), "5");
+          const { smartToken1 } = await loadFixture(deployTokenFixture);
+          assert.equal(await smartToken1.previewRedeem("5"), "5");
         });
 
         it("it should revert when user wants to redeem more than maximum withdrawal amount", async function () {
-          const { tokenFactory, deployer, devToken1, devToken2 } =
+          const { tokenFactory, deployer, smartToken1, smartToken2 } =
             await loadFixture(deployTokenFixture);
 
           await tokenFactory.initializeSMART(
-            devToken1.address,
-            devToken2.address
+            
+            smartToken1.address,
+           
+            smartToken2.address
+          
           );
 
           await expect(
-            devToken1.redeem(
+            smartToken1.redeem(
               ethers.constants.MaxUint256,
               deployer.address,
               deployer.address
             )
           ).to.be.revertedWithCustomError(
-            devToken1,
-            "DevToken__RedeemMoreThanMax"
+            smartToken1,
+            "SmartToken__RedeemMoreThanMax"
           );
         });
 
@@ -831,19 +921,22 @@ developmentChains.includes(network.name)
             tokenFactory,
             deployer,
             underlyingToken,
-            devToken1,
-            devToken2,
+            smartToken1,
+            smartToken2,
           } = await loadFixture(deployTokenFixture);
           const depositAmount = ethers.utils.parseEther("6");
 
           await tokenFactory.initializeSMART(
-            devToken1.address,
-            devToken2.address
+            
+            smartToken1.address,
+           
+            smartToken2.address
+          
           );
 
           // deposit underlying token
           await underlyingToken.approve(tokenFactory.address, depositAmount);
-          await devToken1.deposit(depositAmount, deployer.address);
+          await smartToken1.deposit(depositAmount, deployer.address);
 
           // get user balance before redemption
           const initialBalance = await underlyingToken.balanceOf(
@@ -852,7 +945,7 @@ developmentChains.includes(network.name)
           const expectedBalance = +initialBalance + +depositAmount;
 
           // redeem underlying token
-          await devToken1.redeem(
+          await smartToken1.redeem(
             depositAmount,
             deployer.address,
             deployer.address
@@ -869,18 +962,21 @@ developmentChains.includes(network.name)
             tokenFactory,
             deployer,
             underlyingToken,
-            devToken1,
-            devToken2,
+            smartToken1,
+            smartToken2,
           } = await loadFixture(deployTokenFixture);
           const depositAmount = ethers.utils.parseEther("6");
 
           await tokenFactory.initializeSMART(
-            devToken1.address,
-            devToken2.address
+            
+            smartToken1.address,
+           
+            smartToken2.address
+          
           );
           // deposit underlying token
           await underlyingToken.approve(tokenFactory.address, depositAmount);
-          await devToken1.deposit(depositAmount, deployer.address);
+          await smartToken1.deposit(depositAmount, deployer.address);
 
           // trigger rebase
           await tokenFactory.executeRebase(1, true);
@@ -894,7 +990,11 @@ developmentChains.includes(network.name)
           // });
 
           await expect(
-            devToken1.redeem(depositAmount, deployer.address, deployer.address)
+            smartToken1.redeem(
+              depositAmount,
+              deployer.address,
+              deployer.address
+            )
           ).to.emit(tokenFactory, "RebaseApplied");
         });
 
@@ -903,27 +1003,30 @@ developmentChains.includes(network.name)
             tokenFactory,
             deployer,
             underlyingToken,
-            devToken1,
-            devToken2,
+            smartToken1,
+            smartToken2,
             tester,
           } = await loadFixture(deployTokenFixture);
           const depositAmount = ethers.utils.parseEther("6");
 
           await tokenFactory.initializeSMART(
-            devToken1.address,
-            devToken2.address
+            
+            smartToken1.address,
+           
+            smartToken2.address
+          
           );
 
           // deposit underlying token
           await underlyingToken.approve(tokenFactory.address, depositAmount);
-          await devToken1.deposit(depositAmount, deployer.address);
+          await smartToken1.deposit(depositAmount, deployer.address);
 
           // withdraw underlying token
           await expect(
-            devToken1.redeem(depositAmount, deployer.address, tester.address)
+            smartToken1.redeem(depositAmount, deployer.address, tester.address)
           ).to.be.revertedWithCustomError(
-            devToken1,
-            "DevToken__OnlyAssetOwner"
+            smartToken1,
+            "SmartToken__OnlyAssetOwner"
           );
         });
 
@@ -932,36 +1035,43 @@ developmentChains.includes(network.name)
             tokenFactory,
             deployer,
             underlyingToken,
-            devToken1,
-            devToken2,
+            smartToken1,
+            smartToken2,
           } = await loadFixture(deployTokenFixture);
           const depositAmount = ethers.utils.parseEther("6");
           const withdrawAmount = ethers.utils.parseEther("1");
 
           await tokenFactory.initializeSMART(
-            devToken1.address,
-            devToken2.address
+            
+            smartToken1.address,
+           
+            smartToken2.address
+          
           );
           // deposit underlying token
           await underlyingToken.approve(tokenFactory.address, depositAmount);
-          await devToken1.deposit(depositAmount, deployer.address);
-          await devToken1.redeem(
+          await smartToken1.deposit(depositAmount, deployer.address);
+          await smartToken1.redeem(
             withdrawAmount,
             deployer.address,
             deployer.address
           );
-          await devToken1.redeem(
+          await smartToken1.redeem(
             withdrawAmount,
             deployer.address,
             deployer.address
           );
-          await devToken1.redeem(
+          await smartToken1.redeem(
             withdrawAmount,
             deployer.address,
             deployer.address
           );
           await expect(
-            devToken1.redeem(depositAmount, deployer.address, deployer.address)
+            smartToken1.redeem(
+              depositAmount,
+              deployer.address,
+              deployer.address
+            )
           ).to.be.reverted;
         });
       });
@@ -1125,7 +1235,6 @@ developmentChains.includes(network.name)
           const isDefault = true;
 
           const lastTimeStamp = await tokenFactory.getLastTimeStamp();
-          console.log(`lastTimeStamp: ${lastTimeStamp}`);
 
           const nextRebaseTimeStamp: bigint = BigInt(
             Number(lastTimeStamp) + Number(REBASE_INTERVAL)
@@ -1163,19 +1272,22 @@ developmentChains.includes(network.name)
           const {
             tokenFactory,
             deployer,
-            devToken1,
-            devToken2,
+            smartToken1,
+            smartToken2,
             underlyingToken,
           } = await loadFixture(deployTokenFixture);
           const amount = ethers.utils.parseEther("1");
           await tokenFactory.initializeSMART(
-            devToken1.address,
-            devToken2.address
+            
+            smartToken1.address,
+           
+            smartToken2.address
+          
           );
           await underlyingToken.approve(tokenFactory.address, amount);
-          await devToken1.mint(amount, tokenFactory.address);
+          await smartToken1.mint(amount, tokenFactory.address);
 
-          const tokenFactoryBalance = await devToken1.balanceOf(
+          const tokenFactoryBalance = await smartToken1.balanceOf(
             tokenFactory.address
           );
           expect(tokenFactoryBalance).to.equal(amount);
@@ -1185,19 +1297,22 @@ developmentChains.includes(network.name)
           const {
             tokenFactory,
             deployer,
-            devToken1,
-            devToken2,
+            smartToken1,
+            smartToken2,
             underlyingToken,
           } = await loadFixture(deployTokenFixture);
           const amount = ethers.utils.parseEther("1");
           await tokenFactory.initializeSMART(
-            devToken1.address,
-            devToken2.address
+            
+            smartToken1.address,
+           
+            smartToken2.address
+          
           );
           await underlyingToken.approve(tokenFactory.address, amount);
-          await devToken1.deposit(amount, tokenFactory.address);
+          await smartToken1.deposit(amount, tokenFactory.address);
 
-          const tokenFactoryBalance = await devToken1.balanceOf(
+          const tokenFactoryBalance = await smartToken1.balanceOf(
             tokenFactory.address
           );
           expect(tokenFactoryBalance).to.equal(amount);
@@ -1228,8 +1343,8 @@ developmentChains.includes(network.name)
             tokenFactory,
             deployer,
             underlyingToken,
-            devToken1,
-            devToken2,
+            smartToken1,
+            smartToken2,
             tester,
           } = await loadFixture(deployTokenFixture);
           const depositAmount = ethers.utils.parseEther("10");
@@ -1238,40 +1353,43 @@ developmentChains.includes(network.name)
           const expectedBalanceAfterTransfer = "8666500000000000000";
 
           await tokenFactory.initializeSMART(
-            devToken1.address,
-            devToken2.address
+            
+            smartToken1.address,
+           
+            smartToken2.address
+          
           );
 
           // deposit underlying token
           await underlyingToken.approve(tokenFactory.address, depositAmount);
-          await devToken1.deposit(depositAmount, deployer.address);
+          await smartToken1.deposit(depositAmount, deployer.address);
 
           // to a transaction
-          await devToken1.transfer(tester.address, transferAmount);
+          await smartToken1.transfer(tester.address, transferAmount);
 
           // trigger a rebase
           await tokenFactory.executeRebase(1, true);
 
           // confirm user balances when rebase has taken place
           assert.equal(
-            await devToken1.balanceOf(deployer.address),
+            await smartToken1.balanceOf(deployer.address),
             expectedBalance
           );
           assert.equal(
-            await devToken2.balanceOf(deployer.address),
+            await smartToken2.balanceOf(deployer.address),
             expectedBalance
           );
 
           // do a transaction to simulate the actual reflection of the rebase on chain
-          await devToken1.transfer(tester.address, transferAmount);
+          await smartToken1.transfer(tester.address, transferAmount);
 
           // confirm user balances after rebase has been applied on chain
           assert.equal(
-            await devToken1.balanceOf(deployer.address),
+            await smartToken1.balanceOf(deployer.address),
             expectedBalanceAfterTransfer
           );
           assert.equal(
-            await devToken2.balanceOf(deployer.address),
+            await smartToken2.balanceOf(deployer.address),
             expectedBalance
           );
         });
@@ -1281,8 +1399,8 @@ developmentChains.includes(network.name)
             tokenFactory,
             deployer,
             underlyingToken,
-            devToken1,
-            devToken2,
+            smartToken1,
+            smartToken2,
             tester,
           } = await loadFixture(deployTokenFixture);
           const depositAmount = ethers.utils.parseEther("10");
@@ -1291,40 +1409,43 @@ developmentChains.includes(network.name)
           const expectedBalanceAfterTransfer = "8333500000000000000";
 
           await tokenFactory.initializeSMART(
-            devToken1.address,
-            devToken2.address
+            
+            smartToken1.address,
+           
+            smartToken2.address
+          
           );
 
           // deposit underlying token
           await underlyingToken.approve(tokenFactory.address, depositAmount);
-          await devToken1.deposit(depositAmount, deployer.address);
+          await smartToken1.deposit(depositAmount, deployer.address);
 
           // to a transaction
-          await devToken2.transfer(tester.address, transferAmount);
+          await smartToken2.transfer(tester.address, transferAmount);
 
           // trigger a rebase
           await tokenFactory.executeRebase(1, true);
           await tokenFactory.executeRebase(2, true);
           // confirm user balances when rebase has taken place
           assert.equal(
-            await devToken1.balanceOf(deployer.address),
+            await smartToken1.balanceOf(deployer.address),
             expectedBalance
           );
           assert.equal(
-            await devToken2.balanceOf(deployer.address),
+            await smartToken2.balanceOf(deployer.address),
             expectedBalance
           );
 
           // do a transaction to simulate the actual reflection of the rebase on chain
-          await devToken1.transfer(tester.address, transferAmount);
+          await smartToken1.transfer(tester.address, transferAmount);
 
           // confirm user balances after rebase has been applied on chain
           assert.equal(
-            await devToken1.balanceOf(deployer.address),
+            await smartToken1.balanceOf(deployer.address),
             expectedBalanceAfterTransfer
           );
           assert.equal(
-            await devToken2.balanceOf(deployer.address),
+            await smartToken2.balanceOf(deployer.address),
             expectedBalance
           );
         });
@@ -1334,8 +1455,8 @@ developmentChains.includes(network.name)
             tokenFactory,
             deployer,
             underlyingToken,
-            devToken1,
-            devToken2,
+            smartToken1,
+            smartToken2,
             tester,
           } = await loadFixture(deployTokenFixture);
           const depositAmount = ethers.utils.parseEther("10");
@@ -1344,8 +1465,11 @@ developmentChains.includes(network.name)
           const expectedBalanceAfterTransfer = "10333500000000000000";
 
           await tokenFactory.initializeSMART(
-            devToken1.address,
-            devToken2.address
+            
+            smartToken1.address,
+           
+            smartToken2.address
+          
           );
 
           // give the tester address some underlying asset
@@ -1353,18 +1477,18 @@ developmentChains.includes(network.name)
 
           // deposit underlying token for the deployer(has 10 of x and 10 of y)
           await underlyingToken.approve(tokenFactory.address, depositAmount);
-          await devToken1.deposit(depositAmount, deployer.address);
+          await smartToken1.deposit(depositAmount, deployer.address);
 
           // deposit underlying token for the tester(has 10 of x and 10 of y)
           await underlyingToken
             .connect(tester)
             .approve(tokenFactory.address, depositAmount);
-          await devToken1
+          await smartToken1
             .connect(tester)
             .deposit(depositAmount, tester.address);
 
           // to a transaction (has 10 of x and 9 of y)
-          await devToken2
+          await smartToken2
             .connect(tester)
             .transfer(deployer.address, transferAmount);
 
@@ -1373,26 +1497,26 @@ developmentChains.includes(network.name)
 
           // confirm user balances when rebase has taken place
           assert.equal(
-            await devToken1.balanceOf(tester.address),
+            await smartToken1.balanceOf(tester.address),
             expectedBalance
           );
           assert.equal(
-            await devToken2.balanceOf(tester.address),
+            await smartToken2.balanceOf(tester.address),
             expectedBalance
           );
 
           // do a transaction to simulate the actual reflection of the rebase on chain
           // now the tester account which is the receiver of this transaction should have 9.3335 balance after rebase
           // but after getting this transfer he should have in 10.3335 for x and 9.3335 for y
-          await devToken1.transfer(tester.address, transferAmount);
+          await smartToken1.transfer(tester.address, transferAmount);
 
           // confirm user balances after rebase has been applied on chain
           assert.equal(
-            await devToken1.balanceOf(tester.address),
+            await smartToken1.balanceOf(tester.address),
             expectedBalanceAfterTransfer
           );
           assert.equal(
-            await devToken2.balanceOf(tester.address),
+            await smartToken2.balanceOf(tester.address),
             expectedBalance
           );
         });

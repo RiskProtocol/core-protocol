@@ -10,14 +10,9 @@ import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
-// import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts-upgradeable/utils/introspection/IERC1820RegistryUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/utils/introspection/ERC1820ImplementerUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC777/IERC777RecipientUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC777/IERC777SenderUpgradeable.sol";
 
-import "./DevToken.sol";
+import "./SmartToken.sol";
 import "./../libraries/PriceFeed.sol";
 import "./BaseContract.sol";
 
@@ -41,10 +36,7 @@ contract TokenFactory is
     ReentrancyGuardUpgradeable,
     OwnableUpgradeable,
     UUPSUpgradeable,
-    BaseContract,
-    IERC777RecipientUpgradeable,
-    IERC777SenderUpgradeable,
-    ERC1820ImplementerUpgradeable
+    BaseContract
 {
     using PriceFeed for AggregatorV3Interface;
     using MathUpgradeable for uint256;
@@ -52,14 +44,9 @@ contract TokenFactory is
     using SafeMathUpgradeable for uint8;
     using SafeMathUpgradeable for uint32;
 
-    IERC1820RegistryUpgradeable private _erc1820;
-    bytes32 private constant TOKENS_RECIPIENT_INTERFACE_HASH =
-        keccak256("ERC777TokensRecipient");
-    bytes32 private constant TOKENS_SENDER_INTERFACE_HASH =
-        keccak256("ERC777TokensSender");
     // State variables
     uint256[] private scallingFactorX;
-    DevToken[] private devTokenArray;
+    SmartToken[] private smartTokenArray;
     AggregatorV3Interface private priceFeed;
     mapping(address => uint256) private lastRebaseCount;
     IERC20Update private baseToken;
@@ -86,22 +73,6 @@ contract TokenFactory is
     // Events
     event RebaseApplied(address userAddress, uint256 rebaseCount);
     event Rebase(uint256 rebaseCount);
-    event Erc777TokenReceived(
-        address operator,
-        address from,
-        address to,
-        uint256 amount,
-        bytes userData,
-        bytes operatorData
-    );
-    event Erc777TokenSent(
-        address operator,
-        address from,
-        address to,
-        uint256 amount,
-        bytes userData,
-        bytes operatorData
-    );
     event Deposit(
         address caller,
         address receiver,
@@ -116,10 +87,10 @@ contract TokenFactory is
         uint256 shares
     );
 
-    modifier onlyDevTokens() {
+    modifier onlySmartTokens() {
         if (
-            _msgSender() == address(devTokenArray[0]) ||
-            _msgSender() == address(devTokenArray[1])
+            _msgSender() == address(smartTokenArray[0]) ||
+            _msgSender() == address(smartTokenArray[1])
         ) {
             _;
         } else {
@@ -145,19 +116,7 @@ contract TokenFactory is
         __UUPSUpgradeable_init();
 
         //
-        _erc1820 = IERC1820RegistryUpgradeable(
-            0x1820a4B7618BdE71Dce8cdc73aAB6C95905faD24
-        );
-        _erc1820.setInterfaceImplementer(
-            address(this),
-            TOKENS_RECIPIENT_INTERFACE_HASH,
-            address(this)
-        );
-        _erc1820.setInterfaceImplementer(
-            address(this),
-            TOKENS_SENDER_INTERFACE_HASH,
-            address(this)
-        );
+
         baseToken = IERC20Update(baseTokenAddress);
         priceFeed = AggregatorV3Interface(priceFeedAddress);
         (bool success, uint8 assetDecimals) = _tryGetAssetDecimals(baseToken);
@@ -176,11 +135,11 @@ contract TokenFactory is
 
     //note: renaming this method to avoid conflicts with upgradable initialize
     function initializeSMART(
-        DevToken token1,
-        DevToken token2
+        SmartToken token1,
+        SmartToken token2
     ) external onlyOwner {
-        devTokenArray.push(token1);
-        devTokenArray.push(token2);
+        smartTokenArray.push(token1);
+        smartTokenArray.push(token2);
     }
 
     /**
@@ -220,16 +179,38 @@ contract TokenFactory is
         return baseToken;
     }
 
+    /**
+     * @dev Returns the maximum amount of assets the owner can withdraw.
+     *      (ie this returns the smaller balance between token0 and token1)
+     */
     function maxAmountToWithdraw(
         address owner_
     ) public view virtual returns (uint256) {
         if (
-            devTokenArray[0].balanceOf(owner_) >
-            devTokenArray[1].balanceOf(owner_)
+            smartTokenArray[0].balanceOf(owner_) >
+            smartTokenArray[1].balanceOf(owner_)
         ) {
-            return devTokenArray[1].balanceOf(owner_);
+            return smartTokenArray[1].balanceOf(owner_);
         } else {
-            return devTokenArray[0].balanceOf(owner_);
+            return smartTokenArray[0].balanceOf(owner_);
+        }
+    }
+
+    /**
+     * @dev Returns the maximum amount of shares the account holds,
+     *      (ie this returns the bigger balance between token0 and token1)
+     *      this is not the max value the owner can withdraw.
+     */
+    function maxSharesOwned(
+        address owner_
+    ) public view virtual returns (uint256) {
+        if (
+            smartTokenArray[0].balanceOf(owner_) >
+            smartTokenArray[1].balanceOf(owner_)
+        ) {
+            return smartTokenArray[0].balanceOf(owner_);
+        } else {
+            return smartTokenArray[1].balanceOf(owner_);
         }
     }
 
@@ -246,7 +227,7 @@ contract TokenFactory is
         virtual
         onlyNotSanctioned(caller)
         onlyNotSanctioned(receiver)
-        onlyDevTokens
+        onlySmartTokens
     {
         rebaseCheck(receiver);
 
@@ -281,7 +262,7 @@ contract TokenFactory is
         virtual
         onlyNotSanctioned(caller)
         onlyNotSanctioned(receiver)
-        onlyDevTokens
+        onlySmartTokens
     {
         rebaseCheck(receiver);
         //mgmt fees logic
@@ -304,28 +285,28 @@ contract TokenFactory is
     }
 
     function factoryMint(
-        uint256 devTokenIndex,
+        uint256 smartTokenIndex,
         address receiver,
         uint256 amount
     ) private {
-        uint256 assets = devTokenArray[devTokenIndex].previewMint(amount);
-        devTokenArray[devTokenIndex].mintAsset(receiver, assets);
+        uint256 assets = smartTokenArray[smartTokenIndex].previewMint(amount);
+        smartTokenArray[smartTokenIndex].mintAsset(receiver, assets);
     }
 
     function factoryBurn(
-        uint256 devTokenIndex,
+        uint256 smartTokenIndex,
         address owner_,
         uint256 amount
     ) private {
-        devTokenArray[devTokenIndex].devBurn(owner_, amount);
+        smartTokenArray[smartTokenIndex].burn(owner_, amount);
     }
 
     function factoryTransfer(
-        uint256 devTokenIndex,
+        uint256 smartTokenIndex,
         address receiver,
         uint256 amount
     ) private {
-        devTokenArray[devTokenIndex].devTransfer(receiver, amount);
+        smartTokenArray[smartTokenIndex].smartTransfer(receiver, amount);
     }
 
     function subUnchecked(
@@ -392,8 +373,8 @@ contract TokenFactory is
     }
 
     function applyRebase(address owner_) public {
-        uint256 asset1ValueEth = devTokenArray[0].unScaledbalanceOf(owner_);
-        uint256 asset2ValueEth = devTokenArray[1].unScaledbalanceOf(owner_);
+        uint256 asset1ValueEth = smartTokenArray[0].unScaledbalanceOf(owner_);
+        uint256 asset2ValueEth = smartTokenArray[1].unScaledbalanceOf(owner_);
         uint256 initialAsset1ValueEth = asset1ValueEth;
         uint256 initialAsset2ValueEth = asset2ValueEth;
 
@@ -454,8 +435,8 @@ contract TokenFactory is
         uint256 scallingFactorY = subUnchecked(scallingFactorX_);
         uint256 denominator = 10 ** decimals();
 
-        uint256 asset1Balance = devTokenArray[0].unScaledbalanceOf(owner_);
-        uint256 asset2Balance = devTokenArray[1].unScaledbalanceOf(owner_);
+        uint256 asset1Balance = smartTokenArray[0].unScaledbalanceOf(owner_);
+        uint256 asset2Balance = smartTokenArray[1].unScaledbalanceOf(owner_);
 
         //Calculate the net balance of user after rebases are to be applied
         (asset1Balance, asset2Balance) = calculateMgmtFeeForRebase(
@@ -471,8 +452,8 @@ contract TokenFactory is
 
     function updateUserLastRebaseCount(address owner_) public {
         if (
-            devTokenArray[0].unScaledbalanceOf(owner_) == 0 &&
-            devTokenArray[1].unScaledbalanceOf(owner_) == 0
+            smartTokenArray[0].unScaledbalanceOf(owner_) == 0 &&
+            smartTokenArray[1].unScaledbalanceOf(owner_) == 0
         ) {
             lastRebaseCount[owner_] = getScallingFactorLength();
         }
@@ -656,52 +637,14 @@ contract TokenFactory is
         return lastRebaseCount[userAddress];
     }
 
-    function getDevTokenAddress(uint256 index) public view returns (DevToken) {
-        return devTokenArray[index];
+    function getSmartTokenAddress(
+        uint256 index
+    ) public view returns (SmartToken) {
+        return smartTokenArray[index];
     }
 
     function getInterval() public view returns (uint256) {
         return interval;
-    }
-
-    /* ERC777: token recieve and sender implmentations
-    We could use these as a sort of hooks and allowing us to do stuffs based on
-    the tokens the contract recieve and vice versa.
-     */
-    function tokensReceived(
-        address operator,
-        address from,
-        address to,
-        uint256 amount,
-        bytes calldata userData,
-        bytes calldata operatorData
-    ) external override nonReentrant {
-        emit Erc777TokenReceived(
-            operator,
-            from,
-            to,
-            amount,
-            userData,
-            operatorData
-        );
-    }
-
-    function tokensToSend(
-        address operator,
-        address from,
-        address to,
-        uint256 amount,
-        bytes calldata userData,
-        bytes calldata operatorData
-    ) external override {
-        emit Erc777TokenSent(
-            operator,
-            from,
-            to,
-            amount,
-            userData,
-            operatorData
-        );
     }
 
     // unwanted methods

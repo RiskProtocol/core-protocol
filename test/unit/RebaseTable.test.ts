@@ -5,7 +5,6 @@ import {
   REBASE_INTERVAL,
   TOKEN1_NAME,
   TOKEN1_SYMBOL,
-  defaultOperators,
   TOKEN2_NAME,
   TOKEN2_SYMBOL,
   DECIMALS,
@@ -83,29 +82,33 @@ developmentChains.includes(network.name)
         ]);
         await tokenFactory.deployed();
 
-        // deploy devtoken 1
-        const DevToken1 = await ethers.getContractFactory("DevToken", deployer);
+        // deploy smartToken 1
+        const SmartToken1 = await ethers.getContractFactory(
+          "SmartToken",
+          deployer
+        );
 
-        const devToken1 = await upgrades.deployProxy(DevToken1, [
+        const smartToken1 = await upgrades.deployProxy(SmartToken1, [
           TOKEN1_NAME,
           TOKEN1_SYMBOL,
           tokenFactory.address,
-          defaultOperators,
-          sanctionsContract.address,
-        ]);
-        await devToken1.deployed();
+          sanctionsContract.address
+        );
+        await smartToken1.deployed();
 
-        // deploy devtoken 2
-        const DevToken2 = await ethers.getContractFactory("DevToken", deployer);
+        // deploy smartToken 2
+        const SmartToken2 = await ethers.getContractFactory(
+          "SmartToken",
+          deployer
+        );
 
-        const devToken2 = await upgrades.deployProxy(DevToken2, [
+        const smartToken2 = await upgrades.deployProxy(SmartToken2, [
           TOKEN2_NAME,
           TOKEN2_SYMBOL,
           tokenFactory.address,
-          defaultOperators,
-          sanctionsContract.address,
-        ]);
-        await devToken2.deployed();
+          sanctionsContract.address
+        );
+        await smartToken2.deployed();
 
         // other instances to mock fake underlying token
         const TokenFactory2 = await ethers.getContractFactory(
@@ -123,8 +126,8 @@ developmentChains.includes(network.name)
 
         // Fixtures can return anything you consider useful for your tests
         return {
-          devToken1,
-          devToken2,
+          smartToken1,
+          smartToken2,
           mockV3Aggregator,
           underlyingToken,
           tokenFactory,
@@ -141,35 +144,38 @@ developmentChains.includes(network.name)
               tokenFactory,
               deployer,
               underlyingToken,
-              devToken1,
-              devToken2,
+              smartToken1,
+              smartToken2,
               tester,
             } = await loadFixture(deployTokenFixture);
             const depositAmount = item.depositValue;
             const transferAmount = ethers.utils.parseEther("1");
 
             await tokenFactory.initializeSMART(
-              devToken1.address,
-              devToken2.address
+              
+              smartToken1.address,
+             
+              smartToken2.address
+            
             );
 
             // deposit underlying token
             await underlyingToken.approve(tokenFactory.address, depositAmount);
-            await devToken1.deposit(depositAmount, deployer.address);
+            await smartToken1.deposit(depositAmount, deployer.address);
 
             // to a transaction
-            await devToken1.transfer(tester.address, transferAmount);
+            await smartToken1.transfer(tester.address, transferAmount);
 
             // trigger a rebase
             await tokenFactory.executeRebase(1, true);
 
             // confirm user balances when rebase has taken place
             assert.equal(
-              await devToken1.balanceOf(deployer.address),
+              await smartToken1.balanceOf(deployer.address),
               item.afterRebase
             );
             assert.equal(
-              await devToken2.balanceOf(deployer.address),
+              await smartToken2.balanceOf(deployer.address),
               item.afterRebase
             );
           });
@@ -183,21 +189,24 @@ developmentChains.includes(network.name)
             tokenFactory,
             deployer,
             underlyingToken,
-            devToken1,
-            devToken2,
+            smartToken1,
+            smartToken2,
             tester,
           } = await loadFixture(deployTokenFixture);
 
           const depositAmount = ethers.utils.parseEther("1");
 
           await tokenFactory.initializeSMART(
-            devToken1.address,
-            devToken2.address
+            
+            smartToken1.address,
+           
+            smartToken2.address
+          
           );
 
           // deposit underlying token
           await underlyingToken.approve(tokenFactory.address, depositAmount);
-          await devToken1.deposit(depositAmount, deployer.address);
+          await smartToken1.deposit(depositAmount, deployer.address);
 
           // trigger a rebase
           await tokenFactory.executeRebase(1, false);
@@ -212,21 +221,24 @@ developmentChains.includes(network.name)
             tokenFactory,
             deployer,
             underlyingToken,
-            devToken1,
-            devToken2,
+            smartToken1,
+            smartToken2,
             tester,
           } = await loadFixture(deployTokenFixture);
 
           const depositAmount = ethers.utils.parseEther("1");
 
           await tokenFactory.initializeSMART(
-            devToken1.address,
-            devToken2.address
+            
+            smartToken1.address,
+           
+            smartToken2.address
+          
           );
 
           // deposit underlying token
           await underlyingToken.approve(tokenFactory.address, depositAmount);
-          await devToken1.deposit(depositAmount, deployer.address);
+          await smartToken1.deposit(depositAmount, deployer.address);
 
           // trigger a rebase
           await tokenFactory.executeRebase(1, false);
@@ -244,21 +256,24 @@ developmentChains.includes(network.name)
             tokenFactory,
             deployer,
             underlyingToken,
-            devToken1,
-            devToken2,
+            smartToken1,
+            smartToken2,
             tester,
           } = await loadFixture(deployTokenFixture);
 
           const depositAmount = ethers.utils.parseEther("1");
 
           await tokenFactory.initializeSMART(
-            devToken1.address,
-            devToken2.address
+            
+            smartToken1.address,
+           
+            smartToken2.address
+          
           );
 
           // deposit underlying token
           await underlyingToken.approve(tokenFactory.address, depositAmount);
-          await devToken1.deposit(depositAmount, deployer.address);
+          await smartToken1.deposit(depositAmount, deployer.address);
 
           // trigger a rebase
           await tokenFactory.executeRebase(1, false);
@@ -274,21 +289,24 @@ developmentChains.includes(network.name)
             tokenFactory,
             deployer,
             underlyingToken,
-            devToken1,
-            devToken2,
+            smartToken1,
+            smartToken2,
             tester,
           } = await loadFixture(deployTokenFixture);
 
           const depositAmount = ethers.utils.parseEther("1");
 
           await tokenFactory.initializeSMART(
-            devToken1.address,
-            devToken2.address
+            
+            smartToken1.address,
+           
+            smartToken2.address
+          
           );
 
           // deposit underlying token
           await underlyingToken.approve(tokenFactory.address, depositAmount);
-          await devToken1.deposit(depositAmount, deployer.address);
+          await smartToken1.deposit(depositAmount, deployer.address);
 
           // trigger a rebase
           await tokenFactory.executeRebase(1, false);

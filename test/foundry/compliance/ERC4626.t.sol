@@ -6,9 +6,8 @@ import "./../TestHelper.sol";
 
 contract ERC4626Test is Test, TestHelper {
     MockERC20Token underlying;
-    DevToken vault;
-    DevToken vault2;
-    TokenFactory factoryWrapper;
+    SmartToken vault;
+    SmartToken vault2;
 
     function setUp() public {
         vm.createSelectFork(vm.rpcUrl("mainnet"), 17268750);
@@ -30,42 +29,18 @@ contract ERC4626Test is Test, TestHelper {
             sanctionsContract
         );
 
-        // address(proxy).call(
-        //     abi.encodeWithSignature(
-        //         "initialize(address,address,unit256,address)",
-        //         underlying,
-        //         mockV3AggregatorAddress,
-        //         REBASE_INTERVAL,
-        //         sanctionsContract
-        //     )
-        // );
-
-        // console.log("The owner is ");
-
-        vault = new DevToken();
-        vaultProxy = new UUPSProxy(address(vault), "");
-        address(vaultProxy).call(
-            abi.encodeWithSignature(
-                "initialize(string,string,address,array,address)",
-                TOKEN1_NAME,
-                TOKEN1_SYMBOL,
-                address(tokenFactory),
-                defaultOperators,
-                sanctionsContract
-            )
+        vault = new SmartToken(
+            TOKEN1_NAME,
+            TOKEN1_SYMBOL,
+            address(tokenFactory),
+            sanctionsContract
         );
 
-        vault2 = new DevToken();
-        vault2Proxy = new UUPSProxy(address(vault2), "");
-        address(vault2Proxy).call(
-            abi.encodeWithSignature(
-                "initialize(string,string,address,array,address)",
-                TOKEN2_NAME,
-                TOKEN2_SYMBOL,
-                address(tokenFactory),
-                defaultOperators,
-                sanctionsContract
-            )
+        vault2 = new SmartToken(
+            TOKEN2_NAME,
+            TOKEN2_SYMBOL,
+            address(tokenFactory),
+            sanctionsContract
         );
 
         // initialize dev tokens in token factory
@@ -80,19 +55,11 @@ contract ERC4626Test is Test, TestHelper {
     }
 
     function testMetadata() public {
-        //DevToken vlt = new DevToken();
-
-        DevToken vlt = new DevToken();
-        Proxy vltProxy = new UUPSProxy(address(vlt), "");
-        address(vltProxy).call(
-            abi.encodeWithSignature(
-                "initialize(string,string,address,array,address)",
-                TOKEN1_NAME,
-                TOKEN1_SYMBOL,
-                address(tokenFactory),
-                defaultOperators,
-                sanctionsContract
-            )
+        SmartToken vlt = new SmartToken(
+            TOKEN1_NAME,
+            TOKEN1_SYMBOL,
+            address(tokenFactory),
+            sanctionsContract
         );
 
         assertEq(vlt.name(), TOKEN1_NAME);

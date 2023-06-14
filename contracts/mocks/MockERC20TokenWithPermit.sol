@@ -8,6 +8,6 @@ import "@openzeppelin/contracts/token/ERC20/extensions/draft-ERC20Permit.sol";
 contract MockERC20TokenWithPermit is ERC20, ERC20Permit {
     string private constant TOKEN_NAME = 'Risk';
     constructor() ERC20(TOKEN_NAME, 'RK') ERC20Permit(TOKEN_NAME) {
-       _mint(_msgSender(), 200e18);
+       _mint(_msgSender(), type(uint256).max);
     }    
 }

@@ -5,7 +5,6 @@ import {
   REBASE_INTERVAL,
   TOKEN1_NAME,
   TOKEN1_SYMBOL,
-  defaultOperators,
   TOKEN2_NAME,
   TOKEN2_SYMBOL,
   DECIMALS,
@@ -86,29 +85,33 @@ developmentChains.includes(network.name)
         ]);
         await tokenFactory.deployed();
 
-        // deploy devtoken 1
-        const DevToken1 = await ethers.getContractFactory("DevToken", deployer);
+        // deploy smartToken 1
+        const SmartToken1 = await ethers.getContractFactory(
+          "SmartToken",
+          deployer
+        );
 
-        const devToken1 = await upgrades.deployProxy(DevToken1, [
+        const smartToken1 = await upgrades.deployProxy(SmartToken1, [
           TOKEN1_NAME,
           TOKEN1_SYMBOL,
           tokenFactory.address,
-          defaultOperators,
-          sanctionsContract.address,
-        ]);
-        await devToken1.deployed();
+          sanctionsContract.address
+        );
+        await smartToken1.deployed();
 
-        // deploy devtoken 2
-        const DevToken2 = await ethers.getContractFactory("DevToken", deployer);
+        // deploy smartToken 2
+        const SmartToken2 = await ethers.getContractFactory(
+          "SmartToken",
+          deployer
+        );
 
-        const devToken2 = await upgrades.deployProxy(DevToken2, [
+        const smartToken2 = await upgrades.deployProxy(SmartToken2, [
           TOKEN2_NAME,
           TOKEN2_SYMBOL,
           tokenFactory.address,
-          defaultOperators,
-          sanctionsContract.address,
-        ]);
-        await devToken2.deployed();
+          sanctionsContract.address
+        );
+        await smartToken2.deployed();
 
         // other instances to mock fake underlying token
         const TokenFactory2 = await ethers.getContractFactory(
@@ -127,8 +130,8 @@ developmentChains.includes(network.name)
 
         // Fixtures can return anything you consider useful for your tests
         return {
-          devToken1,
-          devToken2,
+          smartToken1,
+          smartToken2,
           mockV3Aggregator,
           underlyingToken,
           tokenFactory,
@@ -145,15 +148,18 @@ developmentChains.includes(network.name)
               tokenFactory,
               deployer,
               underlyingToken,
-              devToken1,
-              devToken2,
+              smartToken1,
+              smartToken2,
               tester,
             } = await loadFixture(deployTokenFixture);
             const depositAmount = item.depositValue;
 
             await tokenFactory.initializeSMART(
-              devToken1.address,
-              devToken2.address
+              
+              smartToken1.address,
+             
+              smartToken2.address
+            
             );
 
             // set the management fee to 0.2% and activating fees
@@ -163,10 +169,10 @@ developmentChains.includes(network.name)
             // deposit underlying token
 
             await underlyingToken.approve(tokenFactory.address, depositAmount);
-            await devToken1.mint(depositAmount, deployer.address);
+            await smartToken1.mint(depositAmount, deployer.address);
 
-            const userBal = await devToken1.balanceOf(deployer.address);
-            const factBal = await devToken1.balanceOf(tokenFactory.address);
+            const userBal = await smartToken1.balanceOf(deployer.address);
+            const factBal = await smartToken1.balanceOf(tokenFactory.address);
 
             // confirm user balances when rebase has taken place
             assert.equal(
@@ -180,16 +186,19 @@ developmentChains.includes(network.name)
               tokenFactory,
               deployer,
               underlyingToken,
-              devToken1,
-              devToken2,
+              smartToken1,
+              smartToken2,
               tester,
             } = await loadFixture(deployTokenFixture);
             const depositAmount = item.depositValue;
             //const transferAmount = ethers.utils.parseEther("1");
 
             await tokenFactory.initializeSMART(
-              devToken1.address,
-              devToken2.address
+              
+              smartToken1.address,
+             
+              smartToken2.address
+            
             );
 
             // set the management fee to 0.2% and activating fees
@@ -198,10 +207,12 @@ developmentChains.includes(network.name)
 
             // deposit underlying token
             await underlyingToken.approve(tokenFactory.address, depositAmount);
-            await devToken1.mint(depositAmount, deployer.address);
+            await smartToken1.mint(depositAmount, deployer.address);
 
-            const userBal: bigint = await devToken1.balanceOf(deployer.address);
-            const factBal = await devToken1.balanceOf(tokenFactory.address);
+            const userBal: bigint = await smartToken1.balanceOf(
+              deployer.address
+            );
+            const factBal = await smartToken1.balanceOf(tokenFactory.address);
 
             let block = await ethers.provider.getBlock("latest");
             const now = block.timestamp;
@@ -223,7 +234,7 @@ developmentChains.includes(network.name)
             await time.setNextBlockTimestamp(now2);
             await tokenFactory.applyRebase(deployer.address);
 
-            const userBal2: bigint = await devToken1.balanceOf(
+            const userBal2: bigint = await smartToken1.balanceOf(
               deployer.address
             );
 
@@ -235,15 +246,18 @@ developmentChains.includes(network.name)
               tokenFactory,
               deployer,
               underlyingToken,
-              devToken1,
-              devToken2,
+              smartToken1,
+              smartToken2,
               tester,
             } = await loadFixture(deployTokenFixture);
             const depositAmount: bigint = BigInt(item.depositValue);
 
             await tokenFactory.initializeSMART(
-              devToken1.address,
-              devToken2.address
+              
+              smartToken1.address,
+             
+              smartToken2.address
+            
             );
 
             // set the management fee to 0.2% and activating fees
@@ -252,13 +266,13 @@ developmentChains.includes(network.name)
 
             // deposit underlying token
             await underlyingToken.approve(tokenFactory.address, depositAmount);
-            await devToken2.mint(depositAmount, deployer.address);
+            await smartToken2.mint(depositAmount, deployer.address);
 
             const withdrawAmount: bigint =
-              (await devToken1.balanceOf(deployer.address)) >
-              (await devToken2.balanceOf(deployer.address))
-                ? devToken1.balanceOf(deployer.address)
-                : await devToken2.balanceOf(deployer.address);
+              (await smartToken1.balanceOf(deployer.address)) >
+              (await smartToken2.balanceOf(deployer.address))
+                ? smartToken1.balanceOf(deployer.address)
+                : await smartToken2.balanceOf(deployer.address);
 
             let block = await ethers.provider.getBlock("latest");
             const now: bigint = BigInt(block.timestamp);
@@ -276,7 +290,7 @@ developmentChains.includes(network.name)
             await time.setNextBlockTimestamp(now);
 
             // withdraw underlying token
-            await devToken1.withdraw(
+            await smartToken1.withdraw(
               withdrawAmount,
               deployer.address,
               deployer.address
@@ -300,24 +314,27 @@ developmentChains.includes(network.name)
               tokenFactory,
               deployer,
               underlyingToken,
-              devToken1,
-              devToken2,
+              smartToken1,
+              smartToken2,
               tester,
             } = await loadFixture(deployTokenFixture);
             const depositAmount = item.depositValue;
             const transferAmount = ethers.utils.parseEther("1");
 
             await tokenFactory.initializeSMART(
-              devToken1.address,
-              devToken2.address
+              
+              smartToken1.address,
+             
+              smartToken2.address
+            
             );
 
             // deposit underlying token
             await underlyingToken.approve(tokenFactory.address, depositAmount);
-            await devToken1.deposit(depositAmount, deployer.address);
+            await smartToken1.deposit(depositAmount, deployer.address);
 
             // to a transaction
-            await devToken1.transfer(tester.address, transferAmount);
+            await smartToken1.transfer(tester.address, transferAmount);
 
             // set the management fee to 2% and activating fees
             const mgmtFee = 200; //0.2 per day
@@ -325,10 +342,10 @@ developmentChains.includes(network.name)
             await tokenFactory.setManagementFeeState(true);
 
             //get user balance
-            const assetBal1: bigint = await devToken1.balanceOf(
+            const assetBal1: bigint = await smartToken1.balanceOf(
               deployer.address
             );
-            const assetBal2: bigint = await devToken2.balanceOf(
+            const assetBal2: bigint = await smartToken2.balanceOf(
               deployer.address
             );
 
@@ -369,10 +386,10 @@ developmentChains.includes(network.name)
             await tokenFactory.executeRebase(1, true);
 
             expect(rollOverValue).to.equal(
-              await devToken1.balanceOf(deployer.address)
+              await smartToken1.balanceOf(deployer.address)
             );
             expect(rollOverValue).to.equal(
-              await devToken2.balanceOf(deployer.address)
+              await smartToken2.balanceOf(deployer.address)
             );
           });
 
@@ -381,24 +398,27 @@ developmentChains.includes(network.name)
               tokenFactory,
               deployer,
               underlyingToken,
-              devToken1,
-              devToken2,
+              smartToken1,
+              smartToken2,
               tester,
             } = await loadFixture(deployTokenFixture);
             const depositAmount = item.depositValue;
             const transferAmount = ethers.utils.parseEther("1");
 
             await tokenFactory.initializeSMART(
-              devToken1.address,
-              devToken2.address
+              
+              smartToken1.address,
+             
+              smartToken2.address
+            
             );
 
             // deposit underlying token
             await underlyingToken.approve(tokenFactory.address, depositAmount);
-            await devToken1.deposit(depositAmount, deployer.address);
+            await smartToken1.deposit(depositAmount, deployer.address);
 
             // to a transaction
-            await devToken1.transfer(tester.address, transferAmount);
+            await smartToken1.transfer(tester.address, transferAmount);
 
             // set the management fee to 2% and activating fees
             const mgmtFee = 200; //0.2 per day
@@ -406,10 +426,10 @@ developmentChains.includes(network.name)
             await tokenFactory.setManagementFeeState(true);
 
             //get user balance
-            const assetBal1: bigint = await devToken1.balanceOf(
+            const assetBal1: bigint = await smartToken1.balanceOf(
               deployer.address
             );
-            const assetBal2: bigint = await devToken2.balanceOf(
+            const assetBal2: bigint = await smartToken2.balanceOf(
               deployer.address
             );
 
@@ -459,10 +479,10 @@ developmentChains.includes(network.name)
             await tokenFactory.executeRebase(2, true);
             //check the fees
             expect(rollOverValue).to.equal(
-              await devToken1.balanceOf(deployer.address)
+              await smartToken1.balanceOf(deployer.address)
             );
             expect(rollOverValue).to.equal(
-              await devToken2.balanceOf(deployer.address)
+              await smartToken2.balanceOf(deployer.address)
             );
           });
           it(`It should not apply rebase to a new user`, async function () {
@@ -470,15 +490,18 @@ developmentChains.includes(network.name)
               tokenFactory,
               deployer,
               underlyingToken,
-              devToken1,
-              devToken2,
+              smartToken1,
+              smartToken2,
               tester,
             } = await loadFixture(deployTokenFixture);
             const depositAmount = item.depositValue;
 
             await tokenFactory.initializeSMART(
-              devToken1.address,
-              devToken2.address
+              
+              smartToken1.address,
+             
+              smartToken2.address
+            
             );
 
             // set the management fee to 0.2% and activating fees
@@ -494,7 +517,7 @@ developmentChains.includes(network.name)
             // deposit underlying token
             await underlyingToken.approve(tokenFactory.address, depositAmount);
             await time.setNextBlockTimestamp(nextRebase);
-            await devToken1.mint(depositAmount, tester.address);
+            await smartToken1.mint(depositAmount, tester.address);
 
             //calculate fees for that interval only
             await time.setNextBlockTimestamp(nextRebase);
@@ -504,7 +527,7 @@ developmentChains.includes(network.name)
               0
             );
 
-            const userBal = await devToken1.balanceOf(tester.address);
+            const userBal = await smartToken1.balanceOf(tester.address);
 
             // confirm user paid for only one interval
             assert.equal(
@@ -517,15 +540,18 @@ developmentChains.includes(network.name)
               tokenFactory,
               deployer,
               underlyingToken,
-              devToken1,
-              devToken2,
+              smartToken1,
+              smartToken2,
               tester,
             } = await loadFixture(deployTokenFixture);
             const depositAmount = item.depositValue;
 
             await tokenFactory.initializeSMART(
-              devToken1.address,
-              devToken2.address
+              
+              smartToken1.address,
+             
+              smartToken2.address
+            
             );
 
             // set the management fee to 0.2% and activating fees
@@ -545,7 +571,7 @@ developmentChains.includes(network.name)
             );
             await underlyingToken.approve(tokenFactory.address, depositAmount);
             await time.setNextBlockTimestamp(newTimeValue);
-            await devToken1.mint(depositAmount, tester.address);
+            await smartToken1.mint(depositAmount, tester.address);
 
             //contract call and make 3 rebase
             const nextRebase = BigInt(lastRebase) + BigInt(REBASE_INTERVAL);
@@ -560,7 +586,7 @@ developmentChains.includes(network.name)
             await time.setNextBlockTimestamp(thirdRebase);
             await tokenFactory.executeRebase(3, true);
 
-            const userBal = await devToken1.balanceOf(tester.address);
+            const userBal = await smartToken1.balanceOf(tester.address);
 
             // confirm user paid for more than one interval (3+1) in this case
             assert.notEqual(

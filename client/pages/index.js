@@ -3,10 +3,10 @@ import { ethers } from "ethers";
 import { Buffer } from "buffer";
 import {
   tokenFactoryAddress,
-  devTokenXAddress,
-  devTokenYAddress,
+  smartTokenXAddress,
+  smartTokenYAddress,
   tokenFactoryAbi,
-  devTokenAbi,
+  smartTokenAbi,
   underlyingTokenAddress,
   uniswapV2RouterAddress,
   uniswapV2RouterABI,
@@ -117,30 +117,30 @@ function App() {
       const provider = new ethers.providers.Web3Provider(window.ethereum);
       const signer = provider.getSigner();
       const accounts = await requestAccounts();
-      contract = new ethers.Contract(devTokenXAddress, devTokenAbi, provider);
+      contract = new ethers.Contract(smartTokenXAddress, smartTokenAbi, provider);
       try {
-        const data = await contract.mint(devTokenXAddress, devTokenYAddress);
+        const data = await contract.mint(smartTokenXAddress, smartTokenYAddress);
       } catch (err) {
         console.log("Error: ", err);
       }
     }
   }
 
-  async function tokenBalance(devToken = "x") {
+  async function tokenBalance(smartToken = "x") {
     if (typeof window.ethereum !== "undefined") {
       let contract;
       const provider = new ethers.providers.Web3Provider(window.ethereum);
       const accounts = await requestAccounts();
-      if (devToken == "x") {
-        contract = new ethers.Contract(devTokenXAddress, devTokenAbi, provider);
+      if (smartToken == "x") {
+        contract = new ethers.Contract(smartTokenXAddress, smartTokenAbi, provider);
       } else {
-        contract = new ethers.Contract(devTokenYAddress, devTokenAbi, provider);
+        contract = new ethers.Contract(smartTokenYAddress, smartTokenAbi, provider);
       }
       try {
         const data = await contract.balanceOf(testAccountAddress);
         console.log(
           `balance of ${
-            devToken == "x" ? "tokenX" : "tokenY"
+          smartToken == "x" ? "tokenX" : "tokenY"
           } is ${data.toString()}`
         );
       } catch (err) {
@@ -211,9 +211,9 @@ function App() {
         signer
       );
 
-      const devTokenX = new ethers.Contract(
-        devTokenXAddress,
-        devTokenAbi,
+      const smartTokenX = new ethers.Contract(
+        smartTokenXAddress,
+        smartTokenAbi,
         signer
       );
       try {
@@ -226,7 +226,7 @@ function App() {
 
         const permit = await createPermit(tokenFactoryAddress,  `${ethers.utils.parseEther(depositAmount)}`, +currentNounce.toString(), permitDeadline)
         console.log(`r: 0x${permit.r.toString('hex')}, s: 0x${permit.s.toString('hex')}, v: ${permit.v}, sig: ${permit.signature}`)
-        await devTokenX.depositWithPermit(
+        await smartTokenX.depositWithPermit(
           `${ethers.utils.parseEther(depositAmount)}`,
           testAccountAddress,
           permitDeadline, `${permit.v}`, permit.r, permit.s
@@ -242,13 +242,13 @@ function App() {
     if (typeof window.ethereum !== "undefined") {
       const provider = new ethers.providers.Web3Provider(window.ethereum);
       const signer = provider.getSigner();
-      const devTokenX = new ethers.Contract(
-        devTokenXAddress,
-        devTokenAbi,
+      const smartTokenX = new ethers.Contract(
+        smartTokenXAddress,
+        smartTokenAbi,
         signer
       );
       try {
-        const data = await devTokenX.withdraw(
+        const data = await smartTokenX.withdraw(
           `${ethers.utils.parseEther(withdrawalAmount)}`,
           testAccountAddress,
           testAccountAddress
@@ -321,8 +321,8 @@ function App() {
       const provider = new ethers.providers.Web3Provider(window.ethereum);
       const signer = provider.getSigner();
       const contract = new ethers.Contract(
-        devTokenXAddress,
-        devTokenAbi,
+        smartTokenXAddress,
+        smartTokenAbi,
         signer
       );
       try {
@@ -334,20 +334,20 @@ function App() {
     }
   }
 
-  async function tokenSupply(devToken = "x") {
+  async function tokenSupply(smartToken = "x") {
     if (typeof window.ethereum !== "undefined") {
       let contract;
       const provider = new ethers.providers.Web3Provider(window.ethereum);
-      if (devToken == "x") {
-        contract = new ethers.Contract(devTokenXAddress, devTokenAbi, provider);
+      if (smartToken == "x") {
+        contract = new ethers.Contract(smartTokenXAddress, smartTokenAbi, provider);
       } else {
-        contract = new ethers.Contract(devTokenYAddress, devTokenAbi, provider);
+        contract = new ethers.Contract(smartTokenYAddress, smartTokenAbi, provider);
       }
       try {
         const data = await contract.totalSupply();
         console.log(
           `total supply of ${
-            devToken == "x" ? "tokenX" : "tokenY"
+          smartToken == "x" ? "tokenX" : "tokenY"
           } is ${data.toString()}`
         );
       } catch (err) {
@@ -367,7 +367,7 @@ function App() {
       );
       try {
         const data = await contract.createPair(
-          devTokenXAddress,
+          smartTokenXAddress,
           underlyingTokenAddress
         );
         const receipt = await data.wait();
@@ -388,7 +388,7 @@ function App() {
       );
       try {
         const data = await contract.getPair(
-          devTokenXAddress,
+          smartTokenXAddress,
           underlyingTokenAddress
         );
         console.log(`tradingPair address is  ${data}`);
@@ -410,38 +410,38 @@ function App() {
         uniswapV2RouterABI,
         signer
       );
-      const devTokenX = new ethers.Contract(
-        devTokenXAddress,
-        devTokenAbi,
+      const smartTokenX = new ethers.Contract(
+        smartTokenXAddress,
+        smartTokenAbi,
         signer
       );
-      const devTokenY = new ethers.Contract(
+      const smartTokenY = new ethers.Contract(
         underlyingTokenAddress,
-        devTokenAbi,
+        smartTokenAbi,
         signer
       );
 
       try {
-        const allowance1 = await devTokenX.allowance(
+        const allowance1 = await smartTokenX.allowance(
           testAccountAddress,
           uniswapV2RouterAddress
         );
-        const allowance2 = await devTokenY.allowance(
+        const allowance2 = await smartTokenY.allowance(
           testAccountAddress,
           uniswapV2RouterAddress
         );
         console.log(`allowance1 : ${allowance1}`);
         console.log(`allowance2 : ${allowance2}`);
         if (+ethers.utils.formatEther(allowance1) < amount) {
-          await devTokenX.approve(uniswapV2RouterAddress, ethAmount);
+          await smartTokenX.approve(uniswapV2RouterAddress, ethAmount);
         }
 
         if (+ethers.utils.formatEther(allowance2) < amount) {
-          await devTokenY.approve(uniswapV2RouterAddress, ethAmount);
+          await smartTokenY.approve(uniswapV2RouterAddress, ethAmount);
         }
 
         const data = await contract.addLiquidity(
-          devTokenXAddress,
+          smartTokenXAddress,
           underlyingTokenAddress,
           ethAmount,
           ethAmount,
@@ -504,7 +504,7 @@ function App() {
         signer
       );
       try {
-        const fromTokenAddress = devTokenXAddress; // Token X
+        const fromTokenAddress = smartTokenXAddress; // Token X
         const toTokenAddress = underlyingTokenAddress; // Token Y
         const amountIn = ethers.utils.parseEther("1"); // 1 Token X
         const amountOutMin = "0"; // minimum acceptable amount of Token Y
@@ -515,12 +515,12 @@ function App() {
           gasLimit: 200000,
         };
 
-        const devTokenX = new ethers.Contract(
-          devTokenXAddress,
-          devTokenAbi,
+        const smartTokenX = new ethers.Contract(
+          smartTokenXAddress,
+          smartTokenAbi,
           signer
         );
-        await devTokenX.approve(uniswapV2RouterAddress, amountIn);
+        await smartTokenX.approve(uniswapV2RouterAddress, amountIn);
 
         const tx = await uniswapRouterContract.swapExactTokensForTokens(
           amountIn,

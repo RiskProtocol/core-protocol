@@ -23,32 +23,32 @@ contract Deposit is Test, TestHelper {
         // sanctionsContract
 
         // deploy token X
-        devTokenX = new DevToken();
-        // TOKEN1_NAME,
-        // TOKEN1_SYMBOL,
-        // address(tokenFactory),
-        // defaultOperators,
-        // sanctionsContract
+        smartTokenX = new SmartToken(
+            TOKEN1_NAME,
+            TOKEN1_SYMBOL,
+            address(tokenFactory),
+            sanctionsContract
+        );
         // deploy token Y
-        devTokenY = new DevToken();
-        // TOKEN2_NAME,
-        // TOKEN2_SYMBOL,
-        // address(tokenFactory),
-        // defaultOperators,
-        // sanctionsContract
+        smartTokenY = new SmartToken(
+            TOKEN2_NAME,
+            TOKEN2_SYMBOL,
+            address(tokenFactory),
+            sanctionsContract
+        );
 
         // initialize dev tokens in token factory
-        tokenFactory.initializeSMART(devTokenX, devTokenY);
+        tokenFactory.initialize(smartTokenX, smartTokenY);
 
         // invariant test
-        handler = new DepositHandler(devTokenX, mockERC20Token);
+        handler = new DepositHandler(smartTokenX, mockERC20Token);
         targetContract(address(handler));
     }
 
     // total supply of token x and y should be the same as total
     // deposit provided that rebase/withdrwal has not taken place
-    function invariant_TotalDeposit() public {
-        assertEq(handler.totalDeposit(), devTokenX.totalSupply());
-        assertEq(handler.totalDeposit(), devTokenY.totalSupply());
+    function invariant_TotalDeposit() public {        
+        assertEq(handler.totalDeposit(), smartTokenX.totalSupply());
+        assertEq(handler.totalDeposit(), smartTokenY.totalSupply());
     }
 }
