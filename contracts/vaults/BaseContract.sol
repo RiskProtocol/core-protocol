@@ -22,7 +22,7 @@ contract BaseContract is Initializable {
 
     function __BaseContract_init(
         address sanctionsContract_
-    ) public initializer {
+    ) internal onlyInitializing {
         sanctionsContract = sanctionsContract_;
     }
 

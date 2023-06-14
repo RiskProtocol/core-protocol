@@ -127,6 +127,11 @@ contract TokenFactory is
         }
     }
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
     function initialize(
         IERC20Update baseTokenAddress,
         address priceFeedAddress,
@@ -163,11 +168,6 @@ contract TokenFactory is
         mgmtFeesHistory.push(managementFeesRate);
         mgmtFeeSum.push(managementFeesRate);
         nextSequenceNumber = 1;
-    }
-
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() {
-        _disableInitializers();
     }
 
     function _authorizeUpgrade(

@@ -49,7 +49,7 @@ abstract contract ERC20Permit is
      *
      * It's a good idea to use the same `name` that is defined as the ERC20 token name.
      */
-    function __ERC20Permit_init(string memory name) public initializer {
+    function __ERC20Permit_init(string memory name) public onlyInitializing {
         __EIP712_init(name, "1");
     }
 
