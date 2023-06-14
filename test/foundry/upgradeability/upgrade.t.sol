@@ -62,6 +62,10 @@ contract _Test is Test, TestHelper {
     function testCanInitialize() public {
         assertEq(factoryWrapper.getInterval(), REBASE_INTERVAL);
         assertEq(address(factoryWrapper.getBaseToken()), address(underlying));
+        assertEq(smartTokenYWrapper.name(), TOKEN2_NAME);
+        assertEq((smartTokenYWrapper.symbol()), TOKEN2_SYMBOL);
+        assertEq(smartTokenXWrapper.name(), TOKEN1_NAME);
+        assertEq((smartTokenXWrapper.symbol()), TOKEN1_SYMBOL);
     }
 
     function testCanUpgrade() public {
@@ -69,18 +73,36 @@ contract _Test is Test, TestHelper {
 
         TokenFactory tokenFactory2 = new TokenFactory();
         factoryWrapper.upgradeTo(address(tokenFactory2));
-        vm.stopPrank();
 
         assertEq(factoryWrapper.getInterval(), REBASE_INTERVAL);
         assertEq(address(factoryWrapper.getBaseToken()), address(underlying));
         assertEq(address(factoryWrapper.owner()), address(owner));
+
+        SmartToken smartTok2 = new SmartToken();
+        smartTokenXWrapper.upgradeTo(address(smartTok2));
+        smartTokenYWrapper.upgradeTo(address(smartTok2));
+
+        assertEq(smartTokenYWrapper.name(), TOKEN2_NAME);
+        assertEq((smartTokenYWrapper.symbol()), TOKEN2_SYMBOL);
+        assertEq(smartTokenXWrapper.name(), TOKEN1_NAME);
+        assertEq((smartTokenXWrapper.symbol()), TOKEN1_SYMBOL);
+        assertEq(address(smartTokenXWrapper.owner()), address(owner));
+        assertEq(address(smartTokenYWrapper.owner()), address(owner));
+
+        vm.stopPrank();
     }
 
     function testUnauthorizedUpgrade() public {
         vm.startPrank(nonAuthorized);
         TokenFactory tokenFactory2 = new TokenFactory();
+        SmartToken smartTok2 = new SmartToken();
+
         vm.expectRevert();
         factoryWrapper.upgradeTo(address(tokenFactory2));
+        vm.expectRevert();
+        smartTokenXWrapper.upgradeTo(address(smartTok2));
+        vm.expectRevert();
+        smartTokenYWrapper.upgradeTo(address(smartTok2));
         vm.stopPrank();
     }
 }

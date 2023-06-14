@@ -4,18 +4,15 @@ pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-
 import "./SmartToken.sol";
 import "./../libraries/PriceFeed.sol";
 import "./BaseContract.sol";
-
 import "./../interfaces/IERC20Update.sol";
 
 error TokenFactory__MethodNotAllowed();
@@ -114,8 +111,6 @@ contract TokenFactory is
         __BaseContract_init(sanctionsContract_);
         __Ownable_init();
         __UUPSUpgradeable_init();
-
-        //
 
         baseToken = IERC20Update(baseTokenAddress);
         priceFeed = AggregatorV3Interface(priceFeedAddress);

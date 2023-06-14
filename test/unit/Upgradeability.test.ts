@@ -195,6 +195,27 @@ developmentChains.includes(network.name)
           expect(await tokenFactory.getSmartTokenAddress(0)).to.equal(
             SmartToken1.address
           );
+
+          const newSmartTokenFactory = await ethers.getContractFactory(
+            "SmartToken",
+            deployer
+          );
+
+          SmartToken1 = await upgrades.upgradeProxy(
+            SmartToken1.address,
+            newSmartTokenFactory
+          );
+
+          expect(await SmartToken1.name()).to.equal(TOKEN1_NAME);
+          expect(await SmartToken1.symbol()).to.equal(TOKEN1_SYMBOL);
+
+          SmartToken2 = await upgrades.upgradeProxy(
+            SmartToken2.address,
+            newSmartTokenFactory
+          );
+
+          expect(await SmartToken2.name()).to.equal(TOKEN2_NAME);
+          expect(await SmartToken2.symbol()).to.equal(TOKEN2_SYMBOL);
         });
         it(`it not allow non owners to upgrade`, async function () {
           let {
@@ -216,6 +237,19 @@ developmentChains.includes(network.name)
 
           await expect(
             upgrades.upgradeProxy(tokenFactory.address, newTokenFactory)
+          ).to.be.revertedWith("Ownable: caller is not the owner");
+
+          const newSmartTokenFactory = await ethers.getContractFactory(
+            "SmartToken",
+            tester
+          );
+
+          await expect(
+            upgrades.upgradeProxy(SmartToken1.address, newSmartTokenFactory)
+          ).to.be.revertedWith("Ownable: caller is not the owner");
+
+          await expect(
+            upgrades.upgradeProxy(SmartToken2.address, newSmartTokenFactory)
           ).to.be.revertedWith("Ownable: caller is not the owner");
         });
       });

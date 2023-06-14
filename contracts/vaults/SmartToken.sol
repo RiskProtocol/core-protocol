@@ -5,7 +5,6 @@ pragma solidity ^0.8.9;
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/interfaces/IERC4626Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
@@ -54,6 +53,11 @@ contract SmartToken is
         _;
     }
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
     function initialize(
         string memory tokenName,
         string memory tokenSymbol,
@@ -64,16 +68,10 @@ contract SmartToken is
         __ERC20_init(tokenName, tokenSymbol);
         __ERC20Permit_init(tokenName);
         __BaseContract_init(sanctionsContract_);
-        __Ownable_init(); //todo:is this required?
+        __Ownable_init(); //note: this is required as we'd need to ensure only owner can upgrade
         __UUPSUpgradeable_init();
-        //
         tokenFactory = TokenFactory(factoryAddress);
         underlyingToken = tokenFactory.getBaseToken();
-    }
-
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() {
-        _disableInitializers();
     }
 
     function _authorizeUpgrade(address) internal override onlyOwner {}
