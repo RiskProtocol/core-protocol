@@ -225,6 +225,19 @@ developmentChains.includes(network.name)
         });
       });
 
+      it("it should ensure that  smartTokens are initialized only once", async function () {
+        const { smartToken1, smartToken2, tokenFactory, tester } =
+          await loadFixture(deployTokenFixture);
+        await tokenFactory.initializeSMART(
+          smartToken1.address,
+
+          smartToken2.address
+        );
+        await expect(
+          tokenFactory.initializeSMART(smartToken1.address, smartToken2.address)
+        ).to.be.revertedWith("Smart Tokens have already been initialized!");
+      });
+
       describe("Others", async function () {
         it("it returns the correct decimals for underlying token", async function () {
           const { underlyingToken, tokenFactory } = await loadFixture(
@@ -1469,75 +1482,6 @@ developmentChains.includes(network.name)
             await smartToken2.balanceOf(tester.address),
             expectedBalance
           );
-        });
-      });
-
-      describe("Forbidden Functions", async function () {
-        it("should not allow users to call ERC20 totalSupply function", async function () {
-          const { tokenFactory, tester } = await loadFixture(
-            deployTokenFixture
-          );
-          await expect(tokenFactory.connect(tester).totalSupply()).to.be
-            .reverted;
-        });
-
-        it("should not allow users to call ERC20 balanceOf function", async function () {
-          const { tokenFactory, deployer, tester } = await loadFixture(
-            deployTokenFixture
-          );
-          await expect(tokenFactory.connect(tester).balanceOf(deployer.address))
-            .to.be.reverted;
-        });
-
-        it("should not allow users to call ERC20 transfer function", async function () {
-          const { tokenFactory, deployer, tester } = await loadFixture(
-            deployTokenFixture
-          );
-          const amount = ethers.utils.parseEther("6");
-          await expect(
-            tokenFactory.connect(tester).transfer(deployer.address, amount)
-          ).to.be.reverted;
-        });
-
-        it("should not allow users to call ERC20 allowance function", async function () {
-          const { tokenFactory, deployer, tester } = await loadFixture(
-            deployTokenFixture
-          );
-          await expect(
-            tokenFactory
-              .connect(tester)
-              .allowance(deployer.address, tester.address)
-          ).to.be.reverted;
-        });
-
-        it("should not allow users to call ERC20 approve function", async function () {
-          const { tokenFactory, deployer, tester } = await loadFixture(
-            deployTokenFixture
-          );
-          const amount = ethers.utils.parseEther("6");
-          await expect(
-            tokenFactory.connect(tester).approve(deployer.address, amount)
-          ).to.be.reverted;
-        });
-
-        it("should not allow users to call ERC20 transferFrom function", async function () {
-          const { tokenFactory, deployer, tester } = await loadFixture(
-            deployTokenFixture
-          );
-          const amount = ethers.utils.parseEther("6");
-          await expect(
-            tokenFactory
-              .connect(tester)
-              .transferFrom(deployer.address, tester.address, amount)
-          ).to.be.reverted;
-        });
-
-        it("should allow only deployer to call ERC20 allowance function", async function () {
-          const { tokenFactory, deployer, tester } = await loadFixture(
-            deployTokenFixture
-          );
-          await expect(tokenFactory.allowance(deployer.address, tester.address))
-            .to.not.be.reverted;
         });
       });
     })
