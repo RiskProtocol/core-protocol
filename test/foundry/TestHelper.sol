@@ -2,8 +2,6 @@
 pragma solidity ^0.8.9;
 
 import "forge-std/Test.sol";
-
-import "forge-std/console.sol";
 import "../../contracts/vaults/TokenFactory.sol";
 import "../../contracts/mocks/MockV3Aggregator.sol";
 import "../../contracts/mocks/MockERC20Token.sol";
