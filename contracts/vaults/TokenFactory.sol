@@ -356,7 +356,7 @@ contract TokenFactory is
             if (scheduledRebase.isNaturalRebase) {
                 lastTimeStamp += interval;
             }
-            uint256 rebasePrice = scheduledRebase.price / 10 ** decimals(); //todo:remove this pricefeed
+            uint256 rebasePrice = scheduledRebase.price / 10 ** decimals();
             uint256 asset1Price = rebasePrice.ceilDiv(3); // this should be gotten from the oracle
             uint256 divisor = rebasePrice.ceilDiv(2);
             scallingFactorX.push(
