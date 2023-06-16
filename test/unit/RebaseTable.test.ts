@@ -339,5 +339,37 @@ developmentChains.includes(network.name)
           );
         });
       });
+
+      it(`it should revert if rebase signature is not signed by API wallet`, async function () {
+        const {
+          tokenFactory,
+          deployer,
+          underlyingToken,
+          smartToken1,
+          smartToken2,
+          tester,
+        } = await loadFixture(deployTokenFixture);
+
+        const depositAmount = ethers.utils.parseEther("1");
+
+        await tokenFactory.initializeSMART(
+          smartToken1.address,
+
+          smartToken2.address
+        );
+
+        // deposit underlying token
+        await underlyingToken.approve(tokenFactory.address, depositAmount);
+        await smartToken1.deposit(depositAmount, deployer.address);
+
+        // trigger a rebase
+
+        await expect(
+          tokenFactory.executeRebase(
+            encodedEarlyRebase1.encodedData,
+            encodedEarlyRebase2.signature //invalid sig
+          )
+        ).to.be.revertedWith("Invalid Signature");
+      });
     })
   : describe.skip;

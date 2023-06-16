@@ -473,7 +473,7 @@ contract TokenFactory is
     function verifyAndDecode(
         bytes memory signature,
         bytes memory encodedData
-    ) private pure returns (ScheduledRebase memory) {
+    ) private view returns (ScheduledRebase memory) {
         bytes32 hash = keccak256(encodedData);
         bytes32 ethSignedMessageHash = keccak256(
             abi.encodePacked("\x19Ethereum Signed Message:\n32", hash)
@@ -484,10 +484,7 @@ contract TokenFactory is
         address recoveredAddress = ecrecover(ethSignedMessageHash, v, r, s);
 
         // Verify the address
-        require(
-            recoveredAddress == 0x786d956DBc070815F9b53a6dd03D38EDf33EE2C7,
-            "Invalid Signature "
-        ); // todo: update this
+        require(recoveredAddress == signersAddress, "Invalid Signature");
 
         // If the signature is valid, decode the encodedData
         (
