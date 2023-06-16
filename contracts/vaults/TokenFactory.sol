@@ -48,6 +48,7 @@ contract TokenFactory is
     uint256 private lastTimeStamp;
     bool private smartTokenInitialized;
     address private signersAddress;
+    mapping(uint256 => bool) private sequenceStatus;
     //management fees
     uint32 private constant MGMT_FEE_SCALING_FACTOR = 100000;
     uint32 private managementFeesRate;
@@ -327,10 +328,13 @@ contract TokenFactory is
             encodedData
         );
 
-        if (rebaseCall.sequenceNumber < nextSequenceNumber) {
+        if (
+            rebaseCall.sequenceNumber < nextSequenceNumber ||
+            sequenceStatus[rebaseCall.sequenceNumber]
+        ) {
             revert TokenFactory__InvalidSequenceNumber();
         }
-
+        sequenceStatus[rebaseCall.sequenceNumber] = true;
         scheduledRebases.push(rebaseCall);
 
         if (rebaseCall.sequenceNumber == nextSequenceNumber) {

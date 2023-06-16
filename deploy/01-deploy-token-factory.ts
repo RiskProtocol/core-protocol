@@ -5,6 +5,7 @@ import {
   BASE_TOKEN_ADDRESS,
   REBASE_INTERVAL,
   sanctionsContractAddress,
+  signersAddress,
 } from "../helper-hardhat-config";
 import { verify } from "../utils/verify";
 const { ethers, upgrades } = require("hardhat");
@@ -32,7 +33,12 @@ const func: DeployFunction = async ({
   const TokenFactoryContract = await ethers.getContractFactory("TokenFactory");
   const TokenFactory = await upgrades.deployProxy(
     TokenFactoryContract,
-    [baseTokenAddress, REBASE_INTERVAL, sanctionsContractAddress],
+    [
+      baseTokenAddress,
+      REBASE_INTERVAL,
+      sanctionsContractAddress,
+      signersAddress,
+    ],
     { initializer: "initialize", kind: "uups" }
   );
   await deployments.save("TokenFactory", TokenFactory);
@@ -54,6 +60,7 @@ const func: DeployFunction = async ({
       baseTokenAddress,
       REBASE_INTERVAL,
       sanctionsContractAddress,
+      signersAddress,
     ]);
   }
 };
