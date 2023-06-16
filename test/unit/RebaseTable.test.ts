@@ -9,6 +9,11 @@ import {
   TOKEN2_SYMBOL,
   DECIMALS,
   INITIAL_PRICE,
+  signersAddress,
+  encodedNaturalRebase1,
+  encodedEarlyRebase1,
+  encodedEarlyRebase2,
+  encodedEarlyRebase3,
 } from "../../helper-hardhat-config";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 
@@ -68,6 +73,7 @@ developmentChains.includes(network.name)
           underlyingToken.address,
           REBASE_INTERVAL,
           sanctionsContract.address,
+          signersAddress,
         ]);
         await tokenFactory.deployed();
 
@@ -109,6 +115,7 @@ developmentChains.includes(network.name)
           "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D",
           REBASE_INTERVAL,
           sanctionsContract.address,
+          signersAddress,
         ]);
         await tokenFactory2.deployed();
 
@@ -152,7 +159,10 @@ developmentChains.includes(network.name)
             await smartToken1.transfer(tester.address, transferAmount);
 
             // trigger a rebase
-            await tokenFactory.executeRebase(1, true, INITIAL_PRICE);
+            await tokenFactory.executeRebase(
+              encodedNaturalRebase1.encodedData,
+              encodedNaturalRebase1.signature
+            );
 
             // confirm user balances when rebase has taken place
             assert.equal(
@@ -192,10 +202,16 @@ developmentChains.includes(network.name)
           await smartToken1.deposit(depositAmount, deployer.address);
 
           // trigger a rebase
-          await tokenFactory.executeRebase(1, false, INITIAL_PRICE);
+          await tokenFactory.executeRebase(
+            encodedEarlyRebase1.encodedData,
+            encodedEarlyRebase1.signature
+          );
           expect(await tokenFactory.getNextSequenceNumber()).to.equal(2);
 
-          await tokenFactory.executeRebase(2, false, INITIAL_PRICE);
+          await tokenFactory.executeRebase(
+            encodedEarlyRebase2.encodedData,
+            encodedEarlyRebase2.signature
+          );
           expect(await tokenFactory.getNextSequenceNumber()).to.equal(3);
         });
 
@@ -222,12 +238,21 @@ developmentChains.includes(network.name)
           await smartToken1.deposit(depositAmount, deployer.address);
 
           // trigger a rebase
-          await tokenFactory.executeRebase(1, false, INITIAL_PRICE);
+          await tokenFactory.executeRebase(
+            encodedEarlyRebase1.encodedData,
+            encodedEarlyRebase1.signature
+          );
 
-          await tokenFactory.executeRebase(3, false, INITIAL_PRICE);
+          await tokenFactory.executeRebase(
+            encodedEarlyRebase3.encodedData,
+            encodedEarlyRebase3.signature
+          );
 
           expect(await tokenFactory.getNextSequenceNumber()).to.equal(2);
-          await tokenFactory.executeRebase(2, false, INITIAL_PRICE);
+          await tokenFactory.executeRebase(
+            encodedEarlyRebase2.encodedData,
+            encodedEarlyRebase2.signature
+          );
 
           expect(await tokenFactory.getNextSequenceNumber()).to.equal(4);
         });
@@ -255,12 +280,20 @@ developmentChains.includes(network.name)
           await smartToken1.deposit(depositAmount, deployer.address);
 
           // trigger a rebase
-          await tokenFactory.executeRebase(1, false, INITIAL_PRICE);
-          await tokenFactory.executeRebase(2, false, INITIAL_PRICE);
-          await tokenFactory.executeRebase(3, false, INITIAL_PRICE);
-          await tokenFactory.executeRebase(4, false, INITIAL_PRICE);
-          await tokenFactory.executeRebase(5, false, INITIAL_PRICE);
-          expect(await tokenFactory.getNextSequenceNumber()).to.equal(6);
+          await tokenFactory.executeRebase(
+            encodedEarlyRebase1.encodedData,
+            encodedEarlyRebase1.signature
+          );
+          await tokenFactory.executeRebase(
+            encodedEarlyRebase2.encodedData,
+            encodedEarlyRebase2.signature
+          );
+          await tokenFactory.executeRebase(
+            encodedEarlyRebase3.encodedData,
+            encodedEarlyRebase3.signature
+          );
+
+          expect(await tokenFactory.getNextSequenceNumber()).to.equal(4);
         });
 
         it(`it should handle rebases with already executed sequence properly`, async function () {
@@ -286,11 +319,20 @@ developmentChains.includes(network.name)
           await smartToken1.deposit(depositAmount, deployer.address);
 
           // trigger a rebase
-          await tokenFactory.executeRebase(1, false, INITIAL_PRICE);
-          await tokenFactory.executeRebase(2, false, INITIAL_PRICE);
+          await tokenFactory.executeRebase(
+            encodedEarlyRebase1.encodedData,
+            encodedEarlyRebase1.signature
+          );
+          await tokenFactory.executeRebase(
+            encodedEarlyRebase2.encodedData,
+            encodedEarlyRebase2.signature
+          );
 
           await expect(
-            tokenFactory.executeRebase(1, false, INITIAL_PRICE)
+            tokenFactory.executeRebase(
+              encodedEarlyRebase1.encodedData,
+              encodedEarlyRebase1.signature
+            )
           ).to.be.revertedWithCustomError(
             tokenFactory,
             "TokenFactory__InvalidSequenceNumber"

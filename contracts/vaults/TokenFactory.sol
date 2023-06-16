@@ -47,6 +47,7 @@ contract TokenFactory is
     uint256 private interval;
     uint256 private lastTimeStamp;
     bool private smartTokenInitialized;
+    address private signersAddress;
     //management fees
     uint32 private constant MGMT_FEE_SCALING_FACTOR = 100000;
     uint32 private managementFeesRate;
@@ -108,7 +109,8 @@ contract TokenFactory is
     function initialize(
         IERC20Update baseTokenAddress,
         uint256 rebaseInterval, // in seconds
-        address sanctionsContract_
+        address sanctionsContract_,
+        address signersAddress_
     ) public initializer {
         __BaseContract_init(sanctionsContract_);
         __Ownable_init();
@@ -124,6 +126,7 @@ contract TokenFactory is
         mgmtFeeSum.push(managementFeesRate);
         nextSequenceNumber = 1;
         smartTokenInitialized = false;
+        signersAddress = signersAddress_;
     }
 
     function _authorizeUpgrade(
@@ -316,19 +319,21 @@ contract TokenFactory is
     }
 
     function executeRebase(
-        uint256 sequenceNumber,
-        bool isNaturalRebase,
-        uint256 price
+        bytes memory encodedData,
+        bytes memory signature
     ) external onlyOwner {
-        if (sequenceNumber < nextSequenceNumber) {
+        ScheduledRebase memory rebaseCall = verifyAndDecode(
+            signature,
+            encodedData
+        );
+
+        if (rebaseCall.sequenceNumber < nextSequenceNumber) {
             revert TokenFactory__InvalidSequenceNumber();
         }
 
-        scheduledRebases.push(
-            ScheduledRebase(sequenceNumber, isNaturalRebase, price)
-        );
+        scheduledRebases.push(rebaseCall);
 
-        if (sequenceNumber == nextSequenceNumber) {
+        if (rebaseCall.sequenceNumber == nextSequenceNumber) {
             rebase();
         }
     }
@@ -458,6 +463,63 @@ contract TokenFactory is
         ) {
             lastRebaseCount[owner_] = getScallingFactorLength();
         }
+    }
+
+    /*
+    note: The following functions will be used to decode the encoded data as well as verify
+    the signature in the function call
+     */
+
+    function verifyAndDecode(
+        bytes memory signature,
+        bytes memory encodedData
+    ) private pure returns (ScheduledRebase memory) {
+        bytes32 hash = keccak256(encodedData);
+        bytes32 ethSignedMessageHash = keccak256(
+            abi.encodePacked("\x19Ethereum Signed Message:\n32", hash)
+        );
+
+        // Recover the address
+        (uint8 v, bytes32 r, bytes32 s) = splitSignature(signature);
+        address recoveredAddress = ecrecover(ethSignedMessageHash, v, r, s);
+
+        // Verify the address
+        require(
+            recoveredAddress == 0x786d956DBc070815F9b53a6dd03D38EDf33EE2C7,
+            "Invalid Signature "
+        ); // todo: update this
+
+        // If the signature is valid, decode the encodedData
+        (
+            uint256 sequenceNumber,
+            bool isNaturalRebase,
+            uint256 underlyingValue
+        ) = abi.decode(encodedData, (uint256, bool, uint256));
+        ScheduledRebase memory data = ScheduledRebase(
+            sequenceNumber,
+            isNaturalRebase,
+            underlyingValue
+        );
+        return data;
+    }
+
+    function splitSignature(
+        bytes memory sig
+    ) private pure returns (uint8 v, bytes32 r, bytes32 s) {
+        require(sig.length == 65, "invalid signature length");
+
+        assembly {
+            // first 32 bytes, after the length prefix
+            r := mload(add(sig, 32))
+            // second 32 bytes
+            s := mload(add(sig, 64))
+            // final byte (first byte of the next 32 bytes)
+            v := byte(0, mload(add(sig, 96)))
+        }
+    }
+
+    function setSignersAddress(address addr) public onlyOwner {
+        signersAddress = addr;
     }
 
     /*
@@ -596,6 +658,10 @@ contract TokenFactory is
     }
 
     //  other getter methods
+    function getSignersAddress() public view returns (address) {
+        return signersAddress;
+    }
+
     function getScheduledRebases()
         public
         view

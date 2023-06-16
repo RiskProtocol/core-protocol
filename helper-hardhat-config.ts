@@ -1,34 +1,74 @@
 export interface networkConfigItem {
-    priceFeed?: string
-    blockConfirmations?: number
+  priceFeed?: string;
+  blockConfirmations?: number;
 }
 
 export interface networkConfigInfo {
-    [key: string]: networkConfigItem
+  [key: string]: networkConfigItem;
 }
 
 export const networkConfig: networkConfigInfo = {
-    goerli: {
-        priceFeed: '0xD4a33860578De61DBAbDc8BFdb98FD742fA7028e',
-        blockConfirmations: 6
-    },
-    polygon: {
-        priceFeed: '0xF9680D99D6C9589e2a93a78A04A279e509205945'
-    },
-    localhost: {},
-    hardhat: {}
-}
+  goerli: {
+    priceFeed: "0xD4a33860578De61DBAbDc8BFdb98FD742fA7028e",
+    blockConfirmations: 6,
+  },
+  polygon: {
+    priceFeed: "0xF9680D99D6C9589e2a93a78A04A279e509205945",
+  },
+  localhost: {},
+  hardhat: {},
+};
 
-export const developmentChains = ['localhost', 'hardhat']
+export const developmentChains = ["localhost", "hardhat"];
 
-export const DECIMALS = "18"
-export const INITIAL_PRICE = "2000000000000000000000" // 2000, we then add the 18 decimals which is 18 zeros
-export const BASE_TOKEN_ADDRESS = "0x70997970C51812dc3A010C7d01b50e0d17dc79C8"
-export const BASE_TOKEN_DECIMALS = 18
-export const TOKEN1_NAME = "RistP One"
-export const TOKEN1_SYMBOL = "R1"
-export const TOKEN2_NAME = "RistP Two"
-export const TOKEN2_SYMBOL = "R2"
-export const REBASE_INTERVAL = 7890000 // 3months in seconds
-export const defaultOperators: string[] = []
-export const sanctionsContractAddress = "0x40C57923924B5c5c5455c48D93317139ADDaC8fb"; //polygon network
+export const DECIMALS = "18";
+export const INITIAL_PRICE = "2000000000000000000000"; // 2000, we then add the 18 decimals which is 18 zeros
+export const BASE_TOKEN_ADDRESS = "0x70997970C51812dc3A010C7d01b50e0d17dc79C8";
+export const BASE_TOKEN_DECIMALS = 18;
+export const TOKEN1_NAME = "RistP One";
+export const TOKEN1_SYMBOL = "R1";
+export const TOKEN2_NAME = "RistP Two";
+export const TOKEN2_SYMBOL = "R2";
+export const REBASE_INTERVAL = 7890000; // 3months in seconds
+export const defaultOperators: string[] = [];
+export const sanctionsContractAddress =
+  "0x40C57923924B5c5c5455c48D93317139ADDaC8fb"; //polygon network
+export const signersAddress = "0x786d956DBc070815F9b53a6dd03D38EDf33EE2C7"; //signer address on the webservice
+export const encodedNaturalRebase1 = {
+  signature:
+    "0x01be563feca88a0d0f9e0ff10c0824fce4f23b11aaa9e6a3c04bd9715a3d0285011e98584a95a6a432fd2d0d2e269f648592249d20fa4c101c2445c8199872521b",
+  encodedData:
+    "0x0000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000006c6b935b8bbd400000",
+};
+export const encodedNaturalRebase2 = {
+  signature:
+    "0xfe4a5fbc51e3a50032a7948127b94e2aeef9d7ce6a712e66152369a19f373c561f84799d405fa8fb15004555366ed930c6377f7896c099bed2a62f56fcd479951b",
+  encodedData:
+    "0x0000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000006c6b935b8bbd400000",
+};
+
+export const encodedNaturalRebase3 = {
+  signature:
+    "0x04bb9d8a36c65d253d9db86cdb0eee2b35530346410704e1b7563b0edaffd45e683e76ca2021dbb33e4c6d4dbc65a4307e8f8dd1d865d7f129e2d21236352b9a1c",
+  encodedData:
+    "0x0000000000000000000000000000000000000000000000000000000000000003000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000006c6b935b8bbd400000",
+};
+export const encodedEarlyRebase1 = {
+  signature:
+    "0xb9f69f75c22c19dec0f5dfcb28e2226cb3cf114d070b6510d1eb075425edea0438d8304ab315483ae885fc74dd33db7e1a99067d274b075e42d9054df5cb89501b",
+  encodedData:
+    "0x0000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000006c6b935b8bbd400000",
+};
+
+export const encodedEarlyRebase2 = {
+  signature:
+    "0xda2cc086e08c92b24b0f7432dbee659871dd495896cfeb0602d1718bffe05bbc13b08234cfc9b990c304e3b904506ee50cff17bd4050a5b8dc90397cccab2b581c",
+  encodedData:
+    "0x0000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000006c6b935b8bbd400000",
+};
+export const encodedEarlyRebase3 = {
+  signature:
+    "0x0b3f0f860956a37e4925b4da51b95aafc280eb5c111f74e3baf642e91864862a5db89fc4bdb480dac58ee543921769a305c43de3f546c2c14ffdbcd2efeb70a41b",
+  encodedData:
+    "0x0000000000000000000000000000000000000000000000000000000000000003000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000006c6b935b8bbd400000",
+};

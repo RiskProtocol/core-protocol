@@ -9,6 +9,7 @@ import {
   TOKEN2_SYMBOL,
   DECIMALS,
   INITIAL_PRICE,
+  signersAddress,
 } from "../../helper-hardhat-config";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 
@@ -40,6 +41,7 @@ developmentChains.includes(network.name)
           underlyingToken.address,
           REBASE_INTERVAL,
           sanctionsContract.address,
+          signersAddress,
         ]);
         await tokenFactory.deployed();
 

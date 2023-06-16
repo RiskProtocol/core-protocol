@@ -25,7 +25,8 @@ contract _Test is Test, TestHelper {
         factoryWrapper.initialize(
             underlying,
             REBASE_INTERVAL,
-            sanctionsContract
+            sanctionsContract,
+            signersAddress
         );
 
         // deploy token X

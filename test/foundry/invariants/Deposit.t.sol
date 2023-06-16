@@ -22,7 +22,8 @@ contract Deposit is Test, TestHelper {
         factoryWrapper.initialize(
             mockERC20Token,
             REBASE_INTERVAL,
-            sanctionsContract
+            sanctionsContract,
+            signersAddress
         );
 
         // deploy token X

@@ -9,6 +9,7 @@ import {
   TOKEN2_SYMBOL,
   DECIMALS,
   INITIAL_PRICE,
+  signersAddress,
 } from "../../helper-hardhat-config";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { getPermitDigest, sign } from "../../utils/signatures";
@@ -44,6 +45,7 @@ developmentChains.includes(network.name)
           underlyingToken.address,
           REBASE_INTERVAL,
           sanctionsContract.address,
+          signersAddress,
         ]);
         await tokenFactory.deployed();
 
@@ -65,6 +67,7 @@ developmentChains.includes(network.name)
           underlyingTokenWithoutPermit.address,
           REBASE_INTERVAL,
           sanctionsContract.address,
+          signersAddress,
         ]);
         await tokenFactory1.deployed();
 
@@ -224,7 +227,6 @@ developmentChains.includes(network.name)
 
             smartToken2.address
           );
-          // await underlyingTokenWithoutPermit.approve(tokenFactory1.address, depositAmount);
 
           // Create the approval request
           const approve = {

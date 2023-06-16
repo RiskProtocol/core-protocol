@@ -27,4 +27,5 @@ abstract contract TestHelper {
     address public deployer = 0xe738696676571D9b74C81716E4aE797c2440d306;
     address public sanctionsContract =
         0x40C57923924B5c5c5455c48D93317139ADDaC8fb; //polygon network
+    address public signersAddress = 0x786d956DBc070815F9b53a6dd03D38EDf33EE2C7;
 }

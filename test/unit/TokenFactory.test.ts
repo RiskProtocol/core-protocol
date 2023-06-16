@@ -9,6 +9,9 @@ import {
   TOKEN2_SYMBOL,
   DECIMALS,
   INITIAL_PRICE,
+  signersAddress,
+  encodedNaturalRebase1,
+  encodedNaturalRebase2,
 } from "../../helper-hardhat-config";
 import { loadFixture, time } from "@nomicfoundation/hardhat-network-helpers";
 import { token } from "../../typechain-types/@openzeppelin/contracts";
@@ -44,6 +47,7 @@ developmentChains.includes(network.name)
           underlyingToken.address,
           REBASE_INTERVAL,
           sanctionsContract.address,
+          signersAddress,
         ]);
         await tokenFactory.deployed();
 
@@ -85,6 +89,7 @@ developmentChains.includes(network.name)
           "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D",
           REBASE_INTERVAL,
           sanctionsContract.address,
+          signersAddress,
         ]);
         await tokenFactory2.deployed();
 
@@ -106,6 +111,7 @@ developmentChains.includes(network.name)
           underlyingTokenWithoutPermit.address,
           REBASE_INTERVAL,
           sanctionsContract.address,
+          signersAddress,
         ]);
         await tokenFactory3.deployed();
 
@@ -542,7 +548,10 @@ developmentChains.includes(network.name)
           await smartToken1.deposit(depositAmount, deployer.address);
 
           // trigger rebase
-          await tokenFactory.executeRebase(1, true, INITIAL_PRICE);
+          await tokenFactory.executeRebase(
+            encodedNaturalRebase1.encodedData,
+            encodedNaturalRebase1.signature
+          );
 
           await expect(
             smartToken1.withdraw(
@@ -576,7 +585,10 @@ developmentChains.includes(network.name)
           await smartToken1.deposit(depositAmount, deployer.address);
 
           // trigger rebase
-          await tokenFactory.executeRebase(1, true, INITIAL_PRICE);
+          await tokenFactory.executeRebase(
+            encodedNaturalRebase1.encodedData,
+            encodedNaturalRebase1.signature
+          );
 
           await expect(
             smartToken1.withdraw(
@@ -934,15 +946,10 @@ developmentChains.includes(network.name)
           await smartToken1.deposit(depositAmount, deployer.address);
 
           // trigger rebase
-          await tokenFactory.executeRebase(1, true, INITIAL_PRICE);
-          //   await expect(
-          //     tokenFactory.redeem(
-          //       depositAmount,
-          //       deployer.address,
-          //       deployer.address
-          //     )
-          //   ).to.emit(tokenFactory, "RebaseApplied");
-          // });
+          await tokenFactory.executeRebase(
+            encodedNaturalRebase1.encodedData,
+            encodedNaturalRebase1.signature
+          );
 
           await expect(
             smartToken1.redeem(
@@ -1272,7 +1279,12 @@ developmentChains.includes(network.name)
             deployTokenFixture
           );
           await expect(
-            tokenFactory.connect(tester).executeRebase(1, true, INITIAL_PRICE)
+            tokenFactory
+              .connect(tester)
+              .executeRebase(
+                encodedNaturalRebase1.encodedData,
+                encodedNaturalRebase1.signature
+              )
           ).to.be.reverted;
         });
 
@@ -1281,7 +1293,10 @@ developmentChains.includes(network.name)
             deployTokenFixture
           );
           await expect(
-            tokenFactory.executeRebase(1, true, INITIAL_PRICE)
+            tokenFactory.executeRebase(
+              encodedNaturalRebase1.encodedData,
+              encodedNaturalRebase1.signature
+            )
           ).to.emit(tokenFactory, "Rebase");
         });
 
@@ -1313,7 +1328,10 @@ developmentChains.includes(network.name)
           await smartToken1.transfer(tester.address, transferAmount);
 
           // trigger a rebase
-          await tokenFactory.executeRebase(1, true, INITIAL_PRICE);
+          await tokenFactory.executeRebase(
+            encodedNaturalRebase1.encodedData,
+            encodedNaturalRebase1.signature
+          );
 
           // confirm user balances when rebase has taken place
           assert.equal(
@@ -1367,8 +1385,14 @@ developmentChains.includes(network.name)
           await smartToken2.transfer(tester.address, transferAmount);
 
           // trigger a rebase
-          await tokenFactory.executeRebase(1, true, INITIAL_PRICE);
-          await tokenFactory.executeRebase(2, true, INITIAL_PRICE);
+          await tokenFactory.executeRebase(
+            encodedNaturalRebase1.encodedData,
+            encodedNaturalRebase1.signature
+          );
+          await tokenFactory.executeRebase(
+            encodedNaturalRebase2.encodedData,
+            encodedNaturalRebase2.signature
+          );
           // confirm user balances when rebase has taken place
           assert.equal(
             await smartToken1.balanceOf(deployer.address),
@@ -1434,7 +1458,10 @@ developmentChains.includes(network.name)
             .transfer(deployer.address, transferAmount);
 
           // trigger a rebase
-          await tokenFactory.executeRebase(1, true, INITIAL_PRICE);
+          await tokenFactory.executeRebase(
+            encodedNaturalRebase1.encodedData,
+            encodedNaturalRebase1.signature
+          );
 
           // confirm user balances when rebase has taken place
           assert.equal(
