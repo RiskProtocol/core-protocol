@@ -21,16 +21,6 @@ developmentChains.includes(network.name)
       async function deployTokenFixture() {
         const [deployer, tester] = await ethers.getSigners();
 
-        const MockV3AggregatorFactory = await ethers.getContractFactory(
-          "MockV3Aggregator",
-          deployer
-        );
-        const mockV3Aggregator = await MockV3AggregatorFactory.deploy(
-          DECIMALS,
-          INITIAL_PRICE
-        );
-        await mockV3Aggregator.deployed();
-
         const MockERC20TokenWithPermit = await ethers.getContractFactory(
           "MockERC20TokenWithPermit",
           deployer
@@ -53,7 +43,6 @@ developmentChains.includes(network.name)
 
         let tokenFactory = await upgrades.deployProxy(TokenFactory, [
           underlyingToken.address,
-          mockV3Aggregator.address,
           REBASE_INTERVAL,
           sanctionsContract.address,
         ]);
@@ -95,7 +84,6 @@ developmentChains.includes(network.name)
 
         const tokenFactory2 = await upgrades.deployProxy(TokenFactory2, [
           "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D",
-          mockV3Aggregator.address,
           REBASE_INTERVAL,
           sanctionsContract.address,
         ]);
@@ -117,7 +105,6 @@ developmentChains.includes(network.name)
 
         const tokenFactory3 = await upgrades.deployProxy(TokenFactory3Factory, [
           underlyingTokenWithoutPermit.address,
-          mockV3Aggregator.address,
           REBASE_INTERVAL,
           sanctionsContract.address,
         ]);
@@ -155,7 +142,6 @@ developmentChains.includes(network.name)
         return {
           SmartToken1,
           SmartToken2,
-          mockV3Aggregator,
           underlyingToken,
           tokenFactory,
           deployer,

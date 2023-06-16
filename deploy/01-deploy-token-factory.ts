@@ -17,24 +17,14 @@ const func: DeployFunction = async ({
   const { deploy, log } = deployments;
   const { deployer } = await getNamedAccounts();
 
-  /* While deploying on localhost or hardhat, we would like to use a mock for Price feed
-      because they don't exist on those chains, we would equally want to deploy the price feed
-      with the correct contract address for different chains
-    */
-
-  let priceFeedAddress: string;
   let baseTokenAddress: string;
 
   if (developmentChains.includes(network.name)) {
-    const ethUsdAggregator = await deployments.get("MockV3Aggregator");
-    priceFeedAddress = ethUsdAggregator.address;
-
     const mockERC20TokenWithPermit = await deployments.get(
       "MockERC20TokenWithPermit"
     );
     baseTokenAddress = mockERC20TokenWithPermit.address;
   } else {
-    priceFeedAddress = networkConfig[network.name].priceFeed!;
     baseTokenAddress = BASE_TOKEN_ADDRESS;
   }
 
@@ -42,12 +32,7 @@ const func: DeployFunction = async ({
   const TokenFactoryContract = await ethers.getContractFactory("TokenFactory");
   const TokenFactory = await upgrades.deployProxy(
     TokenFactoryContract,
-    [
-      baseTokenAddress,
-      priceFeedAddress,
-      REBASE_INTERVAL,
-      sanctionsContractAddress,
-    ],
+    [baseTokenAddress, REBASE_INTERVAL, sanctionsContractAddress],
     { initializer: "initialize", kind: "uups" }
   );
   await deployments.save("TokenFactory", TokenFactory);
@@ -67,7 +52,6 @@ const func: DeployFunction = async ({
   ) {
     await verify(TokenFactory.address, [
       baseTokenAddress,
-      priceFeedAddress,
       REBASE_INTERVAL,
       sanctionsContractAddress,
     ]);

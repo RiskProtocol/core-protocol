@@ -3,13 +3,11 @@ pragma solidity ^0.8.9;
 
 import "forge-std/Test.sol";
 import "../../contracts/vaults/TokenFactory.sol";
-import "../../contracts/mocks/MockV3Aggregator.sol";
 import "../../contracts/mocks/MockERC20Token.sol";
 import "../../contracts/vaults/SmartToken.sol";
 import "../../contracts/mocks/MockUUPSProxy.sol";
 
 abstract contract TestHelper {
-    MockV3Aggregator public mockV3Aggregator;
     MockERC20Token public mockERC20Token;
     TokenFactory public tokenFactory;
     SmartToken public smartTokenX;

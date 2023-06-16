@@ -11,7 +11,6 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./SmartToken.sol";
-import "./../libraries/PriceFeed.sol";
 import "./BaseContract.sol";
 import "./../interfaces/IERC20Update.sol";
 
@@ -34,7 +33,6 @@ contract TokenFactory is
     UUPSUpgradeable,
     BaseContract
 {
-    using PriceFeed for AggregatorV3Interface;
     using MathUpgradeable for uint256;
     using SafeMathUpgradeable for uint256;
     using SafeMathUpgradeable for uint8;
@@ -43,7 +41,6 @@ contract TokenFactory is
     // State variables
     uint256[] private scallingFactorX;
     SmartToken[] private smartTokenArray;
-    AggregatorV3Interface private priceFeed;
     mapping(address => uint256) private lastRebaseCount;
     IERC20Update private baseToken;
     uint8 private baseTokenDecimals;
@@ -62,6 +59,7 @@ contract TokenFactory is
         //ScheduledRebase
         uint256 sequenceNumber;
         bool isNaturalRebase;
+        uint256 price;
     }
 
     ScheduledRebase[] private scheduledRebases;
@@ -109,7 +107,6 @@ contract TokenFactory is
 
     function initialize(
         IERC20Update baseTokenAddress,
-        address priceFeedAddress,
         uint256 rebaseInterval, // in seconds
         address sanctionsContract_
     ) public initializer {
@@ -118,7 +115,6 @@ contract TokenFactory is
         __UUPSUpgradeable_init();
 
         baseToken = IERC20Update(baseTokenAddress);
-        priceFeed = AggregatorV3Interface(priceFeedAddress);
         (bool success, uint8 assetDecimals) = _tryGetAssetDecimals(baseToken);
         baseTokenDecimals = success ? assetDecimals : 18;
         interval = rebaseInterval;
@@ -321,13 +317,16 @@ contract TokenFactory is
 
     function executeRebase(
         uint256 sequenceNumber,
-        bool isNaturalRebase
+        bool isNaturalRebase,
+        uint256 price
     ) external onlyOwner {
         if (sequenceNumber < nextSequenceNumber) {
             revert TokenFactory__InvalidSequenceNumber();
         }
 
-        scheduledRebases.push(ScheduledRebase(sequenceNumber, isNaturalRebase));
+        scheduledRebases.push(
+            ScheduledRebase(sequenceNumber, isNaturalRebase, price)
+        );
 
         if (sequenceNumber == nextSequenceNumber) {
             rebase();
@@ -348,7 +347,7 @@ contract TokenFactory is
             if (scheduledRebase.isNaturalRebase) {
                 lastTimeStamp += interval;
             }
-            uint256 rebasePrice = priceFeed.getPrice() / 10 ** decimals();
+            uint256 rebasePrice = scheduledRebase.price / 10 ** decimals(); //todo:remove this pricefeed
             uint256 asset1Price = rebasePrice.ceilDiv(3); // this should be gotten from the oracle
             uint256 divisor = rebasePrice.ceilDiv(2);
             scallingFactorX.push(
@@ -619,10 +618,6 @@ contract TokenFactory is
 
     function getManagementFeeState() public view returns (bool) {
         return managementFeeEnabled;
-    }
-
-    function getPriceFeedAddress() public view returns (AggregatorV3Interface) {
-        return priceFeed;
     }
 
     function getScallingFactorLength() public view returns (uint256) {

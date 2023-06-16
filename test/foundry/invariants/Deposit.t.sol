@@ -13,10 +13,6 @@ contract Deposit is Test, TestHelper {
     function setUp() public {
         vm.createSelectFork(vm.rpcUrl("mainnet"), 17268750);
 
-        // deploy chainlink mock
-        mockV3Aggregator = new MockV3Aggregator(DECIMALS, INITIAL_PRICE);
-        address mockV3AggregatorAddress = address(mockV3Aggregator);
-
         // deploy underlying asset
         mockERC20Token = new MockERC20Token();
         tokenFactory = new TokenFactory();
@@ -25,7 +21,6 @@ contract Deposit is Test, TestHelper {
         factoryWrapper = TokenFactory(address(factoryProxy));
         factoryWrapper.initialize(
             mockERC20Token,
-            mockV3AggregatorAddress,
             REBASE_INTERVAL,
             sanctionsContract
         );

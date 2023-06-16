@@ -28,18 +28,7 @@ const func: DeployFunction = async ({
   );
 
   log("Deploying SmartToken 1...");
-  // const SmartToken1 = await deploy("SmartToken", {
-  //   from: deployer,
-  //   args: [
-  //     TOKEN1_NAME,
-  //     TOKEN1_SYMBOL,
-  //     tokenFactory.address,
-  //     sanctionsContractAddress,
-  //   ],
-  //   log: true,
-  //   // we need to wait if on a live network so we can verify properly
-  //   waitConfirmations: networkConfig[network.name].blockConfirmations || 1,
-  // });
+
   const SmartFactoryContract = await ethers.getContractFactory("SmartToken");
   const SmartToken1 = await upgrades.deployProxy(
     SmartFactoryContract,

@@ -20,16 +20,6 @@ developmentChains.includes(network.name)
       async function deployTokenFixture() {
         const [deployer, tester] = await ethers.getSigners();
 
-        const MockV3AggregatorFactory = await ethers.getContractFactory(
-          "MockV3Aggregator",
-          deployer
-        );
-        const mockV3Aggregator = await MockV3AggregatorFactory.deploy(
-          DECIMALS,
-          INITIAL_PRICE
-        );
-        await mockV3Aggregator.deployed();
-
         const MockERC20TokenWithPermit = await ethers.getContractFactory(
           "MockERC20TokenWithPermit",
           deployer
@@ -52,7 +42,6 @@ developmentChains.includes(network.name)
 
         const tokenFactory = await upgrades.deployProxy(TokenFactory, [
           underlyingToken.address,
-          mockV3Aggregator.address,
           REBASE_INTERVAL,
           sanctionsContract.address,
         ]);
@@ -94,7 +83,6 @@ developmentChains.includes(network.name)
 
         const tokenFactory2 = await upgrades.deployProxy(TokenFactory2, [
           "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D",
-          mockV3Aggregator.address,
           REBASE_INTERVAL,
           sanctionsContract.address,
         ]);
@@ -116,7 +104,6 @@ developmentChains.includes(network.name)
 
         const tokenFactory3 = await upgrades.deployProxy(TokenFactory3Factory, [
           underlyingTokenWithoutPermit.address,
-          mockV3Aggregator.address,
           REBASE_INTERVAL,
           sanctionsContract.address,
         ]);
@@ -154,7 +141,6 @@ developmentChains.includes(network.name)
         return {
           smartToken1,
           smartToken2,
-          mockV3Aggregator,
           underlyingToken,
           tokenFactory,
           deployer,
@@ -175,14 +161,6 @@ developmentChains.includes(network.name)
           );
           const result = await smartToken1.asset();
           assert.equal(result, underlyingToken.address);
-        });
-
-        it("sets the address of the price aggregator correctly", async function () {
-          const { tokenFactory, mockV3Aggregator } = await loadFixture(
-            deployTokenFixture
-          );
-          const result = await tokenFactory.getPriceFeedAddress();
-          assert.equal(result, mockV3Aggregator.address);
         });
 
         it("sets the rebase interval correctly", async function () {
@@ -564,7 +542,7 @@ developmentChains.includes(network.name)
           await smartToken1.deposit(depositAmount, deployer.address);
 
           // trigger rebase
-          await tokenFactory.executeRebase(1, true);
+          await tokenFactory.executeRebase(1, true, INITIAL_PRICE);
 
           await expect(
             smartToken1.withdraw(
@@ -598,7 +576,7 @@ developmentChains.includes(network.name)
           await smartToken1.deposit(depositAmount, deployer.address);
 
           // trigger rebase
-          await tokenFactory.executeRebase(1, true);
+          await tokenFactory.executeRebase(1, true, INITIAL_PRICE);
 
           await expect(
             smartToken1.withdraw(
@@ -956,7 +934,7 @@ developmentChains.includes(network.name)
           await smartToken1.deposit(depositAmount, deployer.address);
 
           // trigger rebase
-          await tokenFactory.executeRebase(1, true);
+          await tokenFactory.executeRebase(1, true, INITIAL_PRICE);
           //   await expect(
           //     tokenFactory.redeem(
           //       depositAmount,
@@ -1293,18 +1271,18 @@ developmentChains.includes(network.name)
           const { tokenFactory, tester } = await loadFixture(
             deployTokenFixture
           );
-          await expect(tokenFactory.connect(tester).executeRebase(1, true)).to
-            .be.reverted;
+          await expect(
+            tokenFactory.connect(tester).executeRebase(1, true, INITIAL_PRICE)
+          ).to.be.reverted;
         });
 
         it("it can be triggered by the deployer", async function () {
           const { tokenFactory, tester } = await loadFixture(
             deployTokenFixture
           );
-          await expect(tokenFactory.executeRebase(1, true)).to.emit(
-            tokenFactory,
-            "Rebase"
-          );
+          await expect(
+            tokenFactory.executeRebase(1, true, INITIAL_PRICE)
+          ).to.emit(tokenFactory, "Rebase");
         });
 
         it("it should confirm that user has correct balances of token x and y after rebase", async function () {
@@ -1335,7 +1313,7 @@ developmentChains.includes(network.name)
           await smartToken1.transfer(tester.address, transferAmount);
 
           // trigger a rebase
-          await tokenFactory.executeRebase(1, true);
+          await tokenFactory.executeRebase(1, true, INITIAL_PRICE);
 
           // confirm user balances when rebase has taken place
           assert.equal(
@@ -1389,8 +1367,8 @@ developmentChains.includes(network.name)
           await smartToken2.transfer(tester.address, transferAmount);
 
           // trigger a rebase
-          await tokenFactory.executeRebase(1, true);
-          await tokenFactory.executeRebase(2, true);
+          await tokenFactory.executeRebase(1, true, INITIAL_PRICE);
+          await tokenFactory.executeRebase(2, true, INITIAL_PRICE);
           // confirm user balances when rebase has taken place
           assert.equal(
             await smartToken1.balanceOf(deployer.address),
@@ -1456,7 +1434,7 @@ developmentChains.includes(network.name)
             .transfer(deployer.address, transferAmount);
 
           // trigger a rebase
-          await tokenFactory.executeRebase(1, true);
+          await tokenFactory.executeRebase(1, true, INITIAL_PRICE);
 
           // confirm user balances when rebase has taken place
           assert.equal(

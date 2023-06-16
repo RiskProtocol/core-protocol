@@ -46,16 +46,6 @@ developmentChains.includes(network.name)
       async function deployTokenFixture() {
         const [deployer, tester] = await ethers.getSigners();
 
-        const MockV3Aggregator = await ethers.getContractFactory(
-          "MockV3Aggregator",
-          deployer
-        );
-        const mockV3Aggregator = await MockV3Aggregator.deploy(
-          DECIMALS,
-          INITIAL_PRICE
-        );
-        await mockV3Aggregator.deployed();
-
         const MockERC20Token = await ethers.getContractFactory(
           "MockERC20Token",
           deployer
@@ -79,7 +69,6 @@ developmentChains.includes(network.name)
 
         const tokenFactory = await upgrades.deployProxy(TokenFactory, [
           underlyingToken.address,
-          mockV3Aggregator.address,
           REBASE_INTERVAL,
           sanctionsContract.address,
         ]);
@@ -121,7 +110,6 @@ developmentChains.includes(network.name)
 
         const tokenFactory2 = await upgrades.deployProxy(TokenFactory2, [
           "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D",
-          mockV3Aggregator.address,
           REBASE_INTERVAL,
           sanctionsContract.address,
         ]);
@@ -132,7 +120,6 @@ developmentChains.includes(network.name)
         return {
           smartToken1,
           smartToken2,
-          mockV3Aggregator,
           underlyingToken,
           tokenFactory,
           deployer,
@@ -189,7 +176,6 @@ developmentChains.includes(network.name)
               tester,
             } = await loadFixture(deployTokenFixture);
             const depositAmount = item.depositValue;
-            //const transferAmount = ethers.utils.parseEther("1");
 
             await tokenFactory.initializeSMART(
               smartToken1.address,
@@ -215,7 +201,7 @@ developmentChains.includes(network.name)
 
             const nextRebaseTimeStamp = now + REBASE_INTERVAL;
             await time.setNextBlockTimestamp(nextRebaseTimeStamp);
-            await tokenFactory.executeRebase(1, true);
+            await tokenFactory.executeRebase(1, true, INITIAL_PRICE);
 
             let block2 = await ethers.provider.getBlock("latest");
             const now2 = block2.timestamp;
@@ -375,7 +361,7 @@ developmentChains.includes(network.name)
             //contract call
             const nextRebase = BigInt(lastRebase) + BigInt(REBASE_INTERVAL);
             await time.setNextBlockTimestamp(nextRebase);
-            await tokenFactory.executeRebase(1, true);
+            await tokenFactory.executeRebase(1, true, INITIAL_PRICE);
 
             expect(rollOverValue).to.equal(
               await smartToken1.balanceOf(deployer.address)
@@ -462,11 +448,11 @@ developmentChains.includes(network.name)
             //early rebase
             const earlyRebase: bigint = BigInt(lastRebase) + BigInt(1000);
             await time.setNextBlockTimestamp(BigNumber.from(earlyRebase));
-            await tokenFactory.executeRebase(1, false);
+            await tokenFactory.executeRebase(1, true, INITIAL_PRICE);
 
             //normal rebase
             await time.setNextBlockTimestamp(nextRebase);
-            await tokenFactory.executeRebase(2, true);
+            await tokenFactory.executeRebase(2, false, INITIAL_PRICE);
             //check the fees
             expect(rollOverValue).to.equal(
               await smartToken1.balanceOf(deployer.address)
@@ -500,7 +486,7 @@ developmentChains.includes(network.name)
             //contract call and make a rebase
             const nextRebase = BigInt(lastRebase) + BigInt(REBASE_INTERVAL);
             await time.setNextBlockTimestamp(nextRebase);
-            await tokenFactory.executeRebase(1, true);
+            await tokenFactory.executeRebase(1, true, INITIAL_PRICE);
 
             // deposit underlying token
             await underlyingToken.approve(tokenFactory.address, depositAmount);
@@ -562,15 +548,15 @@ developmentChains.includes(network.name)
             //contract call and make 3 rebase
             const nextRebase = BigInt(lastRebase) + BigInt(REBASE_INTERVAL);
             await time.setNextBlockTimestamp(nextRebase);
-            await tokenFactory.executeRebase(1, true);
+            await tokenFactory.executeRebase(1, true, INITIAL_PRICE);
 
             const secondRebase = BigInt(nextRebase) + BigInt(REBASE_INTERVAL);
             await time.setNextBlockTimestamp(secondRebase);
-            await tokenFactory.executeRebase(2, true);
+            await tokenFactory.executeRebase(2, true, INITIAL_PRICE);
 
             const thirdRebase = BigInt(secondRebase) + BigInt(REBASE_INTERVAL);
             await time.setNextBlockTimestamp(thirdRebase);
-            await tokenFactory.executeRebase(3, true);
+            await tokenFactory.executeRebase(3, true, INITIAL_PRICE);
 
             const userBal = await smartToken1.balanceOf(tester.address);
 

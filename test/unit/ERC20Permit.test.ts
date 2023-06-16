@@ -20,16 +20,6 @@ developmentChains.includes(network.name)
         const chainId = 31337;
         const [deployer, tester] = await ethers.getSigners();
 
-        const MockV3Aggregator = await ethers.getContractFactory(
-          "MockV3Aggregator",
-          deployer
-        );
-        const mockV3Aggregator = await MockV3Aggregator.deploy(
-          DECIMALS,
-          INITIAL_PRICE
-        );
-        await mockV3Aggregator.deployed();
-
         const MockERC20TokenWithPermit = await ethers.getContractFactory(
           "MockERC20TokenWithPermit",
           deployer
@@ -52,7 +42,6 @@ developmentChains.includes(network.name)
 
         const tokenFactory = await upgrades.deployProxy(TokenFactory, [
           underlyingToken.address,
-          mockV3Aggregator.address,
           REBASE_INTERVAL,
           sanctionsContract.address,
         ]);
@@ -74,7 +63,6 @@ developmentChains.includes(network.name)
 
         const tokenFactory1 = await upgrades.deployProxy(TokenFactory1Factory, [
           underlyingTokenWithoutPermit.address,
-          mockV3Aggregator.address,
           REBASE_INTERVAL,
           sanctionsContract.address,
         ]);
@@ -112,7 +100,6 @@ developmentChains.includes(network.name)
         return {
           smartToken1,
           smartToken2,
-          mockV3Aggregator,
           underlyingToken,
           tokenFactory,
           deployer,
