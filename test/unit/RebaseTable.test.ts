@@ -1,5 +1,5 @@
 import { assert, expect } from "chai";
-import { ethers, network } from "hardhat";
+import { ethers, network, upgrades } from "hardhat";
 import {
   developmentChains,
   REBASE_INTERVAL,
@@ -73,12 +73,13 @@ developmentChains.includes(network.name)
           "TokenFactory",
           deployer
         );
-        const tokenFactory = await TokenFactory.deploy(
+
+        const tokenFactory = await upgrades.deployProxy(TokenFactory, [
           underlyingToken.address,
           mockV3Aggregator.address,
           REBASE_INTERVAL,
-          sanctionsContract.address
-        );
+          sanctionsContract.address,
+        ]);
         await tokenFactory.deployed();
 
         // deploy smartToken 1
@@ -86,12 +87,13 @@ developmentChains.includes(network.name)
           "SmartToken",
           deployer
         );
-        const smartToken1 = await SmartToken1.deploy(
+
+        const smartToken1 = await upgrades.deployProxy(SmartToken1, [
           TOKEN1_NAME,
           TOKEN1_SYMBOL,
           tokenFactory.address,
-          sanctionsContract.address
-        );
+          sanctionsContract.address,
+        ]);
         await smartToken1.deployed();
 
         // deploy smartToken 2
@@ -99,12 +101,13 @@ developmentChains.includes(network.name)
           "SmartToken",
           deployer
         );
-        const smartToken2 = await SmartToken2.deploy(
+
+        const smartToken2 = await upgrades.deployProxy(SmartToken2, [
           TOKEN2_NAME,
           TOKEN2_SYMBOL,
           tokenFactory.address,
-          sanctionsContract.address
-        );
+          sanctionsContract.address,
+        ]);
         await smartToken2.deployed();
 
         // other instances to mock fake underlying token
@@ -112,12 +115,13 @@ developmentChains.includes(network.name)
           "TokenFactory",
           tester
         );
-        const tokenFactory2 = await TokenFactory2.deploy(
+
+        const tokenFactory2 = await upgrades.deployProxy(TokenFactory2, [
           "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D",
           mockV3Aggregator.address,
           REBASE_INTERVAL,
-          sanctionsContract.address
-        );
+          sanctionsContract.address,
+        ]);
         await tokenFactory2.deployed();
 
         // Fixtures can return anything you consider useful for your tests
@@ -147,8 +151,9 @@ developmentChains.includes(network.name)
             const depositAmount = item.depositValue;
             const transferAmount = ethers.utils.parseEther("1");
 
-            await tokenFactory.initialize(
+            await tokenFactory.initializeSMART(
               smartToken1.address,
+
               smartToken2.address
             );
 
@@ -189,8 +194,9 @@ developmentChains.includes(network.name)
 
           const depositAmount = ethers.utils.parseEther("1");
 
-          await tokenFactory.initialize(
+          await tokenFactory.initializeSMART(
             smartToken1.address,
+
             smartToken2.address
           );
 
@@ -218,8 +224,9 @@ developmentChains.includes(network.name)
 
           const depositAmount = ethers.utils.parseEther("1");
 
-          await tokenFactory.initialize(
+          await tokenFactory.initializeSMART(
             smartToken1.address,
+
             smartToken2.address
           );
 
@@ -250,8 +257,9 @@ developmentChains.includes(network.name)
 
           const depositAmount = ethers.utils.parseEther("1");
 
-          await tokenFactory.initialize(
+          await tokenFactory.initializeSMART(
             smartToken1.address,
+
             smartToken2.address
           );
 
@@ -280,8 +288,9 @@ developmentChains.includes(network.name)
 
           const depositAmount = ethers.utils.parseEther("1");
 
-          await tokenFactory.initialize(
+          await tokenFactory.initializeSMART(
             smartToken1.address,
+
             smartToken2.address
           );
 

@@ -3,18 +3,24 @@ pragma solidity ^0.8.9;
 
 import "../TestHelper.sol";
 
-contract TokenFactoryTest is Test, TestHelper  {   
+contract TokenFactoryTest is Test, TestHelper {
+    TokenFactory factoryWrapper;
+    SmartToken smartTokenXWrapper;
+    SmartToken smartTokenYWrapper;
 
-    function setUp() public {        
+    function setUp() public {
         vm.createSelectFork(vm.rpcUrl("mainnet"), 17268750);
-       
+
         // deploy chainlink mock
         mockV3Aggregator = new MockV3Aggregator(DECIMALS, INITIAL_PRICE);
         address mockV3AggregatorAddress = address(mockV3Aggregator);
 
         // deploy underlying asset
         mockERC20Token = new MockERC20Token();
-        tokenFactory = new TokenFactory(
+        tokenFactory = new TokenFactory();
+        factoryProxy = new UUPSProxy(address(tokenFactory), "");
+        factoryWrapper = TokenFactory(address(factoryProxy));
+        factoryWrapper.initialize(
             mockERC20Token,
             mockV3AggregatorAddress,
             REBASE_INTERVAL,
@@ -22,29 +28,39 @@ contract TokenFactoryTest is Test, TestHelper  {
         );
 
         // deploy token X
-        smartTokenX = new SmartToken(
+        smartTokenX = new SmartToken();
+
+        vaultProxy = new UUPSProxy(address(smartTokenX), "");
+        smartTokenXWrapper = SmartToken(address(vaultProxy));
+        smartTokenXWrapper.initialize(
             TOKEN1_NAME,
             TOKEN1_SYMBOL,
-            address(tokenFactory),
+            address(factoryWrapper),
             sanctionsContract
         );
         // deploy token Y
-        smartTokenY = new SmartToken(
+        smartTokenY = new SmartToken();
+        vault2Proxy = new UUPSProxy(address(smartTokenY), "");
+        smartTokenYWrapper = SmartToken(address(vault2Proxy));
+        smartTokenYWrapper.initialize(
             TOKEN2_NAME,
             TOKEN2_SYMBOL,
-            address(tokenFactory),
+            address(factoryWrapper),
             sanctionsContract
         );
 
         // initialize dev tokens in token factory
-        tokenFactory.initialize(smartTokenX, smartTokenY);      
+        factoryWrapper.initializeSMART(smartTokenXWrapper, smartTokenYWrapper);
     }
 
     function invariant_RebaseInterval() public {
-        assertEq(tokenFactory.getInterval(), REBASE_INTERVAL);
+        assertEq(factoryWrapper.getInterval(), REBASE_INTERVAL);
     }
- 
+
     function invariant_RebaseCount() public {
-        assertLe(tokenFactory.getUserLastRebaseCount(deployer), tokenFactory.getScallingFactorLength());
+        assertLe(
+            factoryWrapper.getUserLastRebaseCount(deployer),
+            factoryWrapper.getScallingFactorLength()
+        );
     }
 }

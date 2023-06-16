@@ -2,13 +2,14 @@
 
 pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/utils/math/Math.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-
 import "./SmartToken.sol";
 import "./../libraries/PriceFeed.sol";
 import "./BaseContract.sol";
@@ -28,25 +29,27 @@ error TokenFactory__InvalidSequenceNumber();
  * The contract will implement periodic rebalancing
  */
 contract TokenFactory is
-    ERC20,
-    ReentrancyGuard,
-    Ownable,
-    BaseContract {
+    ReentrancyGuardUpgradeable,
+    OwnableUpgradeable,
+    UUPSUpgradeable,
+    BaseContract
+{
     using PriceFeed for AggregatorV3Interface;
-    using Math for uint256;
-    using SafeMath for uint256;
-    using SafeMath for uint8;
-    using SafeMath for uint32;
+    using MathUpgradeable for uint256;
+    using SafeMathUpgradeable for uint256;
+    using SafeMathUpgradeable for uint8;
+    using SafeMathUpgradeable for uint32;
 
     // State variables
     uint256[] private scallingFactorX;
     SmartToken[] private smartTokenArray;
-    AggregatorV3Interface private immutable priceFeed;
+    AggregatorV3Interface private priceFeed;
     mapping(address => uint256) private lastRebaseCount;
-    IERC20Update private immutable baseToken;
-    uint8 private immutable baseTokenDecimals;
-    uint256 private immutable interval;
+    IERC20Update private baseToken;
+    uint8 private baseTokenDecimals;
+    uint256 private interval;
     uint256 private lastTimeStamp;
+    bool private smartTokenInitialized;
     //management fees
     uint32 private constant MGMT_FEE_SCALING_FACTOR = 100000;
     uint32 private managementFeesRate;
@@ -91,26 +94,52 @@ contract TokenFactory is
             revert TokenFactory__MethodNotAllowed();
         }
     }
+    modifier onlyIntializedOnce() {
+        require(
+            !smartTokenInitialized,
+            "Smart Tokens have already been initialized!"
+        );
+        _;
+    }
 
-    constructor(
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
+    function initialize(
         IERC20Update baseTokenAddress,
         address priceFeedAddress,
         uint256 rebaseInterval, // in seconds
         address sanctionsContract_
-    ) ERC20("RiskProtocolVault", "RPK") BaseContract(sanctionsContract_) {
+    ) public initializer {
+        __BaseContract_init(sanctionsContract_);
+        __Ownable_init();
+        __UUPSUpgradeable_init();
+
         baseToken = IERC20Update(baseTokenAddress);
         priceFeed = AggregatorV3Interface(priceFeedAddress);
         (bool success, uint8 assetDecimals) = _tryGetAssetDecimals(baseToken);
-        baseTokenDecimals = success ? assetDecimals : super.decimals();
+        baseTokenDecimals = success ? assetDecimals : 18;
         interval = rebaseInterval;
         lastTimeStamp = block.timestamp;
         managementFeesRate = 0;
         mgmtFeesHistory.push(managementFeesRate);
         mgmtFeeSum.push(managementFeesRate);
         nextSequenceNumber = 1;
+        smartTokenInitialized = false;
     }
 
-    function initialize(SmartToken token1, SmartToken token2) external onlyOwner {
+    function _authorizeUpgrade(
+        address
+    ) internal override(UUPSUpgradeable) onlyOwner {}
+
+    //note: renaming this method to avoid conflicts with upgradable initialize
+    function initializeSMART(
+        SmartToken token1,
+        SmartToken token2
+    ) external onlyOwner onlyIntializedOnce {
+        smartTokenInitialized = true;
         smartTokenArray.push(token1);
         smartTokenArray.push(token2);
     }
@@ -123,7 +152,9 @@ contract TokenFactory is
     ) private view returns (bool, uint8) {
         (bool success, bytes memory encodedDecimals) = address(asset_)
             .staticcall(
-                abi.encodeWithSelector(IERC20Metadata.decimals.selector)
+                abi.encodeWithSelector(
+                    IERC20MetadataUpgradeable.decimals.selector
+                )
             );
         if (
             success &&
@@ -142,7 +173,7 @@ contract TokenFactory is
      * inheritance but is most likely 18). Override this function in order to set a guaranteed hardcoded value.
      * See {IERC20Metadata-decimals}.
      */
-    function decimals() public view virtual override returns (uint8) {
+    function decimals() public view virtual returns (uint8) {
         return baseTokenDecimals;
     }
 
@@ -608,60 +639,13 @@ contract TokenFactory is
         return lastRebaseCount[userAddress];
     }
 
-    function getSmartTokenAddress(uint256 index) public view returns (SmartToken) {
+    function getSmartTokenAddress(
+        uint8 index
+    ) public view returns (SmartToken) {
         return smartTokenArray[index];
     }
 
     function getInterval() public view returns (uint256) {
         return interval;
-    }
-
-    // unwanted methods
-
-    /** @dev See {ERC20-totalSupply}. */
-    function totalSupply() public pure override returns (uint256) {
-        revert TokenFactory__MethodNotAllowed();
-    }
-
-    /** @dev See {ERC20-balanceOf}. */
-    function balanceOf(
-        address /* account */
-    ) public view virtual override returns (uint256) {
-        revert TokenFactory__MethodNotAllowed();
-    }
-
-    /** @dev See {ERC20-transfer}. */
-    function transfer(
-        address /* to */,
-        uint256 /* amount */
-    ) public virtual override returns (bool) {
-        revert TokenFactory__MethodNotAllowed();
-    }
-
-    /** @dev See {ERC20-allowance}. We don't revert directly in this function because
-     *  it throws unreachable code warnings during compilation unlike ERC 20 approve function
-     * */
-    function allowance(
-        address owner,
-        address spender
-    ) public view virtual override onlyOwner returns (uint256) {
-        return super.allowance(owner, spender);
-    }
-
-    /** @dev See {ERC20-approve}. */
-    function approve(
-        address /* spender */,
-        uint256 /* amount */
-    ) public virtual override returns (bool) {
-        revert TokenFactory__MethodNotAllowed();
-    }
-
-    /** @dev See {ERC20-transferFrom}. */
-    function transferFrom(
-        address /* from */,
-        address /* to */,
-        uint256 /* amount  */
-    ) public virtual override returns (bool) {
-        revert TokenFactory__MethodNotAllowed();
     }
 }

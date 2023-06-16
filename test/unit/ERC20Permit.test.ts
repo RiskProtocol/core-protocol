@@ -1,5 +1,5 @@
 import { assert, expect } from "chai";
-import { ethers, network } from "hardhat";
+import { ethers, network, upgrades } from "hardhat";
 import {
   developmentChains,
   REBASE_INTERVAL,
@@ -11,10 +11,7 @@ import {
   INITIAL_PRICE,
 } from "../../helper-hardhat-config";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
-import {
-  getPermitDigest,
-  sign,
-} from "../../utils/signatures";
+import { getPermitDigest, sign } from "../../utils/signatures";
 import "dotenv/config";
 
 developmentChains.includes(network.name)
@@ -52,12 +49,13 @@ developmentChains.includes(network.name)
           "TokenFactory",
           deployer
         );
-        const tokenFactory = await TokenFactory.deploy(
+
+        const tokenFactory = await upgrades.deployProxy(TokenFactory, [
           underlyingToken.address,
           mockV3Aggregator.address,
           REBASE_INTERVAL,
-          sanctionsContract.address
-        );
+          sanctionsContract.address,
+        ]);
         await tokenFactory.deployed();
 
         // Underlying Asset without permit function
@@ -73,12 +71,13 @@ developmentChains.includes(network.name)
           "TokenFactory",
           deployer
         );
-        const tokenFactory1 = await TokenFactory1Factory.deploy(
+
+        const tokenFactory1 = await upgrades.deployProxy(TokenFactory1Factory, [
           underlyingTokenWithoutPermit.address,
           mockV3Aggregator.address,
           REBASE_INTERVAL,
-          sanctionsContract.address
-        );
+          sanctionsContract.address,
+        ]);
         await tokenFactory1.deployed();
 
         // deploy smartToken 1
@@ -86,12 +85,13 @@ developmentChains.includes(network.name)
           "SmartToken",
           deployer
         );
-        const smartToken1 = await SmartToken1Factory.deploy(
+
+        const smartToken1 = await upgrades.deployProxy(SmartToken1Factory, [
           TOKEN1_NAME,
           TOKEN1_SYMBOL,
           tokenFactory.address,
-          sanctionsContract.address
-        );
+          sanctionsContract.address,
+        ]);
         await smartToken1.deployed();
 
         // deploy smartToken 2
@@ -99,12 +99,13 @@ developmentChains.includes(network.name)
           "SmartToken",
           deployer
         );
-        const smartToken2 = await SmartToken2Factory.deploy(
+
+        const smartToken2 = await upgrades.deployProxy(SmartToken2Factory, [
           TOKEN2_NAME,
           TOKEN2_SYMBOL,
           tokenFactory.address,
-          sanctionsContract.address
-        );
+          sanctionsContract.address,
+        ]);
         await smartToken2.deployed();
 
         // Fixtures can return anything you consider useful for your tests
@@ -231,8 +232,9 @@ developmentChains.includes(network.name)
             chainId,
           } = await loadFixture(deployTokenFixture);
           const depositAmount = ethers.utils.parseEther("6");
-          await tokenFactory1.initialize(
+          await tokenFactory1.initializeSMART(
             smartToken1.address,
+
             smartToken2.address
           );
           // await underlyingTokenWithoutPermit.approve(tokenFactory1.address, depositAmount);

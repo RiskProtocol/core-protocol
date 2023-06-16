@@ -2,10 +2,13 @@
 
 pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/interfaces/IERC4626.sol";
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/interfaces/IERC4626Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PermitUpgradeable.sol";
 import "./../interfaces/IERC20Update.sol";
 import "./TokenFactory.sol";
 import "./BaseContract.sol";
@@ -19,9 +22,18 @@ error SmartToken__RedeemMoreThanMax();
 error SmartToken__OnlyAssetOwner();
 error SmartToken__ZeroDeposit();
 
-contract SmartToken is BaseContract, IERC4626, ERC20, ERC20Permit, ReentrancyGuard {
-    TokenFactory private immutable tokenFactory;
-    IERC20Update private immutable underlyingToken;
+contract SmartToken is
+    Initializable,
+    UUPSUpgradeable,
+    OwnableUpgradeable,
+    ERC20Upgradeable,
+    ERC20PermitUpgradeable,
+    BaseContract,
+    IERC4626Upgradeable,
+    ReentrancyGuardUpgradeable
+{
+    TokenFactory private tokenFactory;
+    IERC20Update private underlyingToken;
 
     modifier onlyTokenFactory() {
         if (_msgSender() != address(tokenFactory))
@@ -41,19 +53,28 @@ contract SmartToken is BaseContract, IERC4626, ERC20, ERC20Permit, ReentrancyGua
         _;
     }
 
-    constructor(
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
+    function initialize(
         string memory tokenName,
         string memory tokenSymbol,
         address factoryAddress,
         address sanctionsContract_
-    )
-        ERC20(tokenName, tokenSymbol)
-        ERC20Permit(tokenName)
-        BaseContract(sanctionsContract_)
-    {
+    ) public initializer {
+        //initialize deriving contracts
+        __ERC20_init(tokenName, tokenSymbol);
+        __ERC20Permit_init(tokenName);
+        __BaseContract_init(sanctionsContract_);
+        __Ownable_init(); //note: this is required as we'd need to ensure only owner can upgrade
+        __UUPSUpgradeable_init();
         tokenFactory = TokenFactory(factoryAddress);
         underlyingToken = tokenFactory.getBaseToken();
     }
+
+    function _authorizeUpgrade(address) internal override onlyOwner {}
 
     function mintAsset(
         address receiver,
@@ -72,7 +93,7 @@ contract SmartToken is BaseContract, IERC4626, ERC20, ERC20Permit, ReentrancyGua
         uint256 amount
     )
         public
-        override(ERC20, IERC20)
+        override(ERC20Upgradeable, IERC20Upgradeable)
         onlyNotSanctioned(recipient)
         onlyNotSanctioned(_msgSender())
         returns (bool)
@@ -92,7 +113,12 @@ contract SmartToken is BaseContract, IERC4626, ERC20, ERC20Permit, ReentrancyGua
     /** @dev See {IERC20-balanceOf}. */
     function balanceOf(
         address account
-    ) public view override(ERC20, IERC20) returns (uint256) {
+    )
+        public
+        view
+        override(ERC20Upgradeable, IERC20Upgradeable)
+        returns (uint256)
+    {
         if (hasPendingRebase(account)) {
             return tokenFactory.calculateRollOverValue(account);
         } else {
@@ -120,7 +146,7 @@ contract SmartToken is BaseContract, IERC4626, ERC20, ERC20Permit, ReentrancyGua
         uint256 amount
     )
         public
-        override(ERC20, IERC20)
+        override(ERC20Upgradeable, IERC20Upgradeable)
         onlyNotSanctioned(recipient)
         onlyNotSanctioned(sender)
         returns (bool)
@@ -219,7 +245,9 @@ contract SmartToken is BaseContract, IERC4626, ERC20, ERC20Permit, ReentrancyGua
     }
 
     /** @dev See {IERC4626-maxMint}. */
-    function maxMint(address account) public view virtual override returns (uint256) {
+    function maxMint(
+        address account
+    ) public view virtual override returns (uint256) {
         return type(uint256).max - tokenFactory.maxSharesOwned(account);
     }
 
