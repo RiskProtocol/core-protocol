@@ -366,12 +366,9 @@ contract TokenFactory is
                 lastTimeStamp += interval;
             }
             uint256 rebasePrice = scheduledRebase.price / 10 ** decimals();
-            uint256 asset1Price = scheduledRebase.smartTokenXprice /
-                10 ** decimals();
+            uint256 asset1Price = scheduledRebase.smartTokenXprice; //x 10e18
             uint256 divisor = rebasePrice.ceilDiv(2);
-            scallingFactorX.push(
-                ((asset1Price * 10 ** decimals()) / 2) / divisor
-            );
+            scallingFactorX.push((asset1Price / 2) / divisor);
             if (managementFeeEnabled && scheduledRebase.isNaturalRebase) {
                 mgmtFeesHistory.push(managementFeesRate);
                 updateManagementFeeSum();
