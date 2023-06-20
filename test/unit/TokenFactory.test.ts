@@ -546,7 +546,10 @@ developmentChains.includes(network.name)
           // deposit underlying token
           await underlyingToken.approve(tokenFactory.address, depositAmount);
           await smartToken1.deposit(depositAmount, deployer.address);
+          const now = await tokenFactory.getLastTimeStamp();
 
+          const nextRebaseTimeStamp = BigInt(now) + BigInt(REBASE_INTERVAL);
+          await time.setNextBlockTimestamp(nextRebaseTimeStamp);
           // trigger rebase
           await tokenFactory.executeRebase(
             encodedNaturalRebase1.encodedData,
@@ -583,7 +586,10 @@ developmentChains.includes(network.name)
           // deposit underlying token
           await underlyingToken.approve(tokenFactory.address, depositAmount);
           await smartToken1.deposit(depositAmount, deployer.address);
+          const now = await tokenFactory.getLastTimeStamp();
 
+          const nextRebaseTimeStamp = BigInt(now) + BigInt(REBASE_INTERVAL);
+          await time.setNextBlockTimestamp(nextRebaseTimeStamp);
           // trigger rebase
           await tokenFactory.executeRebase(
             encodedNaturalRebase1.encodedData,
@@ -944,7 +950,10 @@ developmentChains.includes(network.name)
           // deposit underlying token
           await underlyingToken.approve(tokenFactory.address, depositAmount);
           await smartToken1.deposit(depositAmount, deployer.address);
+          const now = await tokenFactory.getLastTimeStamp();
 
+          const nextRebaseTimeStamp = BigInt(now) + BigInt(REBASE_INTERVAL);
+          await time.setNextBlockTimestamp(nextRebaseTimeStamp);
           // trigger rebase
           await tokenFactory.executeRebase(
             encodedNaturalRebase1.encodedData,
@@ -1274,10 +1283,14 @@ developmentChains.includes(network.name)
       });
 
       describe("Rebase", async function () {
-        it("it cannot be triggered by any one apart from the deployer", async function () {
+        it("it can be triggered by any one apart from the deployer", async function () {
           const { tokenFactory, tester } = await loadFixture(
             deployTokenFixture
           );
+          const now = await tokenFactory.getLastTimeStamp();
+
+          const nextRebaseTimeStamp = BigInt(now) + BigInt(REBASE_INTERVAL);
+          await time.setNextBlockTimestamp(nextRebaseTimeStamp);
           await expect(
             tokenFactory
               .connect(tester)
@@ -1285,13 +1298,17 @@ developmentChains.includes(network.name)
                 encodedNaturalRebase1.encodedData,
                 encodedNaturalRebase1.signature
               )
-          ).to.be.reverted;
+          ).to.emit(tokenFactory, "Rebase");
         });
 
         it("it can be triggered by the deployer", async function () {
           const { tokenFactory, tester } = await loadFixture(
             deployTokenFixture
           );
+          const now = await tokenFactory.getLastTimeStamp();
+
+          const nextRebaseTimeStamp = BigInt(now) + BigInt(REBASE_INTERVAL);
+          await time.setNextBlockTimestamp(nextRebaseTimeStamp);
           await expect(
             tokenFactory.executeRebase(
               encodedNaturalRebase1.encodedData,
@@ -1328,6 +1345,10 @@ developmentChains.includes(network.name)
           await smartToken1.transfer(tester.address, transferAmount);
 
           // trigger a rebase
+          const now = await tokenFactory.getLastTimeStamp();
+
+          const nextRebaseTimeStamp = BigInt(now) + BigInt(REBASE_INTERVAL);
+          await time.setNextBlockTimestamp(nextRebaseTimeStamp);
           await tokenFactory.executeRebase(
             encodedNaturalRebase1.encodedData,
             encodedNaturalRebase1.signature
@@ -1385,10 +1406,19 @@ developmentChains.includes(network.name)
           await smartToken2.transfer(tester.address, transferAmount);
 
           // trigger a rebase
+          const now = await tokenFactory.getLastTimeStamp();
+
+          const nextRebaseTimeStamp = BigInt(now) + BigInt(REBASE_INTERVAL);
+          await time.setNextBlockTimestamp(nextRebaseTimeStamp);
           await tokenFactory.executeRebase(
             encodedNaturalRebase1.encodedData,
             encodedNaturalRebase1.signature
           );
+          const lastTimeStamp = await tokenFactory.getLastTimeStamp();
+
+          const nextNextRebaseTimeStamp =
+            BigInt(lastTimeStamp) + BigInt(REBASE_INTERVAL);
+          await time.setNextBlockTimestamp(nextNextRebaseTimeStamp);
           await tokenFactory.executeRebase(
             encodedNaturalRebase2.encodedData,
             encodedNaturalRebase2.signature
@@ -1458,6 +1488,10 @@ developmentChains.includes(network.name)
             .transfer(deployer.address, transferAmount);
 
           // trigger a rebase
+          const now = await tokenFactory.getLastTimeStamp();
+
+          const nextRebaseTimeStamp = BigInt(now) + BigInt(REBASE_INTERVAL);
+          await time.setNextBlockTimestamp(nextRebaseTimeStamp);
           await tokenFactory.executeRebase(
             encodedNaturalRebase1.encodedData,
             encodedNaturalRebase1.signature

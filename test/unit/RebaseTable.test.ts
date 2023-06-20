@@ -15,7 +15,7 @@ import {
   encodedEarlyRebase2,
   encodedEarlyRebase3,
 } from "../../helper-hardhat-config";
-import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
+import { loadFixture, time } from "@nomicfoundation/hardhat-network-helpers";
 
 const rebaseTable = [
   {
@@ -157,7 +157,10 @@ developmentChains.includes(network.name)
 
             // to a transaction
             await smartToken1.transfer(tester.address, transferAmount);
+            const now = await tokenFactory.getLastTimeStamp(); //block.timestamp;
 
+            const nextRebaseTimeStamp = BigInt(now) + BigInt(REBASE_INTERVAL);
+            await time.setNextBlockTimestamp(nextRebaseTimeStamp);
             // trigger a rebase
             await tokenFactory.executeRebase(
               encodedNaturalRebase1.encodedData,

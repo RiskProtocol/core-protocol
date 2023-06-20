@@ -17,6 +17,7 @@ import "./../interfaces/IERC20Update.sol";
 error TokenFactory__MethodNotAllowed();
 error TokenFactory__InvalidDivision();
 error TokenFactory__InvalidSequenceNumber();
+error TokenFactory__InvalidNaturalRebase();
 
 /**
  * @title ERC-20 Rebase Tokens
@@ -62,6 +63,7 @@ contract TokenFactory is
         uint256 sequenceNumber;
         bool isNaturalRebase;
         uint256 price;
+        uint256 smartTokenXprice;
     }
 
     ScheduledRebase[] private scheduledRebases;
@@ -322,7 +324,7 @@ contract TokenFactory is
     function executeRebase(
         bytes memory encodedData,
         bytes memory signature
-    ) external onlyOwner {
+    ) external {
         ScheduledRebase memory rebaseCall = verifyAndDecode(
             signature,
             encodedData
@@ -334,6 +336,13 @@ contract TokenFactory is
         ) {
             revert TokenFactory__InvalidSequenceNumber();
         }
+        if (
+            block.timestamp < (lastTimeStamp + interval) &&
+            rebaseCall.isNaturalRebase
+        ) {
+            revert TokenFactory__InvalidNaturalRebase();
+        }
+
         sequenceStatus[rebaseCall.sequenceNumber] = true;
         scheduledRebases.push(rebaseCall);
 
@@ -357,7 +366,8 @@ contract TokenFactory is
                 lastTimeStamp += interval;
             }
             uint256 rebasePrice = scheduledRebase.price / 10 ** decimals();
-            uint256 asset1Price = rebasePrice.ceilDiv(3); // this should be gotten from the oracle
+            uint256 asset1Price = scheduledRebase.smartTokenXprice /
+                10 ** decimals();
             uint256 divisor = rebasePrice.ceilDiv(2);
             scallingFactorX.push(
                 ((asset1Price * 10 ** decimals()) / 2) / divisor
@@ -494,12 +504,14 @@ contract TokenFactory is
         (
             uint256 sequenceNumber,
             bool isNaturalRebase,
-            uint256 underlyingValue
-        ) = abi.decode(encodedData, (uint256, bool, uint256));
+            uint256 underlyingValue,
+            uint256 smartTokenXValue
+        ) = abi.decode(encodedData, (uint256, bool, uint256, uint256));
         ScheduledRebase memory data = ScheduledRebase(
             sequenceNumber,
             isNaturalRebase,
-            underlyingValue
+            underlyingValue,
+            smartTokenXValue
         );
         return data;
     }
