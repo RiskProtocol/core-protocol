@@ -6,16 +6,14 @@ import {
   REBASE_INTERVAL,
   sanctionsContractAddress,
 } from "../helper-hardhat-config";
-import { verify } from "../utils/verify";
+import { verify, delay } from "../utils";
 const { ethers, upgrades } = require("hardhat");
 
 const func: DeployFunction = async ({
-  getNamedAccounts,
   deployments,
   network,
 }) => {
-  const { deploy, log } = deployments;
-  const { deployer } = await getNamedAccounts();
+  const { log } = deployments;
 
   /* While deploying on localhost or hardhat, we would like to use a mock for Price feed
       because they don't exist on those chains, we would equally want to deploy the price feed
@@ -50,12 +48,17 @@ const func: DeployFunction = async ({
     ],
     { initializer: "initialize", kind: "uups" }
   );
+
+  await TokenFactory.deployed();
   await deployments.save("TokenFactory", TokenFactory);
+
+
   log(`TokenFactory deployed at ${TokenFactory.address}`);
+  const tokenFactoryImplementationAddress = await upgrades.erc1967.getImplementationAddress(
+    TokenFactory.address
+  );
   log(
-    `TokenFactory implementation deployed at ${await upgrades.erc1967.getImplementationAddress(
-      TokenFactory.address
-    )}`
+    `TokenFactory implementation deployed at ${tokenFactoryImplementationAddress}`
   );
 
   log("TokenFactory Deployed!");
@@ -65,12 +68,10 @@ const func: DeployFunction = async ({
     !developmentChains.includes(network.name) &&
     process.env.ETHERSCAN_API_KEY
   ) {
-    await verify(TokenFactory.address, [
-      baseTokenAddress,
-      priceFeedAddress,
-      REBASE_INTERVAL,
-      sanctionsContractAddress,
-    ]);
+    log("Wait to verify TokenFactory on Etherscan...");
+    await delay(10000); // wait for 20 seconds to allow etherscan get contract ready for verification
+    log("TokenFactory Verification Delay Complete!");
+    await verify(TokenFactory.address, []);
   }
 };
 export default func;

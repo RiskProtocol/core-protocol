@@ -1,0 +1,320 @@
+{
+  "manifestVersion": "3.2",
+  "proxies": [
+    {
+      "address": "0x646B10299214DF5467C7317F04f1ab928aC152FD",
+      "txHash": "0x82be2db5b7d936ca15234941cf6e89f06cefa997d581ac95f17ae1768b2996ed",
+      "kind": "uups"
+    },
+    {
+      "address": "0xb67E0F69Cff253023A6e2572C85F351985711e88",
+      "txHash": "0x30372790349fa63cdfe755a5e6e7f1c589eb4a96674130003f5f5d3985326f04",
+      "kind": "uups"
+    },
+    {
+      "address": "0x36B753Bc63e0a5A867Be0Ebf73026A423f783DC6",
+      "txHash": "0x85aa71a4c4af0fa0e913866d3be2a0ba3edb21ce0cb091d785b92dad15b951d7",
+      "kind": "uups"
+    }
+  ],
+  "impls": {
+    "cd2c30ef67c927de6cc0424f7e256fde070215be822b695f0dca2f00ca324551": {
+      "address": "0xe252440d2dFEE17E49888fEF9B084fE7Fa0Fe1d1",
+      "txHash": "0x8c9f570befc7efc31dd420f9d1446e7a3ac870ab3532b62706e3c20a4ca3a34b",
+      "layout": {
+        "solcVersion": "0.8.17",
+        "storage": [
+          {
+            "label": "_initialized",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_uint8",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:63",
+            "retypedFrom": "bool"
+          },
+          {
+            "label": "_initializing",
+            "offset": 1,
+            "slot": "0",
+            "type": "t_bool",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:68"
+          },
+          {
+            "label": "_status",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_uint256",
+            "contract": "ReentrancyGuardUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol:38"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "2",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "ReentrancyGuardUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol:88"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "51",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ContextUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:36"
+          },
+          {
+            "label": "_owner",
+            "offset": 0,
+            "slot": "101",
+            "type": "t_address",
+            "contract": "OwnableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:22"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "102",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "OwnableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:94"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "151",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ERC1967UpgradeUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/ERC1967/ERC1967UpgradeUpgradeable.sol:169"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "201",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "UUPSUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol:111"
+          },
+          {
+            "label": "sanctionsContract",
+            "offset": 0,
+            "slot": "251",
+            "type": "t_address",
+            "contract": "BaseContract",
+            "src": "contracts/vaults/BaseContract.sol:14"
+          },
+          {
+            "label": "scallingFactorX",
+            "offset": 0,
+            "slot": "252",
+            "type": "t_array(t_uint256)dyn_storage",
+            "contract": "TokenFactory",
+            "src": "contracts/vaults/TokenFactory.sol:44"
+          },
+          {
+            "label": "smartTokenArray",
+            "offset": 0,
+            "slot": "253",
+            "type": "t_array(t_contract(SmartToken)7770)dyn_storage",
+            "contract": "TokenFactory",
+            "src": "contracts/vaults/TokenFactory.sol:45"
+          },
+          {
+            "label": "priceFeed",
+            "offset": 0,
+            "slot": "254",
+            "type": "t_contract(AggregatorV3Interface)45",
+            "contract": "TokenFactory",
+            "src": "contracts/vaults/TokenFactory.sol:46"
+          },
+          {
+            "label": "lastRebaseCount",
+            "offset": 0,
+            "slot": "255",
+            "type": "t_mapping(t_address,t_uint256)",
+            "contract": "TokenFactory",
+            "src": "contracts/vaults/TokenFactory.sol:47"
+          },
+          {
+            "label": "baseToken",
+            "offset": 0,
+            "slot": "256",
+            "type": "t_contract(IERC20Update)6805",
+            "contract": "TokenFactory",
+            "src": "contracts/vaults/TokenFactory.sol:48"
+          },
+          {
+            "label": "baseTokenDecimals",
+            "offset": 20,
+            "slot": "256",
+            "type": "t_uint8",
+            "contract": "TokenFactory",
+            "src": "contracts/vaults/TokenFactory.sol:49"
+          },
+          {
+            "label": "interval",
+            "offset": 0,
+            "slot": "257",
+            "type": "t_uint256",
+            "contract": "TokenFactory",
+            "src": "contracts/vaults/TokenFactory.sol:50"
+          },
+          {
+            "label": "lastTimeStamp",
+            "offset": 0,
+            "slot": "258",
+            "type": "t_uint256",
+            "contract": "TokenFactory",
+            "src": "contracts/vaults/TokenFactory.sol:51"
+          },
+          {
+            "label": "smartTokenInitialized",
+            "offset": 0,
+            "slot": "259",
+            "type": "t_bool",
+            "contract": "TokenFactory",
+            "src": "contracts/vaults/TokenFactory.sol:52"
+          },
+          {
+            "label": "managementFeesRate",
+            "offset": 1,
+            "slot": "259",
+            "type": "t_uint32",
+            "contract": "TokenFactory",
+            "src": "contracts/vaults/TokenFactory.sol:55"
+          },
+          {
+            "label": "mgmtFeesHistory",
+            "offset": 0,
+            "slot": "260",
+            "type": "t_array(t_uint32)dyn_storage",
+            "contract": "TokenFactory",
+            "src": "contracts/vaults/TokenFactory.sol:56"
+          },
+          {
+            "label": "userMgmtFeeHistory",
+            "offset": 0,
+            "slot": "261",
+            "type": "t_mapping(t_address,t_uint256)",
+            "contract": "TokenFactory",
+            "src": "contracts/vaults/TokenFactory.sol:57"
+          },
+          {
+            "label": "managementFeeEnabled",
+            "offset": 0,
+            "slot": "262",
+            "type": "t_bool",
+            "contract": "TokenFactory",
+            "src": "contracts/vaults/TokenFactory.sol:58"
+          },
+          {
+            "label": "mgmtFeeSum",
+            "offset": 0,
+            "slot": "263",
+            "type": "t_array(t_uint256)dyn_storage",
+            "contract": "TokenFactory",
+            "src": "contracts/vaults/TokenFactory.sol:59"
+          },
+          {
+            "label": "scheduledRebases",
+            "offset": 0,
+            "slot": "264",
+            "type": "t_array(t_struct(ScheduledRebase)7862_storage)dyn_storage",
+            "contract": "TokenFactory",
+            "src": "contracts/vaults/TokenFactory.sol:67"
+          },
+          {
+            "label": "nextSequenceNumber",
+            "offset": 0,
+            "slot": "265",
+            "type": "t_uint256",
+            "contract": "TokenFactory",
+            "src": "contracts/vaults/TokenFactory.sol:68"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_array(t_contract(SmartToken)7770)dyn_storage": {
+            "label": "contract SmartToken[]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_struct(ScheduledRebase)7862_storage)dyn_storage": {
+            "label": "struct TokenFactory.ScheduledRebase[]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_uint256)49_storage": {
+            "label": "uint256[49]",
+            "numberOfBytes": "1568"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]",
+            "numberOfBytes": "1600"
+          },
+          "t_array(t_uint256)dyn_storage": {
+            "label": "uint256[]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_uint32)dyn_storage": {
+            "label": "uint32[]",
+            "numberOfBytes": "32"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_contract(AggregatorV3Interface)45": {
+            "label": "contract AggregatorV3Interface",
+            "numberOfBytes": "20"
+          },
+          "t_contract(IERC20Update)6805": {
+            "label": "contract IERC20Update",
+            "numberOfBytes": "20"
+          },
+          "t_contract(SmartToken)7770": {
+            "label": "contract SmartToken",
+            "numberOfBytes": "20"
+          },
+          "t_mapping(t_address,t_uint256)": {
+            "label": "mapping(address => uint256)",
+            "numberOfBytes": "32"
+          },
+          "t_struct(ScheduledRebase)7862_storage": {
+            "label": "struct TokenFactory.ScheduledRebase",
+            "members": [
+              {
+                "label": "sequenceNumber",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "isNaturalRebase",
+                "type": "t_bool",
+                "offset": 0,
+                "slot": "1"
+              }
+            ],
+            "numberOfBytes": "64"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint32": {
+            "label": "uint32",
+            "numberOfBytes": "4"
+          },
+          "t_uint8": {
+            "label": "uint8",
+            "numberOfBytes": "1"
+          }
+        }
+      }
+    }
+  }
+}

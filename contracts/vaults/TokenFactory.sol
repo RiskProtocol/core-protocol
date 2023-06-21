@@ -8,7 +8,6 @@ import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.
 import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./SmartToken.sol";
 import "./../libraries/PriceFeed.sol";
@@ -45,8 +44,6 @@ contract TokenFactory is
     SmartToken[] private smartTokenArray;
     AggregatorV3Interface private priceFeed;
     mapping(address => uint256) private lastRebaseCount;
-    IERC20Update private baseToken;
-    uint8 private baseTokenDecimals;
     uint256 private interval;
     uint256 private lastTimeStamp;
     bool private smartTokenInitialized;
@@ -113,14 +110,10 @@ contract TokenFactory is
         uint256 rebaseInterval, // in seconds
         address sanctionsContract_
     ) public initializer {
-        __BaseContract_init(sanctionsContract_);
+        __BaseContract_init(sanctionsContract_, baseTokenAddress);
         __Ownable_init();
         __UUPSUpgradeable_init();
-
-        baseToken = IERC20Update(baseTokenAddress);
         priceFeed = AggregatorV3Interface(priceFeedAddress);
-        (bool success, uint8 assetDecimals) = _tryGetAssetDecimals(baseToken);
-        baseTokenDecimals = success ? assetDecimals : 18;
         interval = rebaseInterval;
         lastTimeStamp = block.timestamp;
         managementFeesRate = 0;
@@ -142,43 +135,6 @@ contract TokenFactory is
         smartTokenInitialized = true;
         smartTokenArray.push(token1);
         smartTokenArray.push(token2);
-    }
-
-    /**
-     * @dev Attempts to fetch the asset decimals. A return value of false indicates that the attempt failed in some way.
-     */
-    function _tryGetAssetDecimals(
-        IERC20 asset_
-    ) private view returns (bool, uint8) {
-        (bool success, bytes memory encodedDecimals) = address(asset_)
-            .staticcall(
-                abi.encodeWithSelector(
-                    IERC20MetadataUpgradeable.decimals.selector
-                )
-            );
-        if (
-            success &&
-            encodedDecimals.length >= 32 &&
-            abi.decode(encodedDecimals, (uint256)) <= type(uint8).max
-        ) {
-            uint256 returnedDecimals = abi.decode(encodedDecimals, (uint256));
-            return (true, uint8(returnedDecimals));
-        }
-        return (false, 0);
-    }
-
-    /**
-     * @dev Decimals are read from the underlying asset in the constructor and cached. If this fails (e.g., the asset
-     * has not been created yet), the cached value is set to a default obtained by `super.decimals()` (which depends on
-     * inheritance but is most likely 18). Override this function in order to set a guaranteed hardcoded value.
-     * See {IERC20Metadata-decimals}.
-     */
-    function decimals() public view virtual returns (uint8) {
-        return baseTokenDecimals;
-    }
-
-    function getBaseToken() public view virtual returns (IERC20Update) {
-        return baseToken;
     }
 
     /**
@@ -233,7 +189,7 @@ contract TokenFactory is
     {
         rebaseCheck(receiver);
 
-        SafeERC20.safeTransferFrom(baseToken, caller, address(this), assets);
+        SafeERC20.safeTransferFrom(getBaseToken(), caller, address(this), assets);
         updateUserLastRebaseCount(receiver);
         //mgmtFeeslogic
         if (managementFeeEnabled) {
@@ -281,7 +237,7 @@ contract TokenFactory is
         if (feesRefund > 0) {
             assets += feesRefund;
         }
-        SafeERC20.safeTransfer(baseToken, receiver, assets);
+        SafeERC20.safeTransfer(getBaseToken(), receiver, assets);
 
         emit Withdraw(caller, receiver, owner, assets, shares);
     }

@@ -5,22 +5,16 @@ pragma solidity ^0.8.9;
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/interfaces/IERC4626Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PermitUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "./../interfaces/IERC20Update.sol";
 import "./TokenFactory.sol";
 import "./BaseContract.sol";
+import "./VaultContract.sol";
 
 error SmartToken__NotTokenFactory();
-error SmartToken__MethodNotAllowed();
-error SmartToken__DepositMoreThanMax();
-error SmartToken__MintMoreThanMax();
-error SmartToken__WithdrawMoreThanMax();
-error SmartToken__RedeemMoreThanMax();
 error SmartToken__OnlyAssetOwner();
-error SmartToken__ZeroDeposit();
 
 contract SmartToken is
     Initializable,
@@ -29,27 +23,20 @@ contract SmartToken is
     ERC20Upgradeable,
     ERC20PermitUpgradeable,
     BaseContract,
-    IERC4626Upgradeable,
-    ReentrancyGuardUpgradeable
+    ReentrancyGuardUpgradeable,
+    Vault
 {
-    TokenFactory private tokenFactory;
     IERC20Update private underlyingToken;
+    TokenFactory private tokenFactory;
 
     modifier onlyTokenFactory() {
-        if (_msgSender() != address(tokenFactory))
+        if (_msgSender() != address(getTokenContract()))
             revert SmartToken__NotTokenFactory();
         _;
     }
 
     modifier onlyAssetOwner(address assetOwner) {
         if (assetOwner != _msgSender()) revert SmartToken__OnlyAssetOwner();
-        _;
-    }
-
-    modifier validateDepositAmount(uint256 assets, address receiver) {
-        if (assets == 0) revert SmartToken__ZeroDeposit();
-        if (assets > maxDeposit(receiver))
-            revert SmartToken__DepositMoreThanMax();
         _;
     }
 
@@ -67,11 +54,16 @@ contract SmartToken is
         //initialize deriving contracts
         __ERC20_init(tokenName, tokenSymbol);
         __ERC20Permit_init(tokenName);
-        __BaseContract_init(sanctionsContract_);
         __Ownable_init(); //note: this is required as we'd need to ensure only owner can upgrade
         __UUPSUpgradeable_init();
         tokenFactory = TokenFactory(factoryAddress);
-        underlyingToken = tokenFactory.getBaseToken();
+        underlyingToken = IERC20Update(tokenFactory.getBaseToken());
+        __BaseContract_init(sanctionsContract_, underlyingToken);
+        __VaultContract_init(factoryAddress);
+    }
+
+    function decimals() public pure override(BaseContract,ERC20Upgradeable,IERC20MetadataUpgradeable) returns (uint8) {
+        return 18;
     }
 
     function _authorizeUpgrade(address) internal override onlyOwner {}
@@ -175,34 +167,6 @@ contract SmartToken is
         return underlyingToken.balanceOf(address(tokenFactory));
     }
 
-    /** @dev See {IERC4626-convertToShares}. */
-    function convertToShares(
-        uint256 assets
-    ) public view virtual override returns (uint256 shares) {
-        return assets;
-    }
-
-    /** @dev See {IERC4626-convertToAssets}. */
-    function convertToAssets(
-        uint256 shares
-    ) public view virtual override returns (uint256 assets) {
-        return shares;
-    }
-
-    /** @dev See {IERC4626-maxDeposit}. */
-    function maxDeposit(
-        address account
-    ) public view virtual override returns (uint256) {
-        return type(uint256).max - tokenFactory.maxSharesOwned(account);
-    }
-
-    /** @dev See {IERC4626-previewDeposit}. */
-    function previewDeposit(
-        uint256 assets
-    ) public view virtual override returns (uint256) {
-        return assets;
-    }
-
     /** @dev See {IERC4626-deposit}. */
     function deposit(
         uint256 assets,
@@ -244,20 +208,6 @@ contract SmartToken is
         return shares;
     }
 
-    /** @dev See {IERC4626-maxMint}. */
-    function maxMint(
-        address account
-    ) public view virtual override returns (uint256) {
-        return type(uint256).max - tokenFactory.maxSharesOwned(account);
-    }
-
-    /** @dev See {IERC4626-previewMint}. */
-    function previewMint(
-        uint256 shares
-    ) public view virtual override returns (uint256) {
-        return shares;
-    }
-
     /** @dev See {IERC4626-mint}.
      *
      * As opposed to {deposit}, minting is allowed even if the vault is in a state where the price of a share is zero.
@@ -272,20 +222,6 @@ contract SmartToken is
         uint256 assets = previewMint(shares);
         tokenFactory._deposit(_msgSender(), receiver, assets, shares);
 
-        return assets;
-    }
-
-    /** @dev See {IERC4626-maxWithdraw}. */
-    function maxWithdraw(
-        address owner_
-    ) public view virtual override returns (uint256) {
-        return tokenFactory.maxAmountToWithdraw(owner_);
-    }
-
-    /** @dev See {IERC4626-previewWithdraw}. */
-    function previewWithdraw(
-        uint256 assets
-    ) public view virtual override returns (uint256) {
         return assets;
     }
 
@@ -316,13 +252,6 @@ contract SmartToken is
         tokenFactory._withdraw(_msgSender(), receiver, owner_, assets, shares);
 
         return shares;
-    }
-
-    /** @dev See {IERC4626-maxRedeem}. */
-    function maxRedeem(
-        address owner_
-    ) public view virtual override returns (uint256) {
-        return tokenFactory.maxAmountToWithdraw(owner_);
     }
 
     /** @dev See {IERC4626-previewRedeem}. */

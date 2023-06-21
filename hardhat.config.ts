@@ -14,10 +14,7 @@ const config: HardhatUserConfig = {
   solidity: {
     compilers: [
       {
-        version: "0.8.17",
-      },
-      {
-        version: "0.6.6",
+        version: "0.8.9",
       },
     ],
     settings: {
@@ -43,6 +40,14 @@ const config: HardhatUserConfig = {
       accounts: [process.env.PRIVATE_KEY!],
       chainId: 5,
       allowUnlimitedContractSize: true,
+    },
+    sepolia: {
+      url: process.env.SEPOLIA_RPC_URL,
+      accounts: [process.env.PRIVATE_KEY!],
+      chainId: 11155111,
+      allowUnlimitedContractSize: true,
+      gas: 10000000,
+      gasPrice: 1000000000,
     },
     polygon: {
       url: process.env.POLYGON_RPC_URL,
@@ -76,11 +81,13 @@ const config: HardhatUserConfig = {
       default: 0, // here this will by default take the first account as deployer
       1: 0, // similarly on mainnet it will take the first account as deployer.
       5: 0, // on goerli it will take first account
+      11155111: 0, // on sepolia it will take first account
     },
     tester: {
       default: 1, // here this will by default take the second account as tester
       1: 1, // similarly on mainnet it will take the second account as tester.
       5: 1, // on goerli it will take second account
+      11155111: 1, // on sepolia it will take second account
     },
   },
   contractSizer: {

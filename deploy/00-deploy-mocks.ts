@@ -27,7 +27,7 @@ const deployMocks: DeployFunction = async ({ getNamedAccounts, deployments, netw
             from: deployer,
             args: [], // from github MockV3Aggragator has 2 argument for the contructors
             log: true
-        })       
+        })
         log("MockERC20Token Deployed!")
         log("----------------------------------")
     }

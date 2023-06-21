@@ -1,7 +1,6 @@
 import { DeployFunction } from "hardhat-deploy/types";
 import {
   developmentChains,
-  networkConfig,
   TOKEN1_NAME,
   TOKEN1_SYMBOL,
   TOKEN2_NAME,
@@ -12,35 +11,21 @@ import { verify } from "../utils/verify";
 import { ethers, upgrades } from "hardhat";
 
 const func: DeployFunction = async ({
-  getNamedAccounts,
   deployments,
   network,
 }) => {
-  const { deploy, log } = deployments;
-  const { deployer } = await getNamedAccounts();
+  const { log } = deployments;
 
   const tokenFactoryDeployment = await deployments.get("TokenFactory");
 
-  //const tokenFactory = await ethers.getContract("TokenFactory", deployer);
   const tokenFactory = await ethers.getContractAt(
     "TokenFactory",
     tokenFactoryDeployment.address
   );
 
   log("Deploying SmartToken 1...");
-  // const SmartToken1 = await deploy("SmartToken", {
-  //   from: deployer,
-  //   args: [
-  //     TOKEN1_NAME,
-  //     TOKEN1_SYMBOL,
-  //     tokenFactory.address,
-  //     sanctionsContractAddress,
-  //   ],
-  //   log: true,
-  //   // we need to wait if on a live network so we can verify properly
-  //   waitConfirmations: networkConfig[network.name].blockConfirmations || 1,
-  // });
   const SmartFactoryContract = await ethers.getContractFactory("SmartToken");
+
   const SmartToken1 = await upgrades.deployProxy(
     SmartFactoryContract,
     [
@@ -52,6 +37,7 @@ const func: DeployFunction = async ({
     { initializer: "initialize", kind: "uups" }
   );
 
+  await SmartToken1.deployed();
   log(`SmartToken1 deployed at ${SmartToken1.address}`);
   log(
     `SmartToken1 implementation deployed at ${await upgrades.erc1967.getImplementationAddress(
@@ -85,6 +71,7 @@ const func: DeployFunction = async ({
     { initializer: "initialize", kind: "uups" }
   );
 
+  await SmartToken2.deployed();
   log(`SmartToken2 deployed at ${SmartToken2.address}`);
   log(
     `SmartToken2 implementation deployed at ${await upgrades.erc1967.getImplementationAddress(
