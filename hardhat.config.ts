@@ -18,7 +18,7 @@ const config: HardhatUserConfig = {
         settings: {
           optimizer: {
             enabled: true,
-            runs: 1,
+            runs: 100000,
           },
           viaIR: false,
         },
@@ -27,13 +27,6 @@ const config: HardhatUserConfig = {
         version: "0.6.6",
       },
     ],
-    settings: {
-      optimizer: {
-        enabled: true,
-        runs: 1,
-      },
-      viaIR: true,
-    },
   },
   defaultNetwork: "hardhat",
   networks: {
@@ -100,7 +93,7 @@ const config: HardhatUserConfig = {
   contractSizer: {
     alphaSort: true,
     disambiguatePaths: false,
-    runOnCompile: false,
+    runOnCompile: true,
     strict: true,
   },
   mocha: {
