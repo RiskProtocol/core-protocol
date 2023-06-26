@@ -3,13 +3,11 @@ pragma solidity ^0.8.9;
 
 import "forge-std/Test.sol";
 import "../../contracts/vaults/TokenFactory.sol";
-import "../../contracts/mocks/MockV3Aggregator.sol";
 import "../../contracts/mocks/MockERC20Token.sol";
 import "../../contracts/vaults/SmartToken.sol";
 import "../../contracts/mocks/MockUUPSProxy.sol";
 
 abstract contract TestHelper {
-    MockV3Aggregator public mockV3Aggregator;
     MockERC20Token public mockERC20Token;
     TokenFactory public tokenFactory;
     SmartToken public smartTokenX;
@@ -29,4 +27,5 @@ abstract contract TestHelper {
     address public deployer = 0xe738696676571D9b74C81716E4aE797c2440d306;
     address public sanctionsContract =
         0x40C57923924B5c5c5455c48D93317139ADDaC8fb; //polygon network
+    address public signersAddress = 0x786d956DBc070815F9b53a6dd03D38EDf33EE2C7;
 }

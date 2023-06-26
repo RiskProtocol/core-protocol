@@ -9,6 +9,13 @@ import {
   TOKEN2_SYMBOL,
   DECIMALS,
   INITIAL_PRICE,
+  signersAddress,
+  encodedEarlyRebase1,
+  encodedNaturalRebase1,
+  encodedEarlyRebase2,
+  encodedNaturalRebase2,
+  encodedNaturalRebase3,
+  SmartTokenXValue,
 } from "../../helper-hardhat-config";
 import { loadFixture, time } from "@nomicfoundation/hardhat-network-helpers";
 import { BigNumber } from "ethers";
@@ -46,16 +53,6 @@ developmentChains.includes(network.name)
       async function deployTokenFixture() {
         const [deployer, tester] = await ethers.getSigners();
 
-        const MockV3Aggregator = await ethers.getContractFactory(
-          "MockV3Aggregator",
-          deployer
-        );
-        const mockV3Aggregator = await MockV3Aggregator.deploy(
-          DECIMALS,
-          INITIAL_PRICE
-        );
-        await mockV3Aggregator.deployed();
-
         const MockERC20Token = await ethers.getContractFactory(
           "MockERC20Token",
           deployer
@@ -79,9 +76,9 @@ developmentChains.includes(network.name)
 
         const tokenFactory = await upgrades.deployProxy(TokenFactory, [
           underlyingToken.address,
-          mockV3Aggregator.address,
           REBASE_INTERVAL,
           sanctionsContract.address,
+          signersAddress,
         ]);
         await tokenFactory.deployed();
 
@@ -121,9 +118,9 @@ developmentChains.includes(network.name)
 
         const tokenFactory2 = await upgrades.deployProxy(TokenFactory2, [
           "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D",
-          mockV3Aggregator.address,
           REBASE_INTERVAL,
           sanctionsContract.address,
+          signersAddress,
         ]);
 
         await tokenFactory2.deployed();
@@ -132,7 +129,6 @@ developmentChains.includes(network.name)
         return {
           smartToken1,
           smartToken2,
-          mockV3Aggregator,
           underlyingToken,
           tokenFactory,
           deployer,
@@ -189,7 +185,6 @@ developmentChains.includes(network.name)
               tester,
             } = await loadFixture(deployTokenFixture);
             const depositAmount = item.depositValue;
-            //const transferAmount = ethers.utils.parseEther("1");
 
             await tokenFactory.initializeSMART(
               smartToken1.address,
@@ -210,12 +205,14 @@ developmentChains.includes(network.name)
             );
             const factBal = await smartToken1.balanceOf(tokenFactory.address);
 
-            let block = await ethers.provider.getBlock("latest");
-            const now = block.timestamp;
+            const now = await tokenFactory.getLastTimeStamp();
 
-            const nextRebaseTimeStamp = now + REBASE_INTERVAL;
+            const nextRebaseTimeStamp = BigInt(now) + BigInt(REBASE_INTERVAL);
             await time.setNextBlockTimestamp(nextRebaseTimeStamp);
-            await tokenFactory.executeRebase(1, true);
+            await tokenFactory.executeRebase(
+              encodedNaturalRebase1.encodedData,
+              encodedNaturalRebase1.signature
+            );
 
             let block2 = await ethers.provider.getBlock("latest");
             const now2 = block2.timestamp;
@@ -340,49 +337,46 @@ developmentChains.includes(network.name)
             const assetBal2: bigint = await smartToken2.balanceOf(
               deployer.address
             );
-
             //variables to be used for caluculations
             const oneDay: bigint = BigInt(86400);
-            // const numberOfRebase: bigint = oneYear / BigInt(REBASE_INTERVAL);
             const mgmtFeePerInterval: bigint =
               (BigInt(mgmtFee) * BigInt(REBASE_INTERVAL)) / oneDay;
-            const scallingFactorX_: bigint = BigInt(333500000000000000);
-            const scallingFactorY: bigint = BigInt(666500000000000000);
-            const denominator: bigint = BigInt(1000000000000000000);
-            //balance fees
-            const expectedFeeUnscaled1: bigint =
-              mgmtFeePerInterval * BigInt(assetBal1);
-            const expectedFeeUnscaled2: bigint =
-              mgmtFeePerInterval * BigInt(assetBal2);
-
-            const scallingFactorMgmtFee = 100000;
-            const expectedFee1: bigint =
-              expectedFeeUnscaled1 / BigInt(scallingFactorMgmtFee);
-            const expectedFee2: bigint =
-              expectedFeeUnscaled2 / BigInt(scallingFactorMgmtFee);
-
-            const asset1BalV2: bigint =
-              BigInt(assetBal1) - BigInt(expectedFee1);
-
-            const asset2BalV2: bigint =
-              BigInt(assetBal2) - BigInt(expectedFee2);
-
-            //the get balance formula after rebase
-            const rollOverValue: bigint =
-              (asset1BalV2 * scallingFactorX_ + asset2BalV2 * scallingFactorY) /
-              denominator;
             const lastRebase = await tokenFactory.getLastTimeStamp();
             //contract call
             const nextRebase = BigInt(lastRebase) + BigInt(REBASE_INTERVAL);
-            await time.setNextBlockTimestamp(nextRebase);
-            await tokenFactory.executeRebase(1, true);
 
-            expect(rollOverValue).to.equal(
-              await smartToken1.balanceOf(deployer.address)
+            let block = await ethers.provider.getBlock("latest");
+
+            const scallingFactorMgmtFee = 100000;
+            const depositCycle = nextRebase - BigInt(block.timestamp);
+
+            const expectedFee2: bigint =
+              (BigInt(depositCycle) *
+                BigInt(mgmtFeePerInterval) *
+                BigInt(assetBal2)) /
+              BigInt(REBASE_INTERVAL) /
+              BigInt(scallingFactorMgmtFee);
+            const expectedFee1: bigint =
+              (BigInt(depositCycle) *
+                BigInt(mgmtFeePerInterval) *
+                BigInt(assetBal1)) /
+              BigInt(REBASE_INTERVAL) /
+              BigInt(scallingFactorMgmtFee);
+
+            const fee1 = await tokenFactory.calculateManagementFee(
+              assetBal1,
+              true,
+              0
             );
-            expect(rollOverValue).to.equal(
-              await smartToken2.balanceOf(deployer.address)
+
+            const fee2 = await tokenFactory.calculateManagementFee(
+              assetBal2,
+              true,
+              0
             );
+
+            expect(fee1).to.equal(expectedFee1);
+            expect(fee2).to.equal(expectedFee2);
           });
 
           it(`it should not charge additional fees in case of an early rebase`, async function () {
@@ -415,64 +409,19 @@ developmentChains.includes(network.name)
             await tokenFactory.setManagementFeeRate(mgmtFee);
             await tokenFactory.setManagementFeeState(true);
 
-            //get user balance
-            const assetBal1: bigint = await smartToken1.balanceOf(
-              deployer.address
+            const initialManagementFeeHistory =
+              await tokenFactory.getMgmtFeeFactorLength();
+            await tokenFactory.executeRebase(
+              encodedEarlyRebase1.encodedData,
+              encodedEarlyRebase1.signature
             );
-            const assetBal2: bigint = await smartToken2.balanceOf(
-              deployer.address
-            );
 
-            //variables to be used for caluculations
-            const oneDay: bigint = BigInt(86400);
-            // const numberOfRebase: bigint = oneYear / BigInt(REBASE_INTERVAL);
-            const mgmtFeePerInterval: bigint =
-              (BigInt(mgmtFee) * BigInt(REBASE_INTERVAL)) / oneDay;
-            const scallingFactorX_: bigint = BigInt(333500000000000000);
-            const scallingFactorY: bigint = BigInt(666500000000000000);
-            const denominator: bigint = BigInt(1000000000000000000);
-            //balance fees
-            const expectedFeeUnscaled1: bigint =
-              mgmtFeePerInterval * BigInt(assetBal1);
-            const expectedFeeUnscaled2: bigint =
-              mgmtFeePerInterval * BigInt(assetBal2);
+            const finalManagementFeeHistory =
+              await tokenFactory.getMgmtFeeFactorLength();
 
-            const scallingFactorMgmtFee = 100000;
-            const expectedFee1: bigint =
-              expectedFeeUnscaled1 / BigInt(scallingFactorMgmtFee);
-            const expectedFee2: bigint =
-              expectedFeeUnscaled2 / BigInt(scallingFactorMgmtFee);
-
-            const asset1BalV2: bigint =
-              BigInt(assetBal1) - BigInt(expectedFee1);
-
-            const asset2BalV2: bigint =
-              BigInt(assetBal2) - BigInt(expectedFee2);
-
-            //the get balance formula after rebase
-            const rollOverValue: bigint =
-              (asset1BalV2 * scallingFactorX_ + asset2BalV2 * scallingFactorY) /
-              denominator;
-
-            //contract call
-            const lastRebase = await tokenFactory.getLastTimeStamp();
-            //contract call
-            const nextRebase = BigInt(lastRebase) + BigInt(REBASE_INTERVAL);
-
-            //early rebase
-            const earlyRebase: bigint = BigInt(lastRebase) + BigInt(1000);
-            await time.setNextBlockTimestamp(BigNumber.from(earlyRebase));
-            await tokenFactory.executeRebase(1, false);
-
-            //normal rebase
-            await time.setNextBlockTimestamp(nextRebase);
-            await tokenFactory.executeRebase(2, true);
-            //check the fees
-            expect(rollOverValue).to.equal(
-              await smartToken1.balanceOf(deployer.address)
-            );
-            expect(rollOverValue).to.equal(
-              await smartToken2.balanceOf(deployer.address)
+            //check the fees history
+            expect(initialManagementFeeHistory).to.equal(
+              finalManagementFeeHistory
             );
           });
           it(`It should not apply rebase to a new user`, async function () {
@@ -500,7 +449,10 @@ developmentChains.includes(network.name)
             //contract call and make a rebase
             const nextRebase = BigInt(lastRebase) + BigInt(REBASE_INTERVAL);
             await time.setNextBlockTimestamp(nextRebase);
-            await tokenFactory.executeRebase(1, true);
+            await tokenFactory.executeRebase(
+              encodedNaturalRebase1.encodedData,
+              encodedNaturalRebase1.signature
+            );
 
             // deposit underlying token
             await underlyingToken.approve(tokenFactory.address, depositAmount);
@@ -562,15 +514,24 @@ developmentChains.includes(network.name)
             //contract call and make 3 rebase
             const nextRebase = BigInt(lastRebase) + BigInt(REBASE_INTERVAL);
             await time.setNextBlockTimestamp(nextRebase);
-            await tokenFactory.executeRebase(1, true);
+            await tokenFactory.executeRebase(
+              encodedNaturalRebase1.encodedData,
+              encodedNaturalRebase1.signature
+            );
 
             const secondRebase = BigInt(nextRebase) + BigInt(REBASE_INTERVAL);
             await time.setNextBlockTimestamp(secondRebase);
-            await tokenFactory.executeRebase(2, true);
+            await tokenFactory.executeRebase(
+              encodedNaturalRebase2.encodedData,
+              encodedNaturalRebase2.signature
+            );
 
             const thirdRebase = BigInt(secondRebase) + BigInt(REBASE_INTERVAL);
             await time.setNextBlockTimestamp(thirdRebase);
-            await tokenFactory.executeRebase(3, true);
+            await tokenFactory.executeRebase(
+              encodedNaturalRebase3.encodedData,
+              encodedNaturalRebase3.signature
+            );
 
             const userBal = await smartToken1.balanceOf(tester.address);
 

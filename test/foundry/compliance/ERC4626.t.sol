@@ -16,8 +16,6 @@ contract ERC4626Test is Test, TestHelper {
         vm.createSelectFork(vm.rpcUrl("mainnet"), 17268750);
 
         // deploy chainlink mock
-        mockV3Aggregator = new MockV3Aggregator(DECIMALS, INITIAL_PRICE);
-        address mockV3AggregatorAddress = address(mockV3Aggregator);
 
         // deploy underlying asset
         underlying = new MockERC20Token();
@@ -27,9 +25,9 @@ contract ERC4626Test is Test, TestHelper {
         factoryWrapper = TokenFactory(address(factoryProxy));
         factoryWrapper.initialize(
             underlying,
-            mockV3AggregatorAddress,
             REBASE_INTERVAL,
-            sanctionsContract
+            sanctionsContract,
+            signersAddress
         );
 
         vault = new SmartToken();

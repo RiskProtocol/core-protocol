@@ -9,6 +9,7 @@ import {
   TOKEN2_SYMBOL,
   DECIMALS,
   INITIAL_PRICE,
+  signersAddress,
 } from "../../helper-hardhat-config";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 
@@ -16,16 +17,6 @@ developmentChains.includes(network.name)
   ? describe("SmartToken", async function () {
       async function deployTokenFixture() {
         const [deployer, tester] = await ethers.getSigners();
-
-        const MockV3Aggregator = await ethers.getContractFactory(
-          "MockV3Aggregator",
-          deployer
-        );
-        const mockV3Aggregator = await MockV3Aggregator.deploy(
-          DECIMALS,
-          INITIAL_PRICE
-        );
-        await mockV3Aggregator.deployed();
 
         const MockERC20TokenWithPermit = await ethers.getContractFactory(
           "MockERC20TokenWithPermit",
@@ -48,9 +39,9 @@ developmentChains.includes(network.name)
         );
         const tokenFactory = await upgrades.deployProxy(TokenFactory, [
           underlyingToken.address,
-          mockV3Aggregator.address,
           REBASE_INTERVAL,
           sanctionsContract.address,
+          signersAddress,
         ]);
         await tokenFactory.deployed();
 
@@ -86,7 +77,6 @@ developmentChains.includes(network.name)
         return {
           smartToken1,
           smartToken2,
-          mockV3Aggregator,
           underlyingToken,
           tokenFactory,
           deployer,

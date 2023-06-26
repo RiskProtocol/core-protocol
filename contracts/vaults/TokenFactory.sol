@@ -11,13 +11,13 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./SmartToken.sol";
-import "./../libraries/PriceFeed.sol";
 import "./BaseContract.sol";
 import "./../interfaces/IERC20Update.sol";
 
 error TokenFactory__MethodNotAllowed();
 error TokenFactory__InvalidDivision();
 error TokenFactory__InvalidSequenceNumber();
+error TokenFactory__InvalidNaturalRebase();
 
 /**
  * @title ERC-20 Rebase Tokens
@@ -34,7 +34,6 @@ contract TokenFactory is
     UUPSUpgradeable,
     BaseContract
 {
-    using PriceFeed for AggregatorV3Interface;
     using MathUpgradeable for uint256;
     using SafeMathUpgradeable for uint256;
     using SafeMathUpgradeable for uint8;
@@ -43,13 +42,14 @@ contract TokenFactory is
     // State variables
     uint256[] private scallingFactorX;
     SmartToken[] private smartTokenArray;
-    AggregatorV3Interface private priceFeed;
     mapping(address => uint256) private lastRebaseCount;
     IERC20Update private baseToken;
     uint8 private baseTokenDecimals;
     uint256 private interval;
     uint256 private lastTimeStamp;
     bool private smartTokenInitialized;
+    address private signersAddress;
+    mapping(uint256 => bool) private sequenceNumberApplied;
     //management fees
     uint32 private constant MGMT_FEE_SCALING_FACTOR = 100000;
     uint32 private managementFeesRate;
@@ -62,6 +62,8 @@ contract TokenFactory is
         //ScheduledRebase
         uint256 sequenceNumber;
         bool isNaturalRebase;
+        uint256 price;
+        uint256 smartTokenXprice;
     }
 
     ScheduledRebase[] private scheduledRebases;
@@ -109,16 +111,15 @@ contract TokenFactory is
 
     function initialize(
         IERC20Update baseTokenAddress,
-        address priceFeedAddress,
         uint256 rebaseInterval, // in seconds
-        address sanctionsContract_
+        address sanctionsContract_,
+        address signersAddress_
     ) public initializer {
         __BaseContract_init(sanctionsContract_);
         __Ownable_init();
         __UUPSUpgradeable_init();
 
         baseToken = IERC20Update(baseTokenAddress);
-        priceFeed = AggregatorV3Interface(priceFeedAddress);
         (bool success, uint8 assetDecimals) = _tryGetAssetDecimals(baseToken);
         baseTokenDecimals = success ? assetDecimals : 18;
         interval = rebaseInterval;
@@ -128,6 +129,7 @@ contract TokenFactory is
         mgmtFeeSum.push(managementFeesRate);
         nextSequenceNumber = 1;
         smartTokenInitialized = false;
+        signersAddress = signersAddress_;
     }
 
     function _authorizeUpgrade(
@@ -320,16 +322,32 @@ contract TokenFactory is
     }
 
     function executeRebase(
-        uint256 sequenceNumber,
-        bool isNaturalRebase
-    ) external onlyOwner {
-        if (sequenceNumber < nextSequenceNumber) {
+        bytes memory encodedData,
+        bytes memory signature
+    ) external {
+        ScheduledRebase memory rebaseCall = verifyAndDecode(
+            signature,
+            encodedData
+        );
+
+        if (
+            rebaseCall.sequenceNumber < nextSequenceNumber ||
+            sequenceNumberApplied[rebaseCall.sequenceNumber]
+        ) {
             revert TokenFactory__InvalidSequenceNumber();
         }
+        if (
+            block.timestamp < (lastTimeStamp + interval) &&
+            rebaseCall.isNaturalRebase
+        ) {
+            revert TokenFactory__InvalidNaturalRebase();
+        }
+        //This is to make sure that the sequence number can be applied only once
 
-        scheduledRebases.push(ScheduledRebase(sequenceNumber, isNaturalRebase));
+        sequenceNumberApplied[rebaseCall.sequenceNumber] = true;
+        scheduledRebases.push(rebaseCall);
 
-        if (sequenceNumber == nextSequenceNumber) {
+        if (rebaseCall.sequenceNumber == nextSequenceNumber) {
             rebase();
         }
     }
@@ -348,12 +366,10 @@ contract TokenFactory is
             if (scheduledRebase.isNaturalRebase) {
                 lastTimeStamp += interval;
             }
-            uint256 rebasePrice = priceFeed.getPrice() / 10 ** decimals();
-            uint256 asset1Price = rebasePrice.ceilDiv(3); // this should be gotten from the oracle
+            uint256 rebasePrice = scheduledRebase.price / 10 ** decimals();
+            uint256 asset1Price = scheduledRebase.smartTokenXprice; //x 10e18
             uint256 divisor = rebasePrice.ceilDiv(2);
-            scallingFactorX.push(
-                ((asset1Price * 10 ** decimals()) / 2) / divisor
-            );
+            scallingFactorX.push((asset1Price / 2) / divisor);
             if (managementFeeEnabled && scheduledRebase.isNaturalRebase) {
                 mgmtFeesHistory.push(managementFeesRate);
                 updateManagementFeeSum();
@@ -459,6 +475,62 @@ contract TokenFactory is
         ) {
             lastRebaseCount[owner_] = getScallingFactorLength();
         }
+    }
+
+    /*
+    note: The following functions will be used to decode the encoded data as well as verify
+    the signature in the function call
+     */
+
+    function verifyAndDecode(
+        bytes memory signature,
+        bytes memory encodedData
+    ) private view returns (ScheduledRebase memory) {
+        bytes32 hash = keccak256(encodedData);
+        bytes32 ethSignedMessageHash = keccak256(
+            abi.encodePacked("\x19Ethereum Signed Message:\n32", hash)
+        );
+
+        // Recover the address
+        (uint8 v, bytes32 r, bytes32 s) = splitSignature(signature);
+        address recoveredAddress = ecrecover(ethSignedMessageHash, v, r, s);
+
+        // Verify the address
+        require(recoveredAddress == signersAddress, "Invalid Signature");
+
+        // If the signature is valid, decode the encodedData
+        (
+            uint256 sequenceNumber,
+            bool isNaturalRebase,
+            uint256 underlyingValue,
+            uint256 smartTokenXValue
+        ) = abi.decode(encodedData, (uint256, bool, uint256, uint256));
+        ScheduledRebase memory data = ScheduledRebase(
+            sequenceNumber,
+            isNaturalRebase,
+            underlyingValue,
+            smartTokenXValue
+        );
+        return data;
+    }
+
+    function splitSignature(
+        bytes memory sig
+    ) private pure returns (uint8 v, bytes32 r, bytes32 s) {
+        require(sig.length == 65, "invalid signature length");
+
+        assembly {
+            // first 32 bytes, after the length prefix
+            r := mload(add(sig, 32))
+            // second 32 bytes
+            s := mload(add(sig, 64))
+            // final byte (first byte of the next 32 bytes)
+            v := byte(0, mload(add(sig, 96)))
+        }
+    }
+
+    function setSignersAddress(address addr) public onlyOwner {
+        signersAddress = addr;
     }
 
     /*
@@ -597,6 +669,10 @@ contract TokenFactory is
     }
 
     //  other getter methods
+    function getSignersAddress() public view returns (address) {
+        return signersAddress;
+    }
+
     function getScheduledRebases()
         public
         view
@@ -619,10 +695,6 @@ contract TokenFactory is
 
     function getManagementFeeState() public view returns (bool) {
         return managementFeeEnabled;
-    }
-
-    function getPriceFeedAddress() public view returns (AggregatorV3Interface) {
-        return priceFeed;
     }
 
     function getScallingFactorLength() public view returns (uint256) {

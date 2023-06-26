@@ -16,9 +16,6 @@ contract _Test is Test, TestHelper {
         owner = vm.addr(1);
         nonAuthorized = address(20);
         vm.startPrank(owner);
-        // deploy chainlink mock
-        mockV3Aggregator = new MockV3Aggregator(DECIMALS, INITIAL_PRICE);
-        address mockV3AggregatorAddress = address(mockV3Aggregator);
 
         // deploy underlying asset
         underlying = new MockERC20Token();
@@ -27,9 +24,9 @@ contract _Test is Test, TestHelper {
         factoryWrapper = TokenFactory(address(factoryProxy));
         factoryWrapper.initialize(
             underlying,
-            mockV3AggregatorAddress,
             REBASE_INTERVAL,
-            sanctionsContract
+            sanctionsContract,
+            signersAddress
         );
 
         // deploy token X

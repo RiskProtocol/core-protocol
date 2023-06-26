@@ -9,8 +9,13 @@ import {
   TOKEN2_SYMBOL,
   DECIMALS,
   INITIAL_PRICE,
+  signersAddress,
+  encodedNaturalRebase1,
+  encodedEarlyRebase1,
+  encodedEarlyRebase2,
+  encodedEarlyRebase3,
 } from "../../helper-hardhat-config";
-import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
+import { loadFixture, time } from "@nomicfoundation/hardhat-network-helpers";
 
 const rebaseTable = [
   {
@@ -44,16 +49,6 @@ developmentChains.includes(network.name)
       async function deployTokenFixture() {
         const [deployer, tester] = await ethers.getSigners();
 
-        const MockV3AggregatorFactory = await ethers.getContractFactory(
-          "MockV3Aggregator",
-          deployer
-        );
-        const mockV3Aggregator = await MockV3AggregatorFactory.deploy(
-          DECIMALS,
-          INITIAL_PRICE
-        );
-        await mockV3Aggregator.deployed();
-
         const MockERC20TokenWithPermit = await ethers.getContractFactory(
           "MockERC20TokenWithPermit",
           deployer
@@ -76,9 +71,9 @@ developmentChains.includes(network.name)
 
         const tokenFactory = await upgrades.deployProxy(TokenFactory, [
           underlyingToken.address,
-          mockV3Aggregator.address,
           REBASE_INTERVAL,
           sanctionsContract.address,
+          signersAddress,
         ]);
         await tokenFactory.deployed();
 
@@ -118,9 +113,9 @@ developmentChains.includes(network.name)
 
         const tokenFactory2 = await upgrades.deployProxy(TokenFactory2, [
           "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D",
-          mockV3Aggregator.address,
           REBASE_INTERVAL,
           sanctionsContract.address,
+          signersAddress,
         ]);
         await tokenFactory2.deployed();
 
@@ -128,7 +123,6 @@ developmentChains.includes(network.name)
         return {
           smartToken1,
           smartToken2,
-          mockV3Aggregator,
           underlyingToken,
           tokenFactory,
           deployer,
@@ -163,9 +157,15 @@ developmentChains.includes(network.name)
 
             // to a transaction
             await smartToken1.transfer(tester.address, transferAmount);
+            const now = await tokenFactory.getLastTimeStamp(); //block.timestamp;
 
+            const nextRebaseTimeStamp = BigInt(now) + BigInt(REBASE_INTERVAL);
+            await time.setNextBlockTimestamp(nextRebaseTimeStamp);
             // trigger a rebase
-            await tokenFactory.executeRebase(1, true);
+            await tokenFactory.executeRebase(
+              encodedNaturalRebase1.encodedData,
+              encodedNaturalRebase1.signature
+            );
 
             // confirm user balances when rebase has taken place
             assert.equal(
@@ -205,10 +205,16 @@ developmentChains.includes(network.name)
           await smartToken1.deposit(depositAmount, deployer.address);
 
           // trigger a rebase
-          await tokenFactory.executeRebase(1, false);
+          await tokenFactory.executeRebase(
+            encodedEarlyRebase1.encodedData,
+            encodedEarlyRebase1.signature
+          );
           expect(await tokenFactory.getNextSequenceNumber()).to.equal(2);
 
-          await tokenFactory.executeRebase(2, false);
+          await tokenFactory.executeRebase(
+            encodedEarlyRebase2.encodedData,
+            encodedEarlyRebase2.signature
+          );
           expect(await tokenFactory.getNextSequenceNumber()).to.equal(3);
         });
 
@@ -235,12 +241,21 @@ developmentChains.includes(network.name)
           await smartToken1.deposit(depositAmount, deployer.address);
 
           // trigger a rebase
-          await tokenFactory.executeRebase(1, false);
+          await tokenFactory.executeRebase(
+            encodedEarlyRebase1.encodedData,
+            encodedEarlyRebase1.signature
+          );
 
-          await tokenFactory.executeRebase(3, false);
+          await tokenFactory.executeRebase(
+            encodedEarlyRebase3.encodedData,
+            encodedEarlyRebase3.signature
+          );
 
           expect(await tokenFactory.getNextSequenceNumber()).to.equal(2);
-          await tokenFactory.executeRebase(2, false);
+          await tokenFactory.executeRebase(
+            encodedEarlyRebase2.encodedData,
+            encodedEarlyRebase2.signature
+          );
 
           expect(await tokenFactory.getNextSequenceNumber()).to.equal(4);
         });
@@ -268,12 +283,20 @@ developmentChains.includes(network.name)
           await smartToken1.deposit(depositAmount, deployer.address);
 
           // trigger a rebase
-          await tokenFactory.executeRebase(1, false);
-          await tokenFactory.executeRebase(2, false);
-          await tokenFactory.executeRebase(3, false);
-          await tokenFactory.executeRebase(4, false);
-          await tokenFactory.executeRebase(5, false);
-          expect(await tokenFactory.getNextSequenceNumber()).to.equal(6);
+          await tokenFactory.executeRebase(
+            encodedEarlyRebase1.encodedData,
+            encodedEarlyRebase1.signature
+          );
+          await tokenFactory.executeRebase(
+            encodedEarlyRebase2.encodedData,
+            encodedEarlyRebase2.signature
+          );
+          await tokenFactory.executeRebase(
+            encodedEarlyRebase3.encodedData,
+            encodedEarlyRebase3.signature
+          );
+
+          expect(await tokenFactory.getNextSequenceNumber()).to.equal(4);
         });
 
         it(`it should handle rebases with already executed sequence properly`, async function () {
@@ -299,16 +322,57 @@ developmentChains.includes(network.name)
           await smartToken1.deposit(depositAmount, deployer.address);
 
           // trigger a rebase
-          await tokenFactory.executeRebase(1, false);
-          await tokenFactory.executeRebase(2, false);
+          await tokenFactory.executeRebase(
+            encodedEarlyRebase1.encodedData,
+            encodedEarlyRebase1.signature
+          );
+          await tokenFactory.executeRebase(
+            encodedEarlyRebase2.encodedData,
+            encodedEarlyRebase2.signature
+          );
 
           await expect(
-            tokenFactory.executeRebase(1, false)
+            tokenFactory.executeRebase(
+              encodedEarlyRebase1.encodedData,
+              encodedEarlyRebase1.signature
+            )
           ).to.be.revertedWithCustomError(
             tokenFactory,
             "TokenFactory__InvalidSequenceNumber"
           );
         });
+      });
+
+      it(`it should revert if rebase signature is not signed by API wallet`, async function () {
+        const {
+          tokenFactory,
+          deployer,
+          underlyingToken,
+          smartToken1,
+          smartToken2,
+          tester,
+        } = await loadFixture(deployTokenFixture);
+
+        const depositAmount = ethers.utils.parseEther("1");
+
+        await tokenFactory.initializeSMART(
+          smartToken1.address,
+
+          smartToken2.address
+        );
+
+        // deposit underlying token
+        await underlyingToken.approve(tokenFactory.address, depositAmount);
+        await smartToken1.deposit(depositAmount, deployer.address);
+
+        // trigger a rebase
+
+        await expect(
+          tokenFactory.executeRebase(
+            encodedEarlyRebase1.encodedData,
+            encodedEarlyRebase2.signature //invalid sig
+          )
+        ).to.be.revertedWith("Invalid Signature");
       });
     })
   : describe.skip;
