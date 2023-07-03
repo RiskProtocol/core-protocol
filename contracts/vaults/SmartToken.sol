@@ -127,7 +127,7 @@ contract SmartToken is
         return super.balanceOf(account);
     }
 
-    function hasPendingRebase(address account) private view returns (bool) {
+    function hasPendingRebase(address account) public view returns (bool) {
         return
             tokenFactory.getUserLastRebaseCount(account) !=
             tokenFactory.getScallingFactorLength();
@@ -152,7 +152,7 @@ contract SmartToken is
         return super.transferFrom(sender, recipient, amount);
     }
 
-    function handlePendingRebase(address sender, address receiver) private {
+    function handlePendingRebase(address sender, address receiver) public {
         if (hasPendingRebase(sender)) {
             tokenFactory.applyRebase(sender);
         }
