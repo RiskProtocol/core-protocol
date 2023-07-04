@@ -42,6 +42,7 @@ const func: DeployFunction = async ({
   );
 
   log(`SmartToken1 deployed at ${SmartToken1.address}`);
+  await SmartToken1.deployed();
   log(
     `SmartToken1 implementation deployed at ${await upgrades.erc1967.getImplementationAddress(
       SmartToken1.address
@@ -75,6 +76,7 @@ const func: DeployFunction = async ({
   );
 
   log(`SmartToken2 deployed at ${SmartToken2.address}`);
+  await SmartToken2.deployed();
   log(
     `SmartToken2 implementation deployed at ${await upgrades.erc1967.getImplementationAddress(
       SmartToken2.address
