@@ -1,0 +1,4 @@
+title The API Operation
+User->API:Calls the getNextRebase controller with encoded params OFF
+API->DB: Fetches the next rebase info from the database
+API-->User: Returns human readable next rebase info

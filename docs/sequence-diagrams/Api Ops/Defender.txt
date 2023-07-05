@@ -1,0 +1,6 @@
+title The API Operation - Defender
+Defender->API: Calls the getNextRebase controller with encoded params on
+API->DB:Fetches next rebase info from the database
+API->API: Encode and Sign the data
+API->DB: Update the isInitiated status of the rebase to true
+API-->Defender: Returns encoded rebase parameters with signature to Defender
