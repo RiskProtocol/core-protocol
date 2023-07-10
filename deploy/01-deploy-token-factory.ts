@@ -43,6 +43,7 @@ const func: DeployFunction = async ({
   );
   await deployments.save("TokenFactory", TokenFactory);
   log(`TokenFactory deployed at ${TokenFactory.address}`);
+  await TokenFactory.deployed();
   log(
     `TokenFactory implementation deployed at ${await upgrades.erc1967.getImplementationAddress(
       TokenFactory.address

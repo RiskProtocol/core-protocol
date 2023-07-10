@@ -219,7 +219,10 @@ developmentChains.includes(network.name)
         );
         await expect(
           tokenFactory.initializeSMART(smartToken1.address, smartToken2.address)
-        ).to.be.revertedWith("Smart Tokens have already been initialized!");
+        ).to.be.revertedWithCustomError(
+          tokenFactory,
+          "TokenFactory__AlreadyInitialized"
+        );
       });
 
       describe("Others", async function () {

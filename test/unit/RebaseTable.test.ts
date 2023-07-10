@@ -372,7 +372,10 @@ developmentChains.includes(network.name)
             encodedEarlyRebase1.encodedData,
             encodedEarlyRebase2.signature //invalid sig
           )
-        ).to.be.revertedWith("Invalid Signature");
+        ).to.be.revertedWithCustomError(
+          tokenFactory,
+          "TokenFactory__InvalidSignature"
+        );
       });
     })
   : describe.skip;

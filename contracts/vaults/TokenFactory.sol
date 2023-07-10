@@ -18,6 +18,10 @@ error TokenFactory__MethodNotAllowed();
 error TokenFactory__InvalidDivision();
 error TokenFactory__InvalidSequenceNumber();
 error TokenFactory__InvalidNaturalRebase();
+error TokenFactory__AlreadyInitialized();
+error TokenFactory__InvalidSignature();
+error TokenFactory__InvalidSignatureLength();
+error TokenFactory__InvalidManagementFees();
 
 /**
  * @title ERC-20 Rebase Tokens
@@ -97,10 +101,9 @@ contract TokenFactory is
         }
     }
     modifier onlyIntializedOnce() {
-        require(
-            !smartTokenInitialized,
-            "Smart Tokens have already been initialized!"
-        );
+        if (smartTokenInitialized) {
+            revert TokenFactory__AlreadyInitialized();
+        }
         _;
     }
 
@@ -496,7 +499,10 @@ contract TokenFactory is
         address recoveredAddress = ecrecover(ethSignedMessageHash, v, r, s);
 
         // Verify the address
-        require(recoveredAddress == signersAddress, "Invalid Signature");
+
+        if (recoveredAddress != signersAddress) {
+            revert TokenFactory__InvalidSignature();
+        }
 
         // If the signature is valid, decode the encodedData
         (
@@ -517,7 +523,9 @@ contract TokenFactory is
     function splitSignature(
         bytes memory sig
     ) private pure returns (uint8 v, bytes32 r, bytes32 s) {
-        require(sig.length == 65, "invalid signature length");
+        if (sig.length != 65) {
+            revert TokenFactory__InvalidSignatureLength();
+        }
 
         assembly {
             // first 32 bytes, after the length prefix
@@ -543,10 +551,9 @@ contract TokenFactory is
     function setManagementFeeRate(
         uint32 rate
     ) external onlyOwner returns (bool) {
-        require(
-            rate <= MGMT_FEE_SCALING_FACTOR,
-            "The management fee rate cannot exeed 100 percent (100000)"
-        );
+        if (!(rate <= MGMT_FEE_SCALING_FACTOR)) {
+            revert TokenFactory__InvalidManagementFees();
+        }
         managementFeesRate = rate;
         return true;
     }

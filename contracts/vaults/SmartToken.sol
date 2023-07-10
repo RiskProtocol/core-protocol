@@ -36,20 +36,17 @@ contract SmartToken is
     IERC20Update private underlyingToken;
 
     modifier onlyTokenFactory() {
-        if (_msgSender() != address(tokenFactory))
-            revert SmartToken__NotTokenFactory();
+        _onlyTokenFactory();
         _;
     }
 
     modifier onlyAssetOwner(address assetOwner) {
-        if (assetOwner != _msgSender()) revert SmartToken__OnlyAssetOwner();
+        _onlyAssetOwner(assetOwner);
         _;
     }
 
     modifier validateDepositAmount(uint256 assets, address receiver) {
-        if (assets == 0) revert SmartToken__ZeroDeposit();
-        if (assets > maxDeposit(receiver))
-            revert SmartToken__DepositMoreThanMax();
+        _validateDepositAmount(assets, receiver);
         _;
     }
 
@@ -79,11 +76,11 @@ contract SmartToken is
     function mintAsset(
         address receiver,
         uint256 amount
-    ) public onlyTokenFactory {
+    ) external onlyTokenFactory {
         _mint(receiver, amount);
     }
 
-    function burn(address account, uint256 amount) public onlyTokenFactory {
+    function burn(address account, uint256 amount) external onlyTokenFactory {
         _burn(account, amount);
     }
 
@@ -357,5 +354,25 @@ contract SmartToken is
         tokenFactory._withdraw(_msgSender(), receiver, owner_, assets, shares);
 
         return assets;
+    }
+
+    /**
+    Helpers for modifiers to reduce size */
+    function _onlyTokenFactory() private view {
+        if (_msgSender() != address(tokenFactory))
+            revert SmartToken__NotTokenFactory();
+    }
+
+    function _onlyAssetOwner(address assetOwner) private view {
+        if (assetOwner != _msgSender()) revert SmartToken__OnlyAssetOwner();
+    }
+
+    function _validateDepositAmount(
+        uint256 assets,
+        address receiver
+    ) private view {
+        if (assets == 0) revert SmartToken__ZeroDeposit();
+        if (assets > maxDeposit(receiver))
+            revert SmartToken__DepositMoreThanMax();
     }
 }

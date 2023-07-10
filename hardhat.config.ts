@@ -15,17 +15,18 @@ const config: HardhatUserConfig = {
     compilers: [
       {
         version: "0.8.17",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 100000,
+          },
+          viaIR: false,
+        },
       },
       {
         version: "0.6.6",
       },
     ],
-    settings: {
-      optimizer: {
-        enabled: true,
-        runs: 1,
-      },
-    },
   },
   defaultNetwork: "hardhat",
   networks: {
@@ -42,7 +43,13 @@ const config: HardhatUserConfig = {
       url: process.env.GOERLI_RPC_URL,
       accounts: [process.env.PRIVATE_KEY!],
       chainId: 5,
-      allowUnlimitedContractSize: true,
+      //allowUnlimitedContractSize: true,
+    },
+    sepolia: {
+      url: process.env.SEPOLIA_RPC_URL,
+      accounts: [process.env.PRIVATE_KEY!],
+      chainId: 11155111,
+      //allowUnlimitedContractSize: true,
     },
     polygon: {
       url: process.env.POLYGON_RPC_URL,
@@ -86,7 +93,7 @@ const config: HardhatUserConfig = {
   contractSizer: {
     alphaSort: true,
     disambiguatePaths: false,
-    runOnCompile: false,
+    runOnCompile: true,
     strict: true,
   },
   mocha: {
