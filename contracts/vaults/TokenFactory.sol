@@ -8,6 +8,7 @@ import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.
 import "@openzeppelin/contracts-upgradeable/utils/math/MathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./SmartToken.sol";
@@ -490,13 +491,15 @@ contract TokenFactory is
         bytes memory encodedData
     ) private view returns (ScheduledRebase memory) {
         bytes32 hash = keccak256(encodedData);
-        bytes32 ethSignedMessageHash = keccak256(
-            abi.encodePacked("\x19Ethereum Signed Message:\n32", hash)
+        bytes32 ethSignedMessageHash = ECDSAUpgradeable.toEthSignedMessageHash(
+            hash
         );
 
         // Recover the address
-        (uint8 v, bytes32 r, bytes32 s) = splitSignature(signature);
-        address recoveredAddress = ecrecover(ethSignedMessageHash, v, r, s);
+        address recoveredAddress = ECDSAUpgradeable.recover(
+            ethSignedMessageHash,
+            signature
+        );
 
         // Verify the address
 
@@ -520,22 +523,22 @@ contract TokenFactory is
         return data;
     }
 
-    function splitSignature(
-        bytes memory sig
-    ) private pure returns (uint8 v, bytes32 r, bytes32 s) {
-        if (sig.length != 65) {
-            revert TokenFactory__InvalidSignatureLength();
-        }
+    // function splitSignature(
+    //     bytes memory sig
+    // ) private pure returns (uint8 v, bytes32 r, bytes32 s) {
+    //     if (sig.length != 65) {
+    //         revert TokenFactory__InvalidSignatureLength();
+    //     }
 
-        assembly {
-            // first 32 bytes, after the length prefix
-            r := mload(add(sig, 32))
-            // second 32 bytes
-            s := mload(add(sig, 64))
-            // final byte (first byte of the next 32 bytes)
-            v := byte(0, mload(add(sig, 96)))
-        }
-    }
+    //     assembly {
+    //         // first 32 bytes, after the length prefix
+    //         r := mload(add(sig, 32))
+    //         // second 32 bytes
+    //         s := mload(add(sig, 64))
+    //         // final byte (first byte of the next 32 bytes)
+    //         v := byte(0, mload(add(sig, 96)))
+    //     }
+    // }
 
     function setSignersAddress(address addr) public onlyOwner {
         signersAddress = addr;
