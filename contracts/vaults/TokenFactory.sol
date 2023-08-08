@@ -494,7 +494,6 @@ contract TokenFactory is
         bytes32 ethSignedMessageHash = ECDSAUpgradeable.toEthSignedMessageHash(
             hash
         );
-
         // Recover the address
         address recoveredAddress = ECDSAUpgradeable.recover(
             ethSignedMessageHash,
@@ -502,7 +501,6 @@ contract TokenFactory is
         );
 
         // Verify the address
-
         if (recoveredAddress != signersAddress) {
             revert TokenFactory__InvalidSignature();
         }
@@ -523,22 +521,6 @@ contract TokenFactory is
         return data;
     }
 
-    // function splitSignature(
-    //     bytes memory sig
-    // ) private pure returns (uint8 v, bytes32 r, bytes32 s) {
-    //     if (sig.length != 65) {
-    //         revert TokenFactory__InvalidSignatureLength();
-    //     }
-
-    //     assembly {
-    //         // first 32 bytes, after the length prefix
-    //         r := mload(add(sig, 32))
-    //         // second 32 bytes
-    //         s := mload(add(sig, 64))
-    //         // final byte (first byte of the next 32 bytes)
-    //         v := byte(0, mload(add(sig, 96)))
-    //     }
-    // }
 
     function setSignersAddress(address addr) public onlyOwner {
         signersAddress = addr;
