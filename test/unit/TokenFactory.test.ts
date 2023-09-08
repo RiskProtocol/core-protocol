@@ -1577,19 +1577,6 @@ developmentChains.includes(network.name)
               (BigInt(1e18) * BigInt(priceY - priceX)) / priceU
             ),
           };
-          // const rebase2: RebaseElements = {
-          //   BalanceFactorXY: BigInt(
-          //     (BigInt(rebase1.BalanceFactorXY.toString()) * BigInt(2) * priceX2) /
-          //       priceU2
-          //   ),
-          //   BalanceFactorUx: BigInt(0),
-          //   BalanceFactorUy: BigInt(
-          //     BigInt(rebase1.BalanceFactorUy.toString()) +
-          //       (BigInt(rebase1.BalanceFactorXY.toString()) *
-          //         (priceY2 - priceX2)) /
-          //         priceU2
-          //   ),
-          // };
 
           const lastUserRebaseElementsTester: UserRebaseElements = {
             netX: BigInt(1e19),

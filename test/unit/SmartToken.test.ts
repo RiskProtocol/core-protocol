@@ -10,6 +10,10 @@ import {
   DECIMALS,
   INITIAL_PRICE,
   signersAddress,
+  encodedEarlyRebase1,
+  RebaseElements,
+  UserRebaseElements,
+  callculateRolloverAmount,
 } from "../../helper-hardhat-config";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 
@@ -153,6 +157,152 @@ developmentChains.includes(network.name)
           ).to.be.revertedWithCustomError(
             smartToken1,
             "SmartToken__NotTokenFactory"
+          );
+        });
+      });
+
+      describe("Transfers", async function () {
+        it("Should transfer tokens between accounts", async function () {
+          const {
+            smartToken1,
+            tokenFactory,
+            smartToken2,
+            underlyingToken,
+            deployer,
+            tester,
+          } = await loadFixture(deployTokenFixture);
+          await tokenFactory.initializeSMART(
+            smartToken1.address,
+
+            smartToken2.address
+          );
+
+          await underlyingToken.approve(
+            tokenFactory.address,
+            ethers.utils.parseEther("50")
+          );
+          await smartToken1.deposit(
+            ethers.utils.parseEther("50"),
+            deployer.address
+          );
+
+          // Transfer 50 =
+          await smartToken1.transfer(
+            tester.address,
+            ethers.utils.parseEther("50")
+          );
+          const testerBal = await smartToken1.balanceOf(tester.address);
+          assert.equal(
+            testerBal.toString(),
+            ethers.utils.parseEther("50").toString()
+          );
+
+          // Transfer 40 Tokens
+          await smartToken1
+            .connect(tester)
+            .transfer(deployer.address, ethers.utils.parseEther("40"));
+          const deployerBalance = await smartToken1.balanceOf(deployer.address);
+          assert.equal(
+            deployerBalance.toString(),
+            ethers.utils.parseEther("40").toString()
+          );
+
+          //So now deployer has 40 X and 50 Y
+          // and tester has 10X and 0Y
+
+          const priceX = BigInt(666666666666666666666);
+          const priceU = BigInt(2000000000000000000000);
+          const priceY = priceU - priceX;
+
+          const lastUserRebase: RebaseElements = {
+            BalanceFactorXY: BigInt(1e18),
+            BalanceFactorUx: BigInt(0),
+            BalanceFactorUy: BigInt(0),
+          };
+
+          const rebase1: RebaseElements = {
+            BalanceFactorXY: BigInt(
+              (BigInt(1e18) * BigInt(2) * priceX) / BigInt(priceU)
+            ),
+            BalanceFactorUx: BigInt(0),
+            BalanceFactorUy: BigInt(
+              (BigInt(1e18) * BigInt(priceY - priceX)) / BigInt(priceU)
+            ),
+          };
+
+          const lastUserRebaseElementsTester: UserRebaseElements = {
+            netX: BigInt(ethers.utils.parseEther("10").toString()),
+            netY: BigInt(0),
+            Ux: BigInt(0),
+            Uy: BigInt(0),
+          };
+          const lastUserRebaseElementsDeployer: UserRebaseElements = {
+            netX: BigInt(ethers.utils.parseEther("40").toString()),
+            netY: BigInt(ethers.utils.parseEther("50").toString()),
+            Ux: BigInt(0),
+            Uy: BigInt(0),
+          };
+
+          const postRebaseTester: any[] = callculateRolloverAmount(
+            rebase1,
+            lastUserRebase,
+            lastUserRebaseElementsTester
+          );
+          const postRebaseDeplyer: any[] = callculateRolloverAmount(
+            rebase1,
+            lastUserRebase,
+            lastUserRebaseElementsDeployer
+          );
+
+          //apply rebase
+          await tokenFactory.executeRebase(
+            encodedEarlyRebase1.encodedData,
+            encodedEarlyRebase1.signature
+          );
+
+          assert.equal(
+            Number(BigInt(await smartToken2.balanceOf(tester.address))),
+            Number(postRebaseTester[1])
+          );
+          assert.equal(
+            Number(BigInt(await smartToken1.balanceOf(deployer.address))),
+            Number(postRebaseDeplyer[0])
+          );
+          assert.equal(
+            Number(BigInt(await smartToken2.balanceOf(deployer.address))),
+            Number(postRebaseDeplyer[1])
+          );
+
+          const testerBalPrev = await smartToken2.balanceOf(tester.address);
+          const deployerBalPrev = await smartToken2.balanceOf(deployer.address);
+
+          // Approve 10 tokens from owner to addr1
+          await smartToken2.approve(
+            tester.address,
+            ethers.utils.parseEther("10")
+          );
+
+          // Addr1 transfers 50 tokens from owner to addr2
+          await smartToken2
+            .connect(tester)
+            .transferFrom(
+              deployer.address,
+              tester.address,
+              ethers.utils.parseEther("10")
+            );
+
+          const deplyerBal = await smartToken2.balanceOf(deployer.address);
+          assert.equal(
+            deplyerBal.toString(),
+            BigInt(deployerBalPrev) -
+              BigInt(ethers.utils.parseEther("10").toString())
+          ); // 1000 - 50 = 950
+
+          const testerBalance = await smartToken2.balanceOf(tester.address);
+          assert.equal(
+            testerBalance.toString(),
+            BigInt(testerBalPrev) +
+              BigInt(ethers.utils.parseEther("10").toString())
           );
         });
       });
