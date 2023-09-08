@@ -170,7 +170,7 @@ contract SmartToken is
     function hasPendingRebase(address account) public view returns (bool) {
         return
             tokenFactory.getUserLastRebaseCount(account) !=
-            tokenFactory.getRebaseNumber(); //todo: check
+            tokenFactory.getRebaseNumber();
     }
 
     function getTokenFactory() public view returns (address) {
@@ -398,7 +398,7 @@ contract SmartToken is
         // apply user pending rebase
         if (
             tokenFactory.getUserLastRebaseCount(receiver) !=
-            tokenFactory.getRebaseNumber() //todo: check
+            tokenFactory.getRebaseNumber()
         ) {
             tokenFactory.applyRebase(receiver);
         }
