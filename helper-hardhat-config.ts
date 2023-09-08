@@ -73,3 +73,53 @@ export const encodedEarlyRebase3 = {
   encodedData:
     "0x0000000000000000000000000000000000000000000000000000000000000003000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000006c6b935b8bbd40000000000000000000000000000000000000000000000000002423dbc92e946aaaaa",
 };
+
+export type RebaseElements = {
+  BalanceFactorXY: BigInt;
+  BalanceFactorUx: BigInt;
+  BalanceFactorUy: BigInt;
+};
+
+export type UserRebaseElements = {
+  netX: BigInt;
+  netY: BigInt;
+  Ux: BigInt;
+  Uy: BigInt;
+};
+
+export const callculateRolloverAmount = (
+  lastRebase: any,
+  lastUserRebase: any,
+  userLastRebaseInfo: any
+) => {
+  const netX =
+    (BigInt(userLastRebaseInfo.netX) * BigInt(lastRebase.BalanceFactorXY)) /
+    BigInt(lastUserRebase.BalanceFactorXY);
+  const netY =
+    (BigInt(userLastRebaseInfo.netY) * BigInt(lastRebase.BalanceFactorXY)) /
+    BigInt(lastUserRebase.BalanceFactorXY);
+
+  const uX =
+    BigInt(
+      BigInt(lastRebase.BalanceFactorUx - lastUserRebase.BalanceFactorUx) *
+        BigInt(userLastRebaseInfo.netX)
+    ) /
+      BigInt(lastUserRebase.BalanceFactorXY) +
+    BigInt(userLastRebaseInfo.Ux);
+  const uY =
+    BigInt(
+      BigInt(lastRebase.BalanceFactorUy - lastUserRebase.BalanceFactorUy) *
+        BigInt(userLastRebaseInfo.netY)
+    ) /
+      BigInt(lastUserRebase.BalanceFactorXY) +
+    BigInt(userLastRebaseInfo.Uy);
+
+  const newUserRebaseElements = {
+    netX: netX,
+    netY: netY,
+    Ux: uX,
+    Uy: uY,
+  };
+
+  return [netX + uX + uY, netY + uY + uX, newUserRebaseElements];
+};
