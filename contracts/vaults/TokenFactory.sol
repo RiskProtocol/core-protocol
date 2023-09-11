@@ -23,6 +23,7 @@ error TokenFactory__AlreadyInitialized();
 error TokenFactory__InvalidSignature();
 error TokenFactory__InvalidSignatureLength();
 error TokenFactory__InvalidManagementFees();
+error SmartToken__RebaseCircuitBreaker();
 
 /**
  * @title ERC-20 Rebase Tokens
@@ -63,6 +64,7 @@ contract TokenFactory is
     bool private managementFeeEnabled;
     uint256[] private mgmtFeeSum;
 
+    bool private rebaseCircuitBreaker;
     struct ScheduledRebase {
         //ScheduledRebase
         uint256 sequenceNumber;
@@ -107,6 +109,11 @@ contract TokenFactory is
         }
         _;
     }
+    modifier stopRebase() {
+        if (rebaseCircuitBreaker) revert SmartToken__RebaseCircuitBreaker();
+        _;
+    }
+
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -394,7 +401,7 @@ contract TokenFactory is
         }
     }
 
-    function applyRebase(address owner_) public {
+    function applyRebase(address owner_) public stopRebase {
         uint256 asset1ValueEth = smartTokenArray[0].unScaledbalanceOf(owner_);
         uint256 asset2ValueEth = smartTokenArray[1].unScaledbalanceOf(owner_);
         uint256 initialAsset1ValueEth = asset1ValueEth;
@@ -711,5 +718,9 @@ contract TokenFactory is
 
     function getInterval() public view returns (uint256) {
         return interval;
+    }
+
+    function toggleRebaseCircuitBreaker() external onlyOwner {
+        rebaseCircuitBreaker = !rebaseCircuitBreaker;
     }
 }
