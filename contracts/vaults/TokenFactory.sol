@@ -23,7 +23,7 @@ error TokenFactory__AlreadyInitialized();
 error TokenFactory__InvalidSignature();
 error TokenFactory__InvalidSignatureLength();
 error TokenFactory__InvalidManagementFees();
-error SmartToken__RebaseCircuitBreaker();
+error TokenFactory__RebaseCircuitBreaker();
 
 /**
  * @title ERC-20 Rebase Tokens
@@ -65,6 +65,7 @@ contract TokenFactory is
     uint256[] private mgmtFeeSum;
 
     bool private rebaseCircuitBreaker;
+
     struct ScheduledRebase {
         //ScheduledRebase
         uint256 sequenceNumber;
@@ -110,7 +111,7 @@ contract TokenFactory is
         _;
     }
     modifier stopRebase() {
-        if (rebaseCircuitBreaker) revert SmartToken__RebaseCircuitBreaker();
+        if (rebaseCircuitBreaker) revert TokenFactory__RebaseCircuitBreaker();
         _;
     }
 
@@ -335,7 +336,7 @@ contract TokenFactory is
     function executeRebase(
         bytes memory encodedData,
         bytes memory signature
-    ) external {
+    ) external stopRebase {
         ScheduledRebase memory rebaseCall = verifyAndDecode(
             signature,
             encodedData
