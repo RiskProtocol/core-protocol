@@ -21,9 +21,6 @@ error SmartToken__WithdrawMoreThanMax();
 error SmartToken__RedeemMoreThanMax();
 error SmartToken__OnlyAssetOwner();
 error SmartToken__ZeroDeposit();
-error SmartToken__DepositCircuitBreaker();
-error SmartToken__WithdrawCircuitBreaker();
-error SmartToken__TransferCircuitBreaker();
 
 contract SmartToken is
     Initializable,
@@ -38,10 +35,6 @@ contract SmartToken is
     TokenFactory private tokenFactory;
     IERC20Update private underlyingToken;
 
-    bool private depositCircuitBreaker;
-    bool private withdrawCircuitBreaker;
-    bool private transferCircuitBreaker;
-
     modifier onlyTokenFactory() {
         _onlyTokenFactory();
         _;
@@ -54,22 +47,6 @@ contract SmartToken is
 
     modifier validateDepositAmount(uint256 assets, address receiver) {
         _validateDepositAmount(assets, receiver);
-        _;
-    }
-
-    // circuit breaker modifiers
-    modifier stopDeposit() {
-        if (depositCircuitBreaker) revert SmartToken__DepositCircuitBreaker();
-        _;
-    }
-
-    modifier stopWithdraw() {
-        if (withdrawCircuitBreaker) revert SmartToken__WithdrawCircuitBreaker();
-        _;
-    }
-
-    modifier stopTransfer() {
-        if (transferCircuitBreaker) revert SmartToken__TransferCircuitBreaker();
         _;
     }
 
@@ -409,16 +386,4 @@ contract SmartToken is
             revert SmartToken__DepositMoreThanMax();
     }
 
-    // circuit breaker functions
-    function toggleDepositCircuitBreaker() external onlyOwner {
-        depositCircuitBreaker = !depositCircuitBreaker;
-    }
-
-    function toggleWithdrawCircuitBreaker() external onlyOwner {
-        withdrawCircuitBreaker = !withdrawCircuitBreaker;
-    }
-
-    function toggleTransferCircuitBreaker() external onlyOwner {
-        transferCircuitBreaker = !transferCircuitBreaker;
-    }
 }

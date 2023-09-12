@@ -118,7 +118,7 @@ developmentChains.includes(network.name)
             smartToken1.deposit(depositAmount, deployer.address)
           ).to.be.revertedWithCustomError(
             smartToken1,
-            "SmartToken__DepositCircuitBreaker"
+            "BaseContract__DepositCircuitBreaker"
           );
 
           expect(await smartToken1.balanceOf(deployer.address)).to.equal(depositorBalanceBefore);
@@ -181,7 +181,7 @@ developmentChains.includes(network.name)
             )
           ).to.be.revertedWithCustomError(
             smartToken1,
-            "SmartToken__DepositCircuitBreaker"
+            "BaseContract__DepositCircuitBreaker"
           );
 
           await smartToken1.toggleDepositCircuitBreaker();
@@ -216,7 +216,7 @@ developmentChains.includes(network.name)
             smartToken1.mint(depositAmount, deployer.address)
           ).to.be.revertedWithCustomError(
             smartToken1,
-            "SmartToken__DepositCircuitBreaker"
+            "BaseContract__DepositCircuitBreaker"
           );
 
           expect(await smartToken1.balanceOf(deployer.address)).to.equal(depositorBalanceBefore);
@@ -256,7 +256,7 @@ developmentChains.includes(network.name)
             smartToken1.withdraw(depositAmount, deployer.address, deployer.address)
           ).to.be.revertedWithCustomError(
             smartToken1,
-            "SmartToken__WithdrawCircuitBreaker"
+            "BaseContract__WithdrawCircuitBreaker"
           );
 
           expect(await smartToken1.balanceOf(deployer.address)).to.equal(depositorBalanceBefore);
@@ -293,7 +293,7 @@ developmentChains.includes(network.name)
             smartToken1.redeem(depositAmount, deployer.address, deployer.address)
           ).to.be.revertedWithCustomError(
             smartToken1,
-            "SmartToken__WithdrawCircuitBreaker"
+            "BaseContract__WithdrawCircuitBreaker"
           );
 
           expect(await smartToken1.balanceOf(deployer.address)).to.equal(depositorBalanceBefore);
@@ -333,7 +333,7 @@ developmentChains.includes(network.name)
             smartToken1.transfer(deployer.address, depositAmount)
           ).to.be.revertedWithCustomError(
             smartToken1,
-            "SmartToken__TransferCircuitBreaker"
+            "BaseContract__TransferCircuitBreaker"
           );
 
           expect(await smartToken1.balanceOf(deployer.address)).to.equal(depositorBalanceBefore);
@@ -370,7 +370,7 @@ developmentChains.includes(network.name)
             smartToken1.transferFrom(deployer.address, deployer.address, depositAmount)
           ).to.be.revertedWithCustomError(
             smartToken1,
-            "SmartToken__TransferCircuitBreaker"
+            "BaseContract__TransferCircuitBreaker"
           );
 
           expect(await smartToken1.balanceOf(deployer.address)).to.equal(depositorBalanceBefore);
@@ -417,7 +417,7 @@ developmentChains.includes(network.name)
             encodedNaturalRebase1.signature
           )).to.be.revertedWithCustomError(
             tokenFactory,
-            "TokenFactory__RebaseCircuitBreaker"
+            "BaseContract__RebaseCircuitBreaker"
           );
 
           let block2 = await ethers.provider.getBlock("latest");
@@ -433,10 +433,55 @@ developmentChains.includes(network.name)
             tokenFactory.applyRebase(deployer.address)
           ).to.be.revertedWithCustomError(
             tokenFactory,
-            "TokenFactory__RebaseCircuitBreaker"
+            "BaseContract__RebaseCircuitBreaker"
           );
 
           await tokenFactory.toggleRebaseCircuitBreaker();
+        });
+      });
+
+      describe("Stop and resume all circuit breakers", async function () {
+        it("should stop and resume all circuit breakers", async function () {
+
+          const {
+            smartToken1,
+          } = await loadFixture(deployTokenFixture);
+
+          await smartToken1.stopAllCircularBreakers();
+          expect(
+            await smartToken1.isDepositCircuitBreaker()
+          ).to.be.true;
+
+          expect(
+            await smartToken1.isWithdrawCircuitBreaker()
+          ).to.be.true;
+
+          expect(
+            await smartToken1.isTransferCircuitBreaker()
+          ).to.be.true;
+
+          expect(
+            await smartToken1.isRebaseCircuitBreaker()
+          ).to.be.true;
+
+          await smartToken1.resumeAllCircularBreakers();
+
+          expect(
+            await smartToken1.isDepositCircuitBreaker()
+          ).to.be.false;
+
+          expect(
+            await smartToken1.isWithdrawCircuitBreaker()
+          ).to.be.false;
+
+          expect(
+            await smartToken1.isTransferCircuitBreaker()
+          ).to.be.false;
+
+          expect(
+            await smartToken1.isRebaseCircuitBreaker()
+          ).to.be.false;
+
         });
       });
     })
