@@ -90,8 +90,8 @@ contract SmartToken is
         uint256 amount
     )
         public
-        stopTransfer
         override(ERC20Upgradeable, IERC20Upgradeable)
+        stopTransfer
         onlyNotSanctioned(recipient)
         onlyNotSanctioned(_msgSender())
         returns (bool)
@@ -270,8 +270,9 @@ contract SmartToken is
         uint256 shares,
         address receiver
     ) public virtual
+      override
       stopDeposit
-      override returns (uint256) {
+      returns (uint256) {
         if (shares > maxMint(receiver)) revert SmartToken__MintMoreThanMax();
 
         uint256 assets = previewMint(shares);

@@ -81,14 +81,14 @@ contract BaseContract is Initializable, OwnableUpgradeable {
         rebaseCircuitBreaker = !rebaseCircuitBreaker;
     }
 
-    function stopAllCircularBreakers() external onlyOwner {
+    function stopAllCircuitBreakers() external onlyOwner {
         depositCircuitBreaker = true;
         withdrawCircuitBreaker = true;
         transferCircuitBreaker = true;
         rebaseCircuitBreaker = true;
     }
 
-    function resumeAllCircularBreakers() external onlyOwner {
+    function resumeAllCircuitBreakers() external onlyOwner {
         depositCircuitBreaker = false;
         withdrawCircuitBreaker = false;
         transferCircuitBreaker = false;

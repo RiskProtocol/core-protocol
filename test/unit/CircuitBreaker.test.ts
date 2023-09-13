@@ -447,24 +447,16 @@ developmentChains.includes(network.name)
             smartToken1,
           } = await loadFixture(deployTokenFixture);
 
-          await smartToken1.stopAllCircularBreakers();
-          expect(
-            await smartToken1.isDepositCircuitBreaker()
-          ).to.be.true;
+          await smartToken1.stopAllCircuitBreakers();
+          expect(await smartToken1.isDepositCircuitBreaker()).to.be.true;
 
-          expect(
-            await smartToken1.isWithdrawCircuitBreaker()
-          ).to.be.true;
+          expect(await smartToken1.isWithdrawCircuitBreaker()).to.be.true;
 
-          expect(
-            await smartToken1.isTransferCircuitBreaker()
-          ).to.be.true;
+          expect(await smartToken1.isTransferCircuitBreaker()).to.be.true;
 
-          expect(
-            await smartToken1.isRebaseCircuitBreaker()
-          ).to.be.true;
+          expect(await smartToken1.isRebaseCircuitBreaker()).to.be.true;
 
-          await smartToken1.resumeAllCircularBreakers();
+          await smartToken1.resumeAllCircuitBreakers();
 
           expect(
             await smartToken1.isDepositCircuitBreaker()
