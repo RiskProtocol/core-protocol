@@ -103,11 +103,10 @@ contract TokenFactory is
         }
     }
     modifier onlyOrchestrator() {
-        if (_msgSender() == address(orchestrator)) {
-            _;
-        } else {
+        if (_msgSender() != address(orchestrator)) {
             revert TokenFactory__MethodNotAllowed();
         }
+        _;
     }
     modifier onlyIntializedOnce() {
         if (smartTokenInitialized) {
