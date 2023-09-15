@@ -328,7 +328,7 @@ contract TokenFactory is
     function executeRebase(
         bytes memory encodedData,
         bytes memory signature
-    ) external {
+    ) external stopRebase {
         ScheduledRebase memory rebaseCall = verifyAndDecode(
             signature,
             encodedData
@@ -394,7 +394,7 @@ contract TokenFactory is
         }
     }
 
-    function applyRebase(address owner_) public {
+    function applyRebase(address owner_) public stopRebase {
         uint256 asset1ValueEth = smartTokenArray[0].unScaledbalanceOf(owner_);
         uint256 asset2ValueEth = smartTokenArray[1].unScaledbalanceOf(owner_);
         uint256 initialAsset1ValueEth = asset1ValueEth;
