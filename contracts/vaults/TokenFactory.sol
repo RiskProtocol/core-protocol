@@ -62,6 +62,7 @@ contract TokenFactory is
     mapping(address => uint256) private userMgmtFeeHistory;
     bool private managementFeeEnabled;
     uint256[] private mgmtFeeSum;
+    address private orchestrator;
 
     struct ScheduledRebase {
         //ScheduledRebase
@@ -96,6 +97,13 @@ contract TokenFactory is
             _msgSender() == address(smartTokenArray[0]) ||
             _msgSender() == address(smartTokenArray[1])
         ) {
+            _;
+        } else {
+            revert TokenFactory__MethodNotAllowed();
+        }
+    }
+    modifier onlyOrchestrator() {
+        if (_msgSender() == address(orchestrator)) {
             _;
         } else {
             revert TokenFactory__MethodNotAllowed();
@@ -148,6 +156,10 @@ contract TokenFactory is
         smartTokenInitialized = true;
         smartTokenArray.push(token1);
         smartTokenArray.push(token2);
+    }
+
+    function initializeOrchestrator(address orchestrator_) external onlyOwner {
+        orchestrator = orchestrator_;
     }
 
     /**
@@ -328,7 +340,7 @@ contract TokenFactory is
     function executeRebase(
         bytes memory encodedData,
         bytes memory signature
-    ) external {
+    ) external onlyOrchestrator {
         ScheduledRebase memory rebaseCall = verifyAndDecode(
             signature,
             encodedData
@@ -520,7 +532,6 @@ contract TokenFactory is
         );
         return data;
     }
-
 
     function setSignersAddress(address addr) public onlyOwner {
         signersAddress = addr;

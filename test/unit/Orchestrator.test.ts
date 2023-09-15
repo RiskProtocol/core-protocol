@@ -10,6 +10,7 @@ import {
   signersAddress,
   encodedEarlyRebase1,
   encodedEarlyRebase2,
+  encodedEarlyRebase3,
 } from "../../helper-hardhat-config";
 import { loadFixture, time } from "@nomicfoundation/hardhat-network-helpers";
 
@@ -86,6 +87,9 @@ developmentChains.includes(network.name)
         ]);
         await Orchestrator.deployed();
 
+        //initialize the orchestrator
+        await tokenFactory.initializeOrchestrator(Orchestrator.address);
+
         // Fixtures can return anything you consider useful for your tests
         return {
           SmartToken1,
@@ -120,7 +124,7 @@ developmentChains.includes(network.name)
             Orchestrator.address,
             newOrchestrator
           );
-          expect(await Orchestrator.tokenFactory()).to.equal(
+          expect(await Orchestrator.getTokenFactory()).to.equal(
             tokenFactory.address
           );
           expect(await Orchestrator.owner()).to.equal(deployer.address);
@@ -142,7 +146,7 @@ developmentChains.includes(network.name)
           ).to.be.revertedWith("Ownable: caller is not the owner");
         });
 
-        it(`it should add a transaction properly`, async function () {
+        it(`it should add a Operation properly`, async function () {
           let {
             tokenFactory,
             deployer,
@@ -156,7 +160,6 @@ developmentChains.includes(network.name)
             SmartToken2.address
           );
 
-          //add a deposit transaction on the smart token
           await underlyingToken.approve(
             tokenFactory.address,
             ethers.utils.parseEther("1")
@@ -167,13 +170,13 @@ developmentChains.includes(network.name)
             ethers.utils.parseEther("1"),
             deployer.address,
           ]);
-          await expect(Orchestrator.addTransaction(SmartToken1.address, data))
-            .to.emit(Orchestrator, "TransactionAdded")
+          await expect(Orchestrator.addOperation(0, SmartToken1.address, data))
+            .to.emit(Orchestrator, "OperationAdded")
             .withArgs(true, SmartToken1.address, data);
-          expect(await Orchestrator.transactionsSize()).to.equal(1);
+          expect(await Orchestrator.operationsSize()).to.equal(1);
         });
 
-        it(`it should remove a transaction properly`, async function () {
+        it(`it should remove a Operation properly`, async function () {
           let {
             tokenFactory,
             deployer,
@@ -191,20 +194,57 @@ developmentChains.includes(network.name)
             ethers.utils.parseEther("1"),
             deployer.address,
           ]);
-          await Orchestrator.addTransaction(SmartToken1.address, data);
-          await expect(Orchestrator.removeTransaction(0))
-            .to.emit(Orchestrator, "TransactionRemoved")
+          await Orchestrator.addOperation(0, SmartToken1.address, data);
+          await expect(Orchestrator.removeOperation(0))
+            .to.emit(Orchestrator, "OperationRemoved")
             .withArgs(0);
-          expect(await Orchestrator.transactionsSize()).to.equal(0);
+          expect(await Orchestrator.operationsSize()).to.equal(0);
         });
 
         it(`should revert if index is out of bounds`, async function () {
-          let { Orchestrator } = await loadFixture(deployTokenFixture);
-          await expect(Orchestrator.removeTransaction(0)).to.be.revertedWith(
-            "index out of bounds"
+          let { Orchestrator, deployer, SmartToken1 } = await loadFixture(
+            deployTokenFixture
+          );
+          await expect(
+            Orchestrator.removeOperation(0)
+          ).to.be.revertedWithCustomError(
+            Orchestrator,
+            "Orchestrator_Index_Out_Bounds"
+          );
+
+          await expect(
+            Orchestrator.addOperation(
+              10,
+              ethers.constants.AddressZero,
+              SmartToken1.interface.encodeFunctionData("deposit", [
+                ethers.utils.parseEther("1"),
+                deployer.address,
+              ])
+            )
+          ).to.be.revertedWithCustomError(
+            Orchestrator,
+            "Orchestrator_Index_Out_Bounds"
           );
         });
-        it(`it should test setTransactionEnabled`, async function () {
+        it(`should revert if rebase is executed on token factory directly`, async function () {
+          let { tokenFactory, SmartToken1, SmartToken2 } = await loadFixture(
+            deployTokenFixture
+          );
+          await tokenFactory.initializeSMART(
+            SmartToken1.address,
+            SmartToken2.address
+          );
+          await expect(
+            tokenFactory.executeRebase(
+              encodedEarlyRebase1.encodedData,
+              encodedEarlyRebase1.signature
+            )
+          ).to.be.revertedWithCustomError(
+            tokenFactory,
+            "TokenFactory__MethodNotAllowed"
+          );
+        });
+        it(`it should test setOperationEnabled`, async function () {
           let { deployer, SmartToken1, Orchestrator } = await loadFixture(
             deployTokenFixture
           );
@@ -213,19 +253,38 @@ developmentChains.includes(network.name)
             ethers.utils.parseEther("1"),
             deployer.address,
           ]);
-          await Orchestrator.addTransaction(SmartToken1.address, data);
-          await expect(Orchestrator.setTransactionEnabled(0, false))
-            .to.emit(Orchestrator, "TransactionStatusChanged")
+          await Orchestrator.addOperation(0, SmartToken1.address, data);
+          await expect(
+            Orchestrator.setOperationEnabled(
+              0,
+              ethers.constants.AddressZero,
+              false
+            )
+          ).to.be.revertedWithCustomError(
+            Orchestrator,
+            "Orchestrator_Wrong_Dest_Addr"
+          );
+          await expect(
+            Orchestrator.setOperationEnabled(0, SmartToken1.address, false)
+          )
+            .to.emit(Orchestrator, "OperationStatusChanged")
             .withArgs(0, false);
-          const transaction = await Orchestrator.transactions(0);
-          expect(transaction.enabled).to.equal(false);
+          const ops = await Orchestrator.operations(0);
+          expect(ops.enabled).to.equal(false);
         });
         it(`should revert if index is out of bounds`, async function () {
           let { Orchestrator } = await loadFixture(deployTokenFixture);
 
           await expect(
-            Orchestrator.setTransactionEnabled(0, false)
-          ).to.be.revertedWith("index must be in range of stored tx list");
+            Orchestrator.setOperationEnabled(
+              0,
+              ethers.constants.AddressZero,
+              false
+            )
+          ).to.be.revertedWithCustomError(
+            Orchestrator,
+            "Orchestrator_Index_Out_Bounds"
+          );
         });
         it(`it should rebase properly`, async function () {
           let { tokenFactory, SmartToken1, SmartToken2, Orchestrator } =
@@ -243,7 +302,7 @@ developmentChains.includes(network.name)
             )
           ).to.emit(tokenFactory, "Rebase");
         });
-        it(`it should rebase + execute the added transaction(another rebase)`, async function () {
+        it(`it should rebase + execute the added Operation(another rebase)`, async function () {
           let {
             tokenFactory,
             underlyingToken,
@@ -256,7 +315,7 @@ developmentChains.includes(network.name)
             SmartToken2.address
           );
 
-          //add a deposit transaction on the smart token
+          //add a deposit ops on the smart token
           await underlyingToken.approve(
             tokenFactory.address,
             ethers.utils.parseEther("1")
@@ -267,10 +326,10 @@ developmentChains.includes(network.name)
             "executeRebase",
             [encodedEarlyRebase2.encodedData, encodedEarlyRebase2.signature]
           );
-          await expect(Orchestrator.addTransaction(tokenFactory.address, data))
-            .to.emit(Orchestrator, "TransactionAdded")
+          await expect(Orchestrator.addOperation(0, tokenFactory.address, data))
+            .to.emit(Orchestrator, "OperationAdded")
             .withArgs(true, tokenFactory.address, data);
-          expect(await Orchestrator.transactionsSize()).to.equal(1);
+          expect(await Orchestrator.operationsSize()).to.equal(1);
 
           //rebase
           await expect(
@@ -294,7 +353,7 @@ developmentChains.includes(network.name)
             SmartToken2.address
           );
 
-          //add a deposit transaction on the smart token
+          //add a deposit ops on the smart token
           await underlyingToken.approve(
             tokenFactory.address,
             ethers.utils.parseEther("1")
@@ -305,10 +364,10 @@ developmentChains.includes(network.name)
             "executeRebase",
             [encodedEarlyRebase2.encodedData, encodedEarlyRebase1.signature]
           );
-          await expect(Orchestrator.addTransaction(tokenFactory.address, data))
-            .to.emit(Orchestrator, "TransactionAdded")
+          await expect(Orchestrator.addOperation(0, tokenFactory.address, data))
+            .to.emit(Orchestrator, "OperationAdded")
             .withArgs(true, tokenFactory.address, data);
-          expect(await Orchestrator.transactionsSize()).to.equal(1);
+          expect(await Orchestrator.operationsSize()).to.equal(1);
 
           //rebase
           await expect(
@@ -316,7 +375,10 @@ developmentChains.includes(network.name)
               encodedEarlyRebase1.encodedData,
               encodedEarlyRebase1.signature
             )
-          ).to.revertedWith("Transaction Failed");
+          ).to.revertedWithCustomError(
+            Orchestrator,
+            "Orchestrator_FailedOperation"
+          );
           expect(await tokenFactory.getScallingFactorLength()).to.equal(0);
         });
         it(`should be access controlled`, async function () {
@@ -329,23 +391,168 @@ developmentChains.includes(network.name)
             [encodedEarlyRebase1.encodedData, encodedEarlyRebase1.signature]
           );
           await expect(
-            Orchestrator.connect(tester).addTransaction(
+            Orchestrator.connect(tester).addOperation(
+              0,
               tokenFactory.address,
               data
             )
           ).to.revertedWith("Ownable: caller is not the owner");
 
-          await expect(Orchestrator.addTransaction(tokenFactory.address, data))
-            .to.emit(Orchestrator, "TransactionAdded")
+          await expect(Orchestrator.addOperation(0, tokenFactory.address, data))
+            .to.emit(Orchestrator, "OperationAdded")
             .withArgs(true, tokenFactory.address, data);
 
           await expect(
-            Orchestrator.connect(tester).removeTransaction(0)
+            Orchestrator.connect(tester).removeOperation(0)
           ).to.be.revertedWith("Ownable: caller is not the owner");
 
           await expect(
-            Orchestrator.connect(tester).setTransactionEnabled(0, false)
+            Orchestrator.connect(tester).setOperationEnabled(
+              0,
+              ethers.constants.AddressZero,
+              false
+            )
           ).to.be.revertedWith("Ownable: caller is not the owner");
+        });
+
+        it("should add a operations to list", async function () {
+          let { tokenFactory, tester, Orchestrator } = await loadFixture(
+            deployTokenFixture
+          );
+
+          const data = tokenFactory.interface.encodeFunctionData(
+            "executeRebase",
+            [encodedEarlyRebase1.encodedData, encodedEarlyRebase1.signature]
+          );
+          const destination = ethers.constants.AddressZero;
+
+          await Orchestrator.addOperation(0, destination, data);
+
+          const operation = await Orchestrator.operations(0);
+          expect(operation.enabled).to.be.true;
+          expect(operation.destination).to.equal(destination);
+          expect(operation.data).to.equal(data);
+
+          const data2 = tokenFactory.interface.encodeFunctionData(
+            "executeRebase",
+            [encodedEarlyRebase2.encodedData, encodedEarlyRebase2.signature]
+          );
+          const destination2 = ethers.constants.AddressZero;
+
+          await Orchestrator.addOperation(1, destination, data2);
+
+          const operation2 = await Orchestrator.operations(1);
+          expect(operation2.enabled).to.be.true;
+          expect(operation2.destination).to.equal(destination2);
+          expect(operation2.data).to.equal(data2);
+
+          const data3 = tokenFactory.interface.encodeFunctionData(
+            "executeRebase",
+            [encodedEarlyRebase3.encodedData, encodedEarlyRebase3.signature]
+          );
+          const destination3 = tokenFactory.address;
+
+          await Orchestrator.addOperation(2, destination3, data3);
+
+          const operation3 = await Orchestrator.operations(2);
+          expect(operation3.enabled).to.be.true;
+          expect(operation3.destination).to.equal(destination3);
+          expect(operation3.data).to.equal(data3);
+        });
+
+        it("should add a new operation at index 1", async function () {
+          let { tokenFactory, tester, Orchestrator } = await loadFixture(
+            deployTokenFixture
+          );
+
+          const data = tokenFactory.interface.encodeFunctionData(
+            "executeRebase",
+            [encodedEarlyRebase1.encodedData, encodedEarlyRebase1.signature]
+          );
+          const destination = ethers.constants.AddressZero;
+          await Orchestrator.addOperation(0, destination, data);
+
+          const data2 = tokenFactory.interface.encodeFunctionData(
+            "executeRebase",
+            [encodedEarlyRebase2.encodedData, encodedEarlyRebase2.signature]
+          );
+          const destination2 = ethers.constants.AddressZero;
+          await Orchestrator.addOperation(1, destination2, data2);
+
+          const data3 = tokenFactory.interface.encodeFunctionData(
+            "executeRebase",
+            [encodedEarlyRebase3.encodedData, encodedEarlyRebase3.signature]
+          );
+          const destination3 = tokenFactory.address;
+          await Orchestrator.addOperation(2, destination3, data3);
+
+          // add new operation at index 1
+          const dataNewOPs = tokenFactory.interface.encodeFunctionData(
+            "executeRebase",
+            [encodedEarlyRebase3.encodedData, encodedEarlyRebase3.signature]
+          );
+          const destinationNewOPs = ethers.constants.AddressZero;
+          await Orchestrator.addOperation(1, destinationNewOPs, dataNewOPs);
+
+          const newOperation = await Orchestrator.operations(1);
+          expect(newOperation.enabled).to.be.true;
+          expect(newOperation.destination).to.equal(destinationNewOPs);
+          expect(newOperation.data).to.equal(dataNewOPs);
+
+          //operation which was at index 1 should be at index 2 now
+
+          const operation2 = await Orchestrator.operations(2);
+          expect(operation2.enabled).to.be.true;
+          expect(operation2.destination).to.equal(destination2);
+          expect(operation2.data).to.equal(data2);
+
+          const operation3 = await Orchestrator.operations(3);
+          expect(operation3.enabled).to.be.true;
+          expect(operation3.destination).to.equal(destination3);
+          expect(operation3.data).to.equal(data3);
+        });
+        it("should  remove an operation(s) from the middle", async function () {
+          let { tokenFactory, tester, Orchestrator } = await loadFixture(
+            deployTokenFixture
+          );
+
+          const data = tokenFactory.interface.encodeFunctionData(
+            "executeRebase",
+            [encodedEarlyRebase1.encodedData, encodedEarlyRebase1.signature]
+          );
+          const destination = ethers.constants.AddressZero;
+          await Orchestrator.addOperation(0, destination, data);
+
+          const data2 = tokenFactory.interface.encodeFunctionData(
+            "executeRebase",
+            [encodedEarlyRebase2.encodedData, encodedEarlyRebase2.signature]
+          );
+          const destination2 = ethers.constants.AddressZero;
+          await Orchestrator.addOperation(1, destination2, data2);
+
+          const data3 = tokenFactory.interface.encodeFunctionData(
+            "executeRebase",
+            [encodedEarlyRebase3.encodedData, encodedEarlyRebase3.signature]
+          );
+          const destination3 = tokenFactory.address;
+          await Orchestrator.addOperation(2, destination3, data3);
+
+          await Orchestrator.removeOperation(1);
+          //operation 2 should be at index 1 now
+          const newOperation = await Orchestrator.operations(1);
+          expect(newOperation.enabled).to.be.true;
+          expect(newOperation.destination).to.equal(destination3);
+          expect(newOperation.data).to.equal(data3);
+
+          await Orchestrator.removeOperation(1);
+
+          await expect(Orchestrator.operations(1)).to.be.revertedWithoutReason;
+
+          //expect operation at index 0 to remain unchanged
+          const Operation = await Orchestrator.operations(0);
+          expect(Operation.enabled).to.be.true;
+          expect(Operation.destination).to.equal(destination);
+          expect(Operation.data).to.equal(data);
         });
       });
     })
