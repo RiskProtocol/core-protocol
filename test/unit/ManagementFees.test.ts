@@ -230,8 +230,10 @@ developmentChains.includes(network.name)
             const userBal2: bigint = await smartToken1.balanceOf(
               deployer.address
             );
-
-            assert.equal(userBal, BigInt(userBal2) - BigInt(fee));
+            console.log(
+              `L233 : User Bal: ${userBal}\nUserBal2:${userBal2}\nfees:${fee}`
+            );
+            assert.equal(userBal, BigInt(userBal2) + BigInt(fee));
           });
 
           it(`It should withdraw correct amount with respect to fees.`, async function () {

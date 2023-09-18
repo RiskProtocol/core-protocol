@@ -7,9 +7,10 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/interfaces/IERC4626Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PermitUpgradeable.sol";
+
 import "./../interfaces/IERC20Update.sol";
+import "./../lib/ERC20/ERC20Upgradeable.sol";
+import "./../lib/ERC20/extensions/ERC20PermitUpgradeable.sol";
 import "./TokenFactory.sol";
 import "./BaseContract.sol";
 
@@ -106,6 +107,13 @@ contract SmartToken is
         uint256 amount
     ) external onlyTokenFactory {
         super.transfer(recipient, amount);
+    }
+
+    function smartTreasuryTransfer(
+        address treasuryAddress,
+        uint256 amount
+    ) external onlyTokenFactory {
+        super.treasuryTransfer(treasuryAddress, amount);
     }
 
     /** @dev See {IERC20-balanceOf}. */
@@ -231,7 +239,9 @@ contract SmartToken is
     )
         public
         stopDeposit
-        validateDepositAmount(assets, receiver) returns (uint256) {
+        validateDepositAmount(assets, receiver)
+        returns (uint256)
+    {
         uint256 shares = previewDeposit(assets);
         underlyingToken.permit(
             _msgSender(),
@@ -269,10 +279,7 @@ contract SmartToken is
     function mint(
         uint256 shares,
         address receiver
-    ) public virtual
-      override
-      stopDeposit
-      returns (uint256) {
+    ) public virtual override stopDeposit returns (uint256) {
         if (shares > maxMint(receiver)) revert SmartToken__MintMoreThanMax();
 
         uint256 assets = previewMint(shares);
@@ -386,5 +393,4 @@ contract SmartToken is
         if (assets > maxDeposit(receiver))
             revert SmartToken__DepositMoreThanMax();
     }
-
 }

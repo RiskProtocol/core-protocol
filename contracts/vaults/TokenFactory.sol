@@ -57,11 +57,13 @@ contract TokenFactory is
     mapping(uint256 => bool) private sequenceNumberApplied;
     //management fees
     uint32 private constant MGMT_FEE_SCALING_FACTOR = 100000;
-    uint32 private managementFeesRate;
+    uint32 private managementFeesRate; //Mgmt fee is per day
     uint32[] private mgmtFeesHistory;
     mapping(address => uint256) private userMgmtFeeHistory;
     bool private managementFeeEnabled;
     uint256[] private mgmtFeeSum;
+    uint256 private lastRebaseFees;
+    address private treasuryWallet;
 
     struct ScheduledRebase {
         //ScheduledRebase
@@ -134,6 +136,7 @@ contract TokenFactory is
         nextSequenceNumber = 1;
         smartTokenInitialized = false;
         signersAddress = signersAddress_;
+        lastRebaseFees = 0;
     }
 
     function _authorizeUpgrade(
@@ -309,13 +312,13 @@ contract TokenFactory is
         smartTokenArray[smartTokenIndex].burn(owner_, amount);
     }
 
-    function factoryTransfer(
-        uint256 smartTokenIndex,
-        address receiver,
-        uint256 amount
-    ) private {
-        smartTokenArray[smartTokenIndex].smartTransfer(receiver, amount);
-    }
+    // function factoryTransfer(
+    //     uint256 smartTokenIndex,
+    //     address receiver,
+    //     uint256 amount
+    // ) private {
+    //     smartTokenArray[smartTokenIndex].smartTransfer(receiver, amount);
+    // }
 
     function subUnchecked(
         uint256 scallingFactorX_
@@ -356,6 +359,32 @@ contract TokenFactory is
         }
     }
 
+    //todo:
+
+    function chargeFees() private {
+        if (lastRebaseFees != 0) {
+            //transfer to treasury wallet
+            IERC20Update smartX = IERC20Update(address(smartTokenArray[0]));
+            IERC20Update smartY = IERC20Update(address(smartTokenArray[1]));
+
+            SafeERC20.safeTransfer(smartX, treasuryWallet, lastRebaseFees);
+            SafeERC20.safeTransfer(smartY, treasuryWallet, lastRebaseFees);
+        }
+        //now we check if we have fees to charge for the upcoming rebase
+        //totalSupply for X ===Y hence we care for only 1
+        uint256 totalSupplyX = smartTokenArray[0].totalSupply();
+        //uint256 totalSupplyY =  smartTokenArray[1].totalSupply();
+        //total user fees
+        uint256 fees = calculateManagementFee(totalSupplyX, true, 0);
+        //here we create and hold
+        factoryTreasuryTransfer(fees);
+    }
+
+    function factoryTreasuryTransfer(uint256 amount) private {
+        smartTokenArray[0].smartTreasuryTransfer(address(this), amount);
+        smartTokenArray[1].smartTreasuryTransfer(address(this), amount);
+    }
+
     function rebase() private {
         uint256 i = 0;
         while (i < scheduledRebases.length && i < 5) {
@@ -376,7 +405,9 @@ contract TokenFactory is
             scallingFactorX.push((asset1Price / 2) / divisor);
             if (managementFeeEnabled && scheduledRebase.isNaturalRebase) {
                 mgmtFeesHistory.push(managementFeesRate);
-                updateManagementFeeSum();
+                updateManagementFeeSum(); //todo: we dont need this anymore?
+                //we transfer fees that we had for last rebase to our wallet
+                chargeFees();
             }
 
             emit Rebase(getScallingFactorLength());
@@ -411,22 +442,24 @@ contract TokenFactory is
             initialAsset1ValueEth != asset1ValueEth ||
             initialAsset2ValueEth != asset2ValueEth
         ) {
-            factoryTransfer(
-                0,
-                address(this),
-                (initialAsset1ValueEth - asset1ValueEth)
-            );
-            factoryTransfer(
-                1,
-                address(this),
-                (initialAsset2ValueEth - asset2ValueEth)
-            );
-            emit Deposit(
-                owner_,
-                address(this),
-                (initialAsset1ValueEth - asset1ValueEth),
-                (initialAsset2ValueEth - asset2ValueEth)
-            );
+            // factoryTransfer(
+            //     0,
+            //     address(this),
+            //     (initialAsset1ValueEth - asset1ValueEth)
+            // );
+            // factoryTransfer(
+            //     1,
+            //     address(this),
+            //     (initialAsset2ValueEth - asset2ValueEth)
+            // );
+            // emit Deposit(
+            //     owner_,
+            //     address(this),
+            //     (initialAsset1ValueEth - asset1ValueEth),
+            //     (initialAsset2ValueEth - asset2ValueEth)
+            // );
+            factoryBurn(0, owner_, initialAsset1ValueEth - asset1ValueEth);
+            factoryBurn(1, owner_, initialAsset2ValueEth - asset2ValueEth);
             //update user fee history
             userMgmtFeeHistory[owner_] = getMgmtFeeFactorLength() - 1;
         }
@@ -521,7 +554,6 @@ contract TokenFactory is
         return data;
     }
 
-
     function setSignersAddress(address addr) public onlyOwner {
         signersAddress = addr;
     }
@@ -547,6 +579,13 @@ contract TokenFactory is
         bool state
     ) external onlyOwner returns (bool) {
         managementFeeEnabled = state;
+        return true;
+    }
+
+    function setTreasuryWallet(
+        address wallet
+    ) external onlyOwner returns (bool) {
+        treasuryWallet = wallet;
         return true;
     }
 
