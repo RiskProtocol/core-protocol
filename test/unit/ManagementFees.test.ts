@@ -16,6 +16,7 @@ import {
   encodedNaturalRebase2,
   encodedNaturalRebase3,
   SmartTokenXValue,
+  feeCalculator,
 } from "../../helper-hardhat-config";
 import { loadFixture, time } from "@nomicfoundation/hardhat-network-helpers";
 import { BigNumber } from "ethers";
@@ -51,7 +52,7 @@ const rebaseTable = [
 developmentChains.includes(network.name)
   ? describe("Management Fees", async function () {
       async function deployTokenFixture() {
-        const [deployer, tester] = await ethers.getSigners();
+        const [deployer, tester, treasury] = await ethers.getSigners();
 
         const MockERC20Token = await ethers.getContractFactory(
           "MockERC20Token",
@@ -134,6 +135,7 @@ developmentChains.includes(network.name)
           deployer,
           tester,
           tokenFactory2,
+          treasury,
         };
       }
 
@@ -477,6 +479,17 @@ developmentChains.includes(network.name)
               BigInt(item.depositValue)
             );
           });
+          it(`It should set the treasury address correctly`, async function () {
+            const { tokenFactory, treasury } = await loadFixture(
+              deployTokenFixture
+            );
+
+            await tokenFactory.setTreasuryWallet(treasury.address);
+
+            expect(await tokenFactory.getTreasuryAddress()).equals(
+              treasury.address
+            );
+          });
           it(`It should charge the user for all pending rebases, not just for the one he is depositing`, async function () {
             const {
               tokenFactory,
@@ -485,6 +498,7 @@ developmentChains.includes(network.name)
               smartToken1,
               smartToken2,
               tester,
+              treasury,
             } = await loadFixture(deployTokenFixture);
             const depositAmount = item.depositValue;
 
@@ -493,6 +507,8 @@ developmentChains.includes(network.name)
 
               smartToken2.address
             );
+
+            await tokenFactory.setTreasuryWallet(treasury.address);
 
             // set the management fee to 0.2% and activating fees
             await tokenFactory.setManagementFeeRate(200); //0.2 % per day
@@ -543,6 +559,111 @@ developmentChains.includes(network.name)
               BigInt(item.depositValue)
             );
           });
+
+          // it(`New tests`, async function () {
+          //   const {
+          //     tokenFactory,
+          //     deployer,
+          //     underlyingToken,
+          //     smartToken1,
+          //     smartToken2,
+          //     tester,
+          //     treasury,
+          //   } = await loadFixture(deployTokenFixture);
+          //   const depositAmount = item.depositValue;
+
+          //   await tokenFactory.initializeSMART(
+          //     smartToken1.address,
+
+          //     smartToken2.address
+          //   );
+          //   await tokenFactory.setTreasuryWallet(treasury.address);
+
+          //   // set the management fee to 0.2% and activating fees
+          //   await tokenFactory.setManagementFeeRate(200); //0.2 % per day
+          //   await tokenFactory.setManagementFeeState(true);
+          //   const lastRebase = await tokenFactory.getLastTimeStamp();
+
+          //   // deposit underlying token
+          //   //await time.setNextBlockTimestamp(lastRebase);
+          //   //calculate fees for that interval only
+          //   // const fee = await tokenFactory.calculateManagementFee(
+          //   //   depositAmount,
+          //   //   true,
+          //   //   0
+          //   // );
+          //   await underlyingToken.transfer(tester.address, depositAmount);
+          //   await underlyingToken.approve(tokenFactory.address, depositAmount); //deployer
+          //   await underlyingToken
+          //     .connect(tester)
+          //     .approve(tokenFactory.address, depositAmount); //tester
+
+          //   //await time.setNextBlockTimestamp(lastRebase);
+          //   await smartToken1.mint(depositAmount, deployer.address);
+          //   await smartToken1
+          //     .connect(tester)
+          //     .mint(depositAmount, tester.address);
+
+          //   const deployerBalanceAfter0 = await smartToken1.balanceOf(
+          //     deployer.address
+          //   );
+          //   const testerBalanceAfterFirstFee = await smartToken1.balanceOf(
+          //     tester.address
+          //   );
+
+          //   //contract call and make 3 rebase
+          //   const nextRebase = BigInt(lastRebase) + BigInt(REBASE_INTERVAL);
+          //   await time.setNextBlockTimestamp(nextRebase);
+          //   await tokenFactory.executeRebase(
+          //     encodedNaturalRebase1.encodedData,
+          //     encodedNaturalRebase1.signature
+          //   );
+          //   const deployerFee = feeCalculator(
+          //     deployerBalanceAfter0,
+          //     BigInt(200)
+          //   );
+          //   expect(
+          //     BigInt(await smartToken1.balanceOf(deployer.address))
+          //   ).equals(BigInt(deployerBalanceAfter0) - BigInt(deployerFee));
+
+          //   const deployerBalanceAfter1 = await smartToken1.balanceOf(
+          //     deployer.address
+          //   );
+
+          //   const secondRebase = BigInt(nextRebase) + BigInt(REBASE_INTERVAL);
+          //   await time.setNextBlockTimestamp(secondRebase);
+          //   await tokenFactory.executeRebase(
+          //     encodedNaturalRebase2.encodedData,
+          //     encodedNaturalRebase2.signature
+          //   );
+
+          //   const deployerFee1 = feeCalculator(
+          //     deployerBalanceAfter0,
+          //     BigInt(200)
+          //   );
+          //   expect(
+          //     BigInt(await smartToken1.balanceOf(deployer.address))
+          //   ).equals(BigInt(deployerBalanceAfter1) - BigInt(deployerFee1));
+
+          //   const deployerBalanceAfter2 = await smartToken1.balanceOf(
+          //     deployer.address
+          //   );
+
+          //   const thirdRebase = BigInt(secondRebase) + BigInt(REBASE_INTERVAL);
+          //   await time.setNextBlockTimestamp(thirdRebase);
+          //   await tokenFactory.executeRebase(
+          //     encodedNaturalRebase3.encodedData,
+          //     encodedNaturalRebase3.signature
+          //   );
+
+          //   const userBal = await smartToken1.balanceOf(tester.address);
+
+          //   // confirm user paid for more than one interval (3+1) in this case
+          //   // assert.notEqual(
+          //   //   BigInt(fee) + BigInt(userBal),
+          //   //   BigInt(item.depositValue)
+          //   // );
+          // });
         });
       });
     })

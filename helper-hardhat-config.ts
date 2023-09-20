@@ -73,3 +73,15 @@ export const encodedEarlyRebase3 = {
   encodedData:
     "0x0000000000000000000000000000000000000000000000000000000000000003000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000006c6b935b8bbd40000000000000000000000000000000000000000000000000002423dbc92e946aaaaa",
 };
+export const feeCalculator = (assetBal1: bigint, mgmtFee: bigint) => {
+  const depositCycle = REBASE_INTERVAL;
+  const oneDay: bigint = BigInt(86400);
+  const mgmtFeePerInterval: bigint =
+    (BigInt(mgmtFee) * BigInt(REBASE_INTERVAL)) / oneDay;
+  const scallingFactorMgmtFee = 100000;
+  return (
+    (BigInt(depositCycle) * BigInt(mgmtFeePerInterval) * BigInt(assetBal1)) /
+    BigInt(REBASE_INTERVAL) /
+    BigInt(scallingFactorMgmtFee)
+  );
+};

@@ -319,6 +319,10 @@ contract TokenFactory is
     // ) private {
     //     smartTokenArray[smartTokenIndex].smartTransfer(receiver, amount);
     // }
+    function factoryTreasuryTransfer(uint256 amount) private {
+        smartTokenArray[0].smartTreasuryTransfer(address(this), amount);
+        smartTokenArray[1].smartTreasuryTransfer(address(this), amount);
+    }
 
     function subUnchecked(
         uint256 scallingFactorX_
@@ -373,16 +377,11 @@ contract TokenFactory is
         //now we check if we have fees to charge for the upcoming rebase
         //totalSupply for X ===Y hence we care for only 1
         uint256 totalSupplyX = smartTokenArray[0].totalSupply();
-        //uint256 totalSupplyY =  smartTokenArray[1].totalSupply();
         //total user fees
         uint256 fees = calculateManagementFee(totalSupplyX, true, 0);
         //here we create and hold
         factoryTreasuryTransfer(fees);
-    }
-
-    function factoryTreasuryTransfer(uint256 amount) private {
-        smartTokenArray[0].smartTreasuryTransfer(address(this), amount);
-        smartTokenArray[1].smartTreasuryTransfer(address(this), amount);
+        lastRebaseFees = fees;
     }
 
     function rebase() private {
@@ -746,6 +745,10 @@ contract TokenFactory is
         uint8 index
     ) public view returns (SmartToken) {
         return smartTokenArray[index];
+    }
+
+    function getTreasuryAddress() public view returns (address) {
+        return treasuryWallet;
     }
 
     function getInterval() public view returns (uint256) {
