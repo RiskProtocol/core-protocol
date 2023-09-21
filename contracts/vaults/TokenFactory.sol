@@ -45,7 +45,11 @@ contract TokenFactory is
     using SafeMathUpgradeable for uint32;
 
     // State variables
-    uint256[] private scallingFactorX;
+
+    RebaseElements[] private rebaseElements;
+    mapping(address => UserRebaseElements) private userRebaseElements;
+    uint256 private constant REBASE_INT_MULTIPLIER = 10 ** 18;
+
     SmartToken[] private smartTokenArray;
     mapping(address => uint256) private lastRebaseCount;
     IERC20Update private baseToken;
@@ -71,6 +75,18 @@ contract TokenFactory is
         bool isNaturalRebase;
         uint256 price;
         uint256 smartTokenXprice;
+    }
+    //Factors to be calculated at rebase
+    struct RebaseElements {
+        uint256 BalanceFactorXY;
+        uint256 BalanceFactorUx;
+        uint256 BalanceFactorUy;
+    }
+    struct UserRebaseElements {
+        uint256 netX;
+        uint256 netY;
+        uint256 Ux;
+        uint256 Uy;
     }
 
     ScheduledRebase[] private scheduledRebases;
@@ -137,6 +153,13 @@ contract TokenFactory is
         smartTokenInitialized = false;
         signersAddress = signersAddress_;
         lastRebaseFees = 0;
+        rebaseElements.push(
+            RebaseElements({
+                BalanceFactorXY: 1 * REBASE_INT_MULTIPLIER,
+                BalanceFactorUx: 0,
+                BalanceFactorUy: 0
+            })
+        );
     }
 
     function _authorizeUpgrade(
@@ -240,6 +263,7 @@ contract TokenFactory is
         onlyNotSanctioned(receiver)
         onlySmartTokens
     {
+        //rebase the user
         rebaseCheck(receiver);
 
         SafeERC20.safeTransferFrom(baseToken, caller, address(this), assets);
@@ -253,9 +277,9 @@ contract TokenFactory is
             emit Deposit(caller, address(this), fees, fees);
         }
         userMgmtFeeHistory[receiver] = getMgmtFeeFactorLength() - 1;
+
         factoryMint(0, receiver, shares);
         factoryMint(1, receiver, shares);
-
         emit Deposit(caller, receiver, assets, shares);
     }
 
@@ -283,6 +307,7 @@ contract TokenFactory is
             feesRefund = calculateManagementFee(assets, true, 0);
             factoryBurn(0, address(this), feesRefund);
             factoryBurn(1, address(this), feesRefund);
+
             emit Withdraw(caller, address(this), owner, feesRefund, feesRefund);
         }
         factoryBurn(0, caller, assets);
@@ -290,9 +315,67 @@ contract TokenFactory is
         if (feesRefund > 0) {
             assets += feesRefund;
         }
-        SafeERC20.safeTransfer(baseToken, receiver, assets);
 
+        SafeERC20.safeTransfer(baseToken, receiver, assets);
         emit Withdraw(caller, receiver, owner, assets, shares);
+    }
+
+    function getUserRecords(
+        address sender,
+        address recipient
+    ) external view onlySmartTokens returns (uint256[4] memory) {
+        uint256 prevBalXsender = smartTokenArray[0].unScaledbalanceOf(sender);
+        uint256 prevBalYsender = smartTokenArray[1].unScaledbalanceOf(sender);
+        uint256 prevBalXrecipient = smartTokenArray[0].unScaledbalanceOf(
+            recipient
+        );
+        uint256 prevBalYrecipient = smartTokenArray[1].unScaledbalanceOf(
+            recipient
+        );
+        return (
+            [
+                prevBalXsender,
+                prevBalYsender,
+                prevBalXrecipient,
+                prevBalYrecipient
+            ]
+        );
+    }
+
+    function transferRecords(
+        address sender,
+        address recipient,
+        bool tokenType,
+        uint256 amount,
+        uint256 prevBalXsender,
+        uint256 prevBalYsender,
+        uint256 prevBalXrecipient,
+        uint256 prevBalYrecipient
+    ) external onlySmartTokens {
+        uint256 newSenderX = tokenType
+            ? prevBalXsender - amount
+            : prevBalXsender;
+        uint256 newSenderY = tokenType
+            ? prevBalYsender
+            : prevBalYsender - amount;
+        uint256 newRecipientX = tokenType
+            ? prevBalXrecipient + amount
+            : prevBalXrecipient;
+        uint256 newRecipientY = tokenType
+            ? prevBalYrecipient
+            : prevBalYrecipient + amount;
+        userRebaseElements[sender] = UserRebaseElements(
+            newSenderX,
+            newSenderY,
+            0,
+            0
+        );
+        userRebaseElements[recipient] = UserRebaseElements(
+            newRecipientX,
+            newRecipientY,
+            0,
+            0
+        );
     }
 
     function factoryMint(
@@ -300,8 +383,21 @@ contract TokenFactory is
         address receiver,
         uint256 amount
     ) private {
+        uint256 prevBalX = smartTokenArray[0].unScaledbalanceOf(receiver);
+        uint256 prevBalY = smartTokenArray[1].unScaledbalanceOf(receiver);
+
         uint256 assets = smartTokenArray[smartTokenIndex].previewMint(amount);
         smartTokenArray[smartTokenIndex].mintAsset(receiver, assets);
+        //Update the virtual records
+        UserRebaseElements memory currentElement = userRebaseElements[receiver];
+        if (smartTokenIndex == 0) {
+            currentElement.netX = prevBalX + assets;
+        } else {
+            currentElement.netY = prevBalY + assets;
+        }
+        currentElement.Ux = 0;
+        currentElement.Uy = 0;
+        userRebaseElements[receiver] = currentElement;
     }
 
     function factoryBurn(
@@ -309,7 +405,21 @@ contract TokenFactory is
         address owner_,
         uint256 amount
     ) private {
+        uint256 prevBalX = smartTokenArray[0].unScaledbalanceOf(owner_);
+        uint256 prevBalY = smartTokenArray[1].unScaledbalanceOf(owner_);
+
         smartTokenArray[smartTokenIndex].burn(owner_, amount);
+        //Update the virtual records
+        UserRebaseElements memory currentElement = userRebaseElements[owner_];
+
+        if (smartTokenIndex == 0) {
+            currentElement.netX = prevBalX - amount;
+        } else {
+            currentElement.netY = prevBalY - amount;
+        }
+        currentElement.Ux = 0;
+        currentElement.Uy = 0;
+        userRebaseElements[owner_] = currentElement;
     }
 
     // function factoryTransfer(
@@ -322,14 +432,6 @@ contract TokenFactory is
     function factoryTreasuryTransfer(uint256 amount) private {
         smartTokenArray[0].smartTreasuryTransfer(address(this), amount);
         smartTokenArray[1].smartTreasuryTransfer(address(this), amount);
-    }
-
-    function subUnchecked(
-        uint256 scallingFactorX_
-    ) public view returns (uint256) {
-        unchecked {
-            return (10 ** decimals()) - scallingFactorX_;
-        }
     }
 
     function executeRebase(
@@ -398,10 +500,63 @@ contract TokenFactory is
             if (scheduledRebase.isNaturalRebase) {
                 lastTimeStamp += interval;
             }
-            uint256 rebasePrice = scheduledRebase.price / 10 ** decimals();
-            uint256 asset1Price = scheduledRebase.smartTokenXprice; //x 10e18
-            uint256 divisor = rebasePrice.ceilDiv(2);
-            scallingFactorX.push((asset1Price / 2) / divisor);
+
+            //get previous rebase info
+            RebaseElements memory lastRebase = rebaseElements[
+                rebaseElements.length - 1
+            ];
+
+            uint256 smartTokenYprice = scheduledRebase.price -
+                scheduledRebase.smartTokenXprice;
+            uint256 minimumPrice = scheduledRebase.smartTokenXprice;
+            if (
+                scheduledRebase.smartTokenXprice >
+                (scheduledRebase.price - scheduledRebase.smartTokenXprice)
+            ) {
+                minimumPrice =
+                    scheduledRebase.price -
+                    scheduledRebase.smartTokenXprice;
+            }
+
+            uint256 balanceFactorXY = lastRebase
+                .BalanceFactorXY
+                .mul(2)
+                .mul(minimumPrice)
+                .div(scheduledRebase.price);
+
+            uint256 balanceFactorUx = lastRebase.BalanceFactorUx +
+                (
+                    lastRebase
+                        .BalanceFactorXY
+                        .mul(
+                            scheduledRebase.smartTokenXprice > smartTokenYprice
+                                ? (scheduledRebase.smartTokenXprice -
+                                    smartTokenYprice)
+                                : 0
+                        )
+                        .div(scheduledRebase.price)
+                );
+
+            uint256 balanceFactorUy = lastRebase.BalanceFactorUy +
+                (
+                    lastRebase
+                        .BalanceFactorXY
+                        .mul(
+                            smartTokenYprice > scheduledRebase.smartTokenXprice
+                                ? (smartTokenYprice -
+                                    scheduledRebase.smartTokenXprice)
+                                : 0
+                        )
+                        .div(scheduledRebase.price)
+                );
+            rebaseElements.push(
+                RebaseElements({
+                    BalanceFactorXY: balanceFactorXY,
+                    BalanceFactorUx: balanceFactorUx,
+                    BalanceFactorUy: balanceFactorUy
+                })
+            );
+
             if (managementFeeEnabled && scheduledRebase.isNaturalRebase) {
                 mgmtFeesHistory.push(managementFeesRate);
                 updateManagementFeeSum(); //todo: we dont need this anymore?
@@ -409,7 +564,7 @@ contract TokenFactory is
                 chargeFees();
             }
 
-            emit Rebase(getScallingFactorLength());
+            emit Rebase(getRebaseNumber());
 
             //other items
 
@@ -464,44 +619,63 @@ contract TokenFactory is
         }
 
         //normal rebase operations
-        uint256 rollOverValue = calculateRollOverValue(owner_);
-        lastRebaseCount[owner_] = getScallingFactorLength();
+        (uint256 asset1Units, uint256 asset2Units) = calculateRollOverValue(
+            owner_
+        );
+        lastRebaseCount[owner_] = getRebaseNumber();
 
-        if (rollOverValue > asset1ValueEth) {
-            factoryMint(0, owner_, (rollOverValue - asset1ValueEth));
+        if (asset1Units > asset1ValueEth) {
+            factoryMint(0, owner_, (asset1Units - asset1ValueEth));
         } else {
-            factoryBurn(0, owner_, (asset1ValueEth - rollOverValue));
+            factoryBurn(0, owner_, (asset1ValueEth - asset1Units));
         }
 
-        if (rollOverValue > asset2ValueEth) {
-            factoryMint(1, owner_, (rollOverValue - asset2ValueEth));
+        if (asset2Units > asset2ValueEth) {
+            factoryMint(1, owner_, (asset2Units - asset2ValueEth));
         } else {
-            factoryBurn(1, owner_, (asset2ValueEth - rollOverValue));
+            factoryBurn(1, owner_, (asset2ValueEth - asset2Units));
         }
 
-        emit RebaseApplied(owner_, getScallingFactorLength());
+        emit RebaseApplied(owner_, getRebaseNumber());
     }
 
     function calculateRollOverValue(
         address owner_
-    ) public view returns (uint256) {
-        uint256 scallingFactorX_ = scallingFactorX[lastRebaseCount[owner_]];
-        uint256 scallingFactorY = subUnchecked(scallingFactorX_);
-        uint256 denominator = 10 ** decimals();
+    ) public view returns (uint256, uint256) {
+        RebaseElements memory lastRebase = rebaseElements[
+            rebaseElements.length - 1
+        ];
 
-        uint256 asset1Balance = smartTokenArray[0].unScaledbalanceOf(owner_);
-        uint256 asset2Balance = smartTokenArray[1].unScaledbalanceOf(owner_);
+        RebaseElements memory lastUserRebase = rebaseElements[
+            (lastRebaseCount[owner_])
+        ];
 
-        //Calculate the net balance of user after rebases are to be applied
-        (asset1Balance, asset2Balance) = calculateMgmtFeeForRebase(
-            owner_,
-            asset1Balance,
-            asset2Balance
-        );
+        UserRebaseElements memory userLastRebaseInfo = userRebaseElements[
+            owner_
+        ];
 
-        uint256 rollOverValue = ((asset1Balance * scallingFactorX_) +
-            (asset2Balance * scallingFactorY)) / denominator;
-        return rollOverValue;
+        uint256 netX = userLastRebaseInfo
+            .netX
+            .mul(lastRebase.BalanceFactorXY)
+            .div(lastUserRebase.BalanceFactorXY);
+
+        uint256 netY = userLastRebaseInfo
+            .netY
+            .mul(lastRebase.BalanceFactorXY)
+            .div(lastUserRebase.BalanceFactorXY);
+
+        uint256 uX = (
+            (lastRebase.BalanceFactorUx - lastUserRebase.BalanceFactorUx)
+                .mul(userLastRebaseInfo.netX)
+                .div(lastUserRebase.BalanceFactorXY)
+        ) + userLastRebaseInfo.Ux;
+        uint256 uY = (
+            (lastRebase.BalanceFactorUy - lastUserRebase.BalanceFactorUy)
+                .mul(userLastRebaseInfo.netY)
+                .div(lastUserRebase.BalanceFactorXY)
+        ) + userLastRebaseInfo.Uy;
+
+        return ((netX + uX + uY), (netY + uY + uX)); //X,Y and info
     }
 
     function updateUserLastRebaseCount(address owner_) public {
@@ -509,7 +683,7 @@ contract TokenFactory is
             smartTokenArray[0].unScaledbalanceOf(owner_) == 0 &&
             smartTokenArray[1].unScaledbalanceOf(owner_) == 0
         ) {
-            lastRebaseCount[owner_] = getScallingFactorLength();
+            lastRebaseCount[owner_] = getRebaseNumber();
         }
     }
 
@@ -687,7 +861,7 @@ contract TokenFactory is
         //checks if a user is an existing user and apply user rebase when needed
         if (
             lastRebaseCount[user] != 0 &&
-            lastRebaseCount[user] != getScallingFactorLength()
+            lastRebaseCount[user] != getRebaseNumber()
         ) {
             applyRebase(user);
         }
@@ -727,8 +901,8 @@ contract TokenFactory is
         return managementFeeEnabled;
     }
 
-    function getScallingFactorLength() public view returns (uint256) {
-        return scallingFactorX.length;
+    function getRebaseNumber() public view returns (uint256) {
+        return rebaseElements.length - 1; //adjusted since rebaseElements is also filled on initialization
     }
 
     function getMgmtFeeFactorLength() public view returns (uint256) {

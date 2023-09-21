@@ -85,3 +85,53 @@ export const feeCalculator = (assetBal1: bigint, mgmtFee: bigint) => {
     BigInt(scallingFactorMgmtFee)
   );
 };
+
+export type RebaseElements = {
+  BalanceFactorXY: BigInt;
+  BalanceFactorUx: BigInt;
+  BalanceFactorUy: BigInt;
+};
+
+export type UserRebaseElements = {
+  netX: BigInt;
+  netY: BigInt;
+  Ux: BigInt;
+  Uy: BigInt;
+};
+
+export const callculateRolloverAmount = (
+  lastRebase: any,
+  lastUserRebase: any,
+  userLastRebaseInfo: any
+) => {
+  const netX =
+    (BigInt(userLastRebaseInfo.netX) * BigInt(lastRebase.BalanceFactorXY)) /
+    BigInt(lastUserRebase.BalanceFactorXY);
+  const netY =
+    (BigInt(userLastRebaseInfo.netY) * BigInt(lastRebase.BalanceFactorXY)) /
+    BigInt(lastUserRebase.BalanceFactorXY);
+
+  const uX =
+    BigInt(
+      BigInt(lastRebase.BalanceFactorUx - lastUserRebase.BalanceFactorUx) *
+        BigInt(userLastRebaseInfo.netX)
+    ) /
+      BigInt(lastUserRebase.BalanceFactorXY) +
+    BigInt(userLastRebaseInfo.Ux);
+  const uY =
+    BigInt(
+      BigInt(lastRebase.BalanceFactorUy - lastUserRebase.BalanceFactorUy) *
+        BigInt(userLastRebaseInfo.netY)
+    ) /
+      BigInt(lastUserRebase.BalanceFactorXY) +
+    BigInt(userLastRebaseInfo.Uy);
+
+  const newUserRebaseElements = {
+    netX: netX,
+    netY: netY,
+    Ux: uX,
+    Uy: uY,
+  };
+
+  return [netX + uX + uY, netY + uY + uX, newUserRebaseElements];
+};

@@ -24,7 +24,10 @@ const rebaseTable = [
       x: "9000000000000000000", // we simiulate that one of token X has been traded before rebase
       y: "10000000000000000000",
     },
-    afterRebase: "9666500000000000000",
+    afterRebase: {
+      x: "9333000000000000000",
+      y: "10000000000000000000",
+    },
   },
   {
     depositValue: "5000000000000000000",
@@ -32,7 +35,10 @@ const rebaseTable = [
       x: "4000000000000000000", // we simiulate that one of token X has been traded before rebase
       y: "5000000000000000000",
     },
-    afterRebase: "4666500000000000000",
+    afterRebase: {
+      x: "4333000000000000000",
+      y: "5000000000000000000",
+    },
   },
   {
     depositValue: "4335000000000000000",
@@ -40,7 +46,10 @@ const rebaseTable = [
       x: "3335000000000000000", // we simiulate that one of token X has been traded before rebase
       y: "4335000000000000000",
     },
-    afterRebase: "4001500000000000000",
+    afterRebase: {
+      x: "3668000000000000000",
+      y: "4335000000000000000",
+    },
   },
 ];
 
@@ -88,6 +97,7 @@ developmentChains.includes(network.name)
           TOKEN1_SYMBOL,
           tokenFactory.address,
           sanctionsContract.address,
+          true,
         ]);
         await smartToken1.deployed();
 
@@ -102,6 +112,7 @@ developmentChains.includes(network.name)
           TOKEN2_SYMBOL,
           tokenFactory.address,
           sanctionsContract.address,
+          false,
         ]);
         await smartToken2.deployed();
 
@@ -168,13 +179,14 @@ developmentChains.includes(network.name)
             );
 
             // confirm user balances when rebase has taken place
+
             assert.equal(
               await smartToken1.balanceOf(deployer.address),
-              item.afterRebase
+              item.afterRebase.x
             );
             assert.equal(
               await smartToken2.balanceOf(deployer.address),
-              item.afterRebase
+              item.afterRebase.y
             );
           });
         });

@@ -35,6 +35,7 @@ contract SmartToken is
 {
     TokenFactory private tokenFactory;
     IERC20Update private underlyingToken;
+    bool private isX;
 
     modifier onlyTokenFactory() {
         _onlyTokenFactory();
@@ -60,7 +61,8 @@ contract SmartToken is
         string memory tokenName,
         string memory tokenSymbol,
         address factoryAddress,
-        address sanctionsContract_
+        address sanctionsContract_,
+        bool isX_ //is this token X or Y?
     ) public initializer {
         //initialize deriving contracts
         __ERC20_init(tokenName, tokenSymbol);
@@ -70,6 +72,7 @@ contract SmartToken is
         __UUPSUpgradeable_init();
         tokenFactory = TokenFactory(factoryAddress);
         underlyingToken = tokenFactory.getBaseToken();
+        isX = isX_;
     }
 
     function _authorizeUpgrade(address) internal override onlyOwner {}
@@ -98,15 +101,47 @@ contract SmartToken is
         returns (bool)
     {
         handlePendingRebase(_msgSender(), recipient);
-        super.transfer(recipient, amount);
-        return true;
+
+        uint256[4] memory bals = tokenFactory.getUserRecords(
+            _msgSender(),
+            recipient
+        );
+
+        bool result = super.transfer(recipient, amount);
+
+        tokenFactory.transferRecords(
+            _msgSender(),
+            recipient,
+            isX,
+            amount,
+            bals[0],
+            bals[1],
+            bals[2],
+            bals[3]
+        );
+
+        return result;
     }
 
     function smartTransfer(
         address recipient,
         uint256 amount
     ) external onlyTokenFactory {
+        uint256[4] memory bals = tokenFactory.getUserRecords(
+            _msgSender(),
+            recipient
+        );
         super.transfer(recipient, amount);
+        tokenFactory.transferRecords(
+            _msgSender(),
+            recipient,
+            isX,
+            amount,
+            bals[0],
+            bals[1],
+            bals[2],
+            bals[3]
+        );
     }
 
     function smartTreasuryTransfer(
@@ -126,7 +161,12 @@ contract SmartToken is
         returns (uint256)
     {
         if (hasPendingRebase(account)) {
-            return tokenFactory.calculateRollOverValue(account);
+            (uint256 asset1Units, uint256 asset2Units) = tokenFactory
+                .calculateRollOverValue(account);
+            if (isX) {
+                return asset1Units;
+            }
+            return asset2Units;
         } else {
             return unScaledbalanceOf(account);
         }
@@ -139,7 +179,7 @@ contract SmartToken is
     function hasPendingRebase(address account) public view returns (bool) {
         return
             tokenFactory.getUserLastRebaseCount(account) !=
-            tokenFactory.getScallingFactorLength();
+            tokenFactory.getRebaseNumber();
     }
 
     function getTokenFactory() public view returns (address) {
@@ -159,7 +199,20 @@ contract SmartToken is
         returns (bool)
     {
         handlePendingRebase(sender, recipient);
-        return super.transferFrom(sender, recipient, amount);
+        uint256[4] memory bals = tokenFactory.getUserRecords(sender, recipient);
+        bool result = super.transferFrom(sender, recipient, amount);
+        tokenFactory.transferRecords(
+            sender,
+            recipient,
+            isX,
+            amount,
+            bals[0],
+            bals[1],
+            bals[2],
+            bals[3]
+        );
+
+        return result;
     }
 
     function handlePendingRebase(address sender, address receiver) public {
@@ -319,7 +372,7 @@ contract SmartToken is
         // apply user pending rebase
         if (
             tokenFactory.getUserLastRebaseCount(receiver) !=
-            tokenFactory.getScallingFactorLength()
+            tokenFactory.getRebaseNumber()
         ) {
             tokenFactory.applyRebase(receiver);
         }
@@ -363,7 +416,7 @@ contract SmartToken is
         // apply user pending rebase
         if (
             tokenFactory.getUserLastRebaseCount(receiver) !=
-            tokenFactory.getScallingFactorLength()
+            tokenFactory.getRebaseNumber()
         ) {
             tokenFactory.applyRebase(receiver);
         }
