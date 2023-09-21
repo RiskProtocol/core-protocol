@@ -61,6 +61,7 @@ developmentChains.includes(network.name)
           TOKEN1_SYMBOL,
           tokenFactory.address,
           sanctionsContract.address,
+          true,
         ]);
         await smartToken1.deployed();
 
@@ -75,6 +76,7 @@ developmentChains.includes(network.name)
           TOKEN2_SYMBOL,
           tokenFactory.address,
           sanctionsContract.address,
+          false,
         ]);
         await smartToken2.deployed();
 
@@ -121,11 +123,12 @@ developmentChains.includes(network.name)
             "BaseContract__DepositCircuitBreaker"
           );
 
-          expect(await smartToken1.balanceOf(deployer.address)).to.equal(depositorBalanceBefore);
+          expect(await smartToken1.balanceOf(deployer.address)).to.equal(
+            depositorBalanceBefore
+          );
 
           await smartToken1.toggleDepositCircuitBreaker();
-        }
-        );
+        });
 
         it("should not deposit tokens with permit when circuit breaker is on", async function () {
           const { smartToken1, chainId, deployer, tester } = await loadFixture(
@@ -186,7 +189,9 @@ developmentChains.includes(network.name)
 
           await smartToken1.toggleDepositCircuitBreaker();
 
-          expect(await smartToken1.balanceOf(deployer.address)).to.equal(depositorBalanceBefore);
+          expect(await smartToken1.balanceOf(deployer.address)).to.equal(
+            depositorBalanceBefore
+          );
         });
 
         it("should not mint tokens when circuit breaker is on", async function () {
@@ -219,11 +224,12 @@ developmentChains.includes(network.name)
             "BaseContract__DepositCircuitBreaker"
           );
 
-          expect(await smartToken1.balanceOf(deployer.address)).to.equal(depositorBalanceBefore);
+          expect(await smartToken1.balanceOf(deployer.address)).to.equal(
+            depositorBalanceBefore
+          );
 
           await smartToken1.toggleDepositCircuitBreaker();
-        }
-        );
+        });
       });
 
       describe("Withdraw, test circuit breakers to stop withdraw", async function () {
@@ -253,13 +259,19 @@ developmentChains.includes(network.name)
           await smartToken1.toggleWithdrawCircuitBreaker();
 
           await expect(
-            smartToken1.withdraw(depositAmount, deployer.address, deployer.address)
+            smartToken1.withdraw(
+              depositAmount,
+              deployer.address,
+              deployer.address
+            )
           ).to.be.revertedWithCustomError(
             smartToken1,
             "BaseContract__WithdrawCircuitBreaker"
           );
 
-          expect(await smartToken1.balanceOf(deployer.address)).to.equal(depositorBalanceBefore);
+          expect(await smartToken1.balanceOf(deployer.address)).to.equal(
+            depositorBalanceBefore
+          );
 
           await smartToken1.toggleWithdrawCircuitBreaker();
         });
@@ -290,20 +302,25 @@ developmentChains.includes(network.name)
           await smartToken1.toggleWithdrawCircuitBreaker();
 
           await expect(
-            smartToken1.redeem(depositAmount, deployer.address, deployer.address)
+            smartToken1.redeem(
+              depositAmount,
+              deployer.address,
+              deployer.address
+            )
           ).to.be.revertedWithCustomError(
             smartToken1,
             "BaseContract__WithdrawCircuitBreaker"
           );
 
-          expect(await smartToken1.balanceOf(deployer.address)).to.equal(depositorBalanceBefore);
+          expect(await smartToken1.balanceOf(deployer.address)).to.equal(
+            depositorBalanceBefore
+          );
 
           await smartToken1.toggleWithdrawCircuitBreaker();
         });
       });
 
       describe("Transfer, test circuit breakers to stop transfer", async function () {
-
         it("should not transfer tokens when circuit breaker is on", async function () {
           const {
             smartToken1,
@@ -336,7 +353,9 @@ developmentChains.includes(network.name)
             "BaseContract__TransferCircuitBreaker"
           );
 
-          expect(await smartToken1.balanceOf(deployer.address)).to.equal(depositorBalanceBefore);
+          expect(await smartToken1.balanceOf(deployer.address)).to.equal(
+            depositorBalanceBefore
+          );
 
           await smartToken1.toggleTransferCircuitBreaker();
         });
@@ -367,13 +386,19 @@ developmentChains.includes(network.name)
           await smartToken1.toggleTransferCircuitBreaker();
 
           await expect(
-            smartToken1.transferFrom(deployer.address, deployer.address, depositAmount)
+            smartToken1.transferFrom(
+              deployer.address,
+              deployer.address,
+              depositAmount
+            )
           ).to.be.revertedWithCustomError(
             smartToken1,
             "BaseContract__TransferCircuitBreaker"
           );
 
-          expect(await smartToken1.balanceOf(deployer.address)).to.equal(depositorBalanceBefore);
+          expect(await smartToken1.balanceOf(deployer.address)).to.equal(
+            depositorBalanceBefore
+          );
 
           await smartToken1.toggleTransferCircuitBreaker();
         });
@@ -399,9 +424,7 @@ developmentChains.includes(network.name)
           await underlyingToken.approve(tokenFactory.address, depositAmount);
           await smartToken1.mint(depositAmount, deployer.address);
 
-          const userBal: bigint = await smartToken1.balanceOf(
-            deployer.address
-          );
+          const userBal: bigint = await smartToken1.balanceOf(deployer.address);
           const factBal = await smartToken1.balanceOf(tokenFactory.address);
 
           const now = await tokenFactory.getLastTimeStamp();
@@ -413,9 +436,10 @@ developmentChains.includes(network.name)
 
           await expect(
             tokenFactory.executeRebase(
-            encodedNaturalRebase1.encodedData,
-            encodedNaturalRebase1.signature
-          )).to.be.revertedWithCustomError(
+              encodedNaturalRebase1.encodedData,
+              encodedNaturalRebase1.signature
+            )
+          ).to.be.revertedWithCustomError(
             tokenFactory,
             "BaseContract__RebaseCircuitBreaker"
           );
@@ -427,7 +451,6 @@ developmentChains.includes(network.name)
 
           //assume that user made tx, apply rebase
           await time.setNextBlockTimestamp(now2);
-
 
           await expect(
             tokenFactory.applyRebase(deployer.address)
@@ -442,10 +465,7 @@ developmentChains.includes(network.name)
 
       describe("Stop and resume all circuit breakers", async function () {
         it("should stop and resume all circuit breakers", async function () {
-
-          const {
-            smartToken1,
-          } = await loadFixture(deployTokenFixture);
+          const { smartToken1 } = await loadFixture(deployTokenFixture);
 
           await smartToken1.stopAllCircuitBreakers();
           expect(await smartToken1.isDepositCircuitBreaker()).to.be.true;
@@ -458,22 +478,13 @@ developmentChains.includes(network.name)
 
           await smartToken1.resumeAllCircuitBreakers();
 
-          expect(
-            await smartToken1.isDepositCircuitBreaker()
-          ).to.be.false;
+          expect(await smartToken1.isDepositCircuitBreaker()).to.be.false;
 
-          expect(
-            await smartToken1.isWithdrawCircuitBreaker()
-          ).to.be.false;
+          expect(await smartToken1.isWithdrawCircuitBreaker()).to.be.false;
 
-          expect(
-            await smartToken1.isTransferCircuitBreaker()
-          ).to.be.false;
+          expect(await smartToken1.isTransferCircuitBreaker()).to.be.false;
 
-          expect(
-            await smartToken1.isRebaseCircuitBreaker()
-          ).to.be.false;
-
+          expect(await smartToken1.isRebaseCircuitBreaker()).to.be.false;
         });
       });
     })
