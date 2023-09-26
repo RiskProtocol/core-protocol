@@ -507,11 +507,17 @@ contract TokenFactory is
 
             lastRebaseFees -= calculateManagementFee(lastRebaseFees, true, 0);
 
-            uint256 fee = (smartTokenArray[0].balanceOf(address(this)) >= //todo: tokenY?
+            uint256 fee = (smartTokenArray[0].balanceOf(address(this)) >=
                 lastRebaseFees &&
+                smartTokenArray[1].balanceOf(address(this)) >= lastRebaseFees &&
                 lastRebaseFees != 0)
                 ? lastRebaseFees
-                : smartTokenArray[0].balanceOf(address(this));
+                : (
+                    smartTokenArray[0].balanceOf(address(this)) <
+                        smartTokenArray[1].balanceOf(address(this))
+                        ? smartTokenArray[0].balanceOf(address(this))
+                        : smartTokenArray[1].balanceOf(address(this))
+                );
 
             smartTokenArray[0].transfer(treasuryWallet, fee);
             smartTokenArray[1].transfer(treasuryWallet, fee);
