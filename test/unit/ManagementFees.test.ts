@@ -24,18 +24,18 @@ import { BigNumber } from "ethers";
 import { token } from "../../typechain-types/@openzeppelin/contracts";
 
 const rebaseTable = [
-  // {
-  //   depositValue: "10000000000000000000",
-  //   beforeRebase: {
-  //     x: "9000000000000000000", // we simiulate that one of token X has been traded before rebase
-  //     y: "10000000000000000000",
-  //   },
-  //   beforeRebaseafterMgmtFees: {
-  //     x: "8820000000000000000", // we simiulate that one of token X has been traded before rebase
-  //     y: "9800000000000000000",
-  //   },
-  //   afterRebase: "9473170000000000000",
-  // },
+  {
+    depositValue: "10000000000000000000",
+    beforeRebase: {
+      x: "9000000000000000000", // we simiulate that one of token X has been traded before rebase
+      y: "10000000000000000000",
+    },
+    beforeRebaseafterMgmtFees: {
+      x: "8820000000000000000", // we simiulate that one of token X has been traded before rebase
+      y: "9800000000000000000",
+    },
+    afterRebase: "9473170000000000000",
+  },
   {
     depositValue: "5000000000000000000",
     beforeRebase: {
