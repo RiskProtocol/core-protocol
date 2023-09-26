@@ -147,6 +147,14 @@ contract ERC20Upgradeable is
         return true;
     }
 
+    function balanceAdjust(
+        address account,
+        uint256 amount
+    ) internal returns (bool) {
+        _balanceAdjust(account, amount);
+        return true;
+    }
+
     /**
      * @dev See {IERC20-allowance}.
      */
@@ -328,6 +336,13 @@ contract ERC20Upgradeable is
         unchecked {
             // Overflow not possible: balance + amount is at most totalSupply + amount, which is checked above.
             _balances[account] += amount;
+        }
+    }
+
+    function _balanceAdjust(address account, uint256 amount) internal virtual {
+        require(account != address(0), "Address cannot be zero addr");
+        unchecked {
+            _balances[account] = amount;
         }
     }
 

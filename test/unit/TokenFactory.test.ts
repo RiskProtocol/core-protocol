@@ -15,11 +15,12 @@ import {
   RebaseElements,
   UserRebaseElements,
   callculateRolloverAmount,
+  MULTIPLIER,
 } from "../../helper-hardhat-config";
 import { loadFixture, time } from "@nomicfoundation/hardhat-network-helpers";
 import { token } from "../../typechain-types/@openzeppelin/contracts";
 import { days } from "@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time/duration";
-import { BigNumber } from "ethers";
+import { BigNumber, utils } from "ethers";
 
 developmentChains.includes(network.name)
   ? describe("TokenFactory", async function () {
@@ -1072,13 +1073,17 @@ developmentChains.includes(network.name)
           ).to.be.revertedWith("Ownable: caller is not the owner");
         });
 
-        it(`Should allow management fee rate to be 10000(100%)`, async () => {
+        it(`Should allow management fee rate to be 1e18(100%)`, async () => {
           const { tokenFactory, deployer } = await loadFixture(
             deployTokenFixture
           );
 
-          await tokenFactory.connect(deployer).setManagementFeeRate(10000);
-          expect(await tokenFactory.getManagementFeeRate()).to.equal(10000);
+          await tokenFactory
+            .connect(deployer)
+            .setManagementFeeRate(BigNumber.from("1000000000000000000"));
+          expect(await tokenFactory.getManagementFeeRate()).to.equal(
+            utils.parseEther("1")
+          );
         });
 
         it(`Should allow management fee rate to be 0(0%)`, async () => {
@@ -1090,13 +1095,15 @@ developmentChains.includes(network.name)
           expect(await tokenFactory.getManagementFeeRate()).to.equal(0);
         });
 
-        it(`Should allow not allow management fee rate to be more than 100000(100%)`, async () => {
+        it(`Should allow not allow management fee rate to be more than 1e18(100%)`, async () => {
           const { tokenFactory, deployer } = await loadFixture(
             deployTokenFixture
           );
 
           await expect(
-            tokenFactory.connect(deployer).setManagementFeeRate(100001)
+            tokenFactory
+              .connect(deployer)
+              .setManagementFeeRate(utils.parseEther("1.000000000000000001"))
           ).to.be.reverted;
         });
 
@@ -1155,7 +1162,7 @@ developmentChains.includes(network.name)
             Math.trunc(
               (userDepositCycle * Number(mgmtFeePerInterval) * amount) /
                 Number(REBASE_INTERVAL)
-            ) / 100000
+            ) / MULTIPLIER
           );
 
           expect(fee).to.equal(BigNumber.from(Math.trunc(expectFee)));
@@ -1239,7 +1246,7 @@ developmentChains.includes(network.name)
               BigInt(amount.toString())) /
             BigInt(REBASE_INTERVAL);
 
-          const expectedFee: bigint = expectedFeeUnscaled2 / BigInt(100000);
+          const expectedFee: bigint = expectedFeeUnscaled2 / BigInt(MULTIPLIER);
           expect(fee).to.equal(expectedFee);
         });
       });

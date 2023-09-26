@@ -123,32 +123,23 @@ contract SmartToken is
         return result;
     }
 
-    function smartTransfer(
-        address recipient,
-        uint256 amount
-    ) external onlyTokenFactory {
-        uint256[4] memory bals = tokenFactory.getUserRecords(
-            _msgSender(),
-            recipient
-        );
-        super.transfer(recipient, amount);
-        tokenFactory.transferRecords(
-            _msgSender(),
-            recipient,
-            isX,
-            amount,
-            bals[0],
-            bals[1],
-            bals[2],
-            bals[3]
-        );
-    }
-
     function smartTreasuryTransfer(
         address treasuryAddress,
         uint256 amount
     ) external onlyTokenFactory {
+        tokenFactory.updateRecord(isX, amount);
+
         super.treasuryTransfer(treasuryAddress, amount);
+    }
+
+    function smartBalanceAdjust(
+        address account,
+        uint256 amount
+    ) external onlyTokenFactory {
+        //update the internal record
+        tokenFactory.updateRecord(isX, account, amount);
+
+        super.balanceAdjust(account, amount);
     }
 
     /** @dev See {IERC20-balanceOf}. */
@@ -163,6 +154,7 @@ contract SmartToken is
         if (hasPendingRebase(account)) {
             (uint256 asset1Units, uint256 asset2Units) = tokenFactory
                 .calculateRollOverValue(account);
+
             if (isX) {
                 return asset1Units;
             }

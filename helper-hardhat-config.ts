@@ -20,7 +20,7 @@ export const networkConfig: networkConfigInfo = {
 };
 
 export const developmentChains = ["localhost", "hardhat"];
-
+export const MULTIPLIER = 1e18;
 export const DECIMALS = "18";
 export const INITIAL_PRICE = "2000000000000000000000"; // 2000, we then add the 18 decimals which is 18 zeros
 export const SmartTokenXValue = "667000000000000000000"; // 667, we then add the 18 decimals which is 18 zeros
@@ -78,7 +78,7 @@ export const feeCalculator = (assetBal1: bigint, mgmtFee: bigint) => {
   const oneDay: bigint = BigInt(86400);
   const mgmtFeePerInterval: bigint =
     (BigInt(mgmtFee) * BigInt(REBASE_INTERVAL)) / oneDay;
-  const scallingFactorMgmtFee = 100000;
+  const scallingFactorMgmtFee = MULTIPLIER;
   return (
     (BigInt(depositCycle) * BigInt(mgmtFeePerInterval) * BigInt(assetBal1)) /
     BigInt(REBASE_INTERVAL) /

@@ -60,12 +60,8 @@ contract TokenFactory is
     address private signersAddress;
     mapping(uint256 => bool) private sequenceNumberApplied;
     //management fees
-    uint32 private constant MGMT_FEE_SCALING_FACTOR = 100000;
-    uint32 private managementFeesRate; //Mgmt fee is per day
-    uint32[] private mgmtFeesHistory;
-    mapping(address => uint256) private userMgmtFeeHistory;
+    uint256 private managementFeesRate; //Mgmt fee is per day & scalin Factor is now 10E18
     bool private managementFeeEnabled;
-    uint256[] private mgmtFeeSum;
     uint256 private lastRebaseFees;
     address private treasuryWallet;
 
@@ -81,6 +77,7 @@ contract TokenFactory is
         uint256 BalanceFactorXY;
         uint256 BalanceFactorUx;
         uint256 BalanceFactorUy;
+        uint256 FeeFactor;
     }
     struct UserRebaseElements {
         uint256 netX;
@@ -147,8 +144,6 @@ contract TokenFactory is
         interval = rebaseInterval;
         lastTimeStamp = block.timestamp;
         managementFeesRate = 0;
-        mgmtFeesHistory.push(managementFeesRate);
-        mgmtFeeSum.push(managementFeesRate);
         nextSequenceNumber = 1;
         smartTokenInitialized = false;
         signersAddress = signersAddress_;
@@ -157,7 +152,8 @@ contract TokenFactory is
             RebaseElements({
                 BalanceFactorXY: 1 * REBASE_INT_MULTIPLIER,
                 BalanceFactorUx: 0,
-                BalanceFactorUy: 0
+                BalanceFactorUy: 0,
+                FeeFactor: 1 * REBASE_INT_MULTIPLIER
             })
         );
     }
@@ -276,7 +272,6 @@ contract TokenFactory is
             factoryMint(1, address(this), fees);
             emit Deposit(caller, address(this), fees, fees);
         }
-        userMgmtFeeHistory[receiver] = getMgmtFeeFactorLength() - 1;
 
         factoryMint(0, receiver, shares);
         factoryMint(1, receiver, shares);
@@ -378,6 +373,38 @@ contract TokenFactory is
         );
     }
 
+    //for general users
+    function updateRecord(
+        bool tokenType,
+        address account,
+        uint256 amount
+    ) external onlySmartTokens {
+        uint256 prevBalX = smartTokenArray[0].unScaledbalanceOf(account);
+        uint256 prevBalY = smartTokenArray[1].unScaledbalanceOf(account);
+        userRebaseElements[account] = UserRebaseElements(
+            tokenType ? amount : prevBalX,
+            tokenType ? prevBalY : amount,
+            0,
+            0
+        );
+    }
+
+    //for treasury only
+    function updateRecord(
+        bool tokenType,
+        uint256 amount
+    ) external onlySmartTokens {
+        uint256 prevBalX = smartTokenArray[0].unScaledbalanceOf(address(this));
+        uint256 prevBalY = smartTokenArray[1].unScaledbalanceOf(address(this));
+
+        userRebaseElements[address(this)] = UserRebaseElements(
+            tokenType ? (prevBalX + amount) : prevBalX,
+            tokenType ? prevBalY : (prevBalY + amount),
+            0,
+            0
+        );
+    }
+
     function factoryMint(
         uint256 smartTokenIndex,
         address receiver,
@@ -422,16 +449,20 @@ contract TokenFactory is
         userRebaseElements[owner_] = currentElement;
     }
 
-    // function factoryTransfer(
-    //     uint256 smartTokenIndex,
-    //     address receiver,
-    //     uint256 amount
-    // ) private {
-    //     smartTokenArray[smartTokenIndex].smartTransfer(receiver, amount);
-    // }
+    //create and transfer fees to tokenFactory to hold for 1 rebase
     function factoryTreasuryTransfer(uint256 amount) private {
         smartTokenArray[0].smartTreasuryTransfer(address(this), amount);
         smartTokenArray[1].smartTreasuryTransfer(address(this), amount);
+    }
+
+    //Adjust balance of users based on applied rebase
+    function factoryBalanceAdjust(
+        address account,
+        uint256 amountX,
+        uint256 amountY
+    ) private {
+        smartTokenArray[0].smartBalanceAdjust(account, amountX);
+        smartTokenArray[1].smartBalanceAdjust(account, amountY);
     }
 
     function executeRebase(
@@ -465,24 +496,35 @@ contract TokenFactory is
         }
     }
 
-    //todo:
-
+    // the Fee charging mechanism
     function chargeFees() private {
-        if (lastRebaseFees != 0) {
-            //transfer to treasury wallet
-            IERC20Update smartX = IERC20Update(address(smartTokenArray[0]));
-            IERC20Update smartY = IERC20Update(address(smartTokenArray[1]));
+        if (
+            lastRebaseFees != 0 ||
+            smartTokenArray[0].balanceOf(address(this)) > 0
+        ) {
+            rebaseCheck(address(this));
+            rebaseCheck(treasuryWallet);
 
-            SafeERC20.safeTransfer(smartX, treasuryWallet, lastRebaseFees);
-            SafeERC20.safeTransfer(smartY, treasuryWallet, lastRebaseFees);
+            lastRebaseFees -= calculateManagementFee(lastRebaseFees, true, 0);
+
+            uint256 fee = (smartTokenArray[0].balanceOf(address(this)) >= //todo: tokenY?
+                lastRebaseFees &&
+                lastRebaseFees != 0)
+                ? lastRebaseFees
+                : smartTokenArray[0].balanceOf(address(this));
+
+            smartTokenArray[0].transfer(treasuryWallet, fee);
+            smartTokenArray[1].transfer(treasuryWallet, fee);
         }
         //now we check if we have fees to charge for the upcoming rebase
         //totalSupply for X ===Y hence we care for only 1
         uint256 totalSupplyX = smartTokenArray[0].totalSupply();
         //total user fees
         uint256 fees = calculateManagementFee(totalSupplyX, true, 0);
+
         //here we create and hold
         factoryTreasuryTransfer(fees);
+
         lastRebaseFees = fees;
     }
 
@@ -549,17 +591,28 @@ contract TokenFactory is
                         )
                         .div(scheduledRebase.price)
                 );
+            uint256 feeFactor = lastRebase
+                .FeeFactor
+                .mul(
+                    REBASE_INT_MULTIPLIER -
+                        (
+                            scheduledRebase.isNaturalRebase
+                                ? managementFeesRate.mul(interval).div(1 days)
+                                : 0
+                        )
+                )
+                .div(REBASE_INT_MULTIPLIER);
+
             rebaseElements.push(
                 RebaseElements({
                     BalanceFactorXY: balanceFactorXY,
                     BalanceFactorUx: balanceFactorUx,
-                    BalanceFactorUy: balanceFactorUy
+                    BalanceFactorUy: balanceFactorUy,
+                    FeeFactor: feeFactor
                 })
             );
 
             if (managementFeeEnabled && scheduledRebase.isNaturalRebase) {
-                mgmtFeesHistory.push(managementFeesRate);
-                updateManagementFeeSum(); //todo: we dont need this anymore?
                 //we transfer fees that we had for last rebase to our wallet
                 chargeFees();
             }
@@ -580,62 +633,10 @@ contract TokenFactory is
     }
 
     function applyRebase(address owner_) public stopRebase {
-        uint256 asset1ValueEth = smartTokenArray[0].unScaledbalanceOf(owner_);
-        uint256 asset2ValueEth = smartTokenArray[1].unScaledbalanceOf(owner_);
-        uint256 initialAsset1ValueEth = asset1ValueEth;
-        uint256 initialAsset2ValueEth = asset2ValueEth;
-
-        //calculate the net balance of users after the rebases are to be applied
-        (asset1ValueEth, asset2ValueEth) = calculateMgmtFeeForRebase(
-            owner_,
-            asset1ValueEth,
-            asset2ValueEth
-        );
-        //verify if the user really had any pending mgmt fees
-        if (
-            initialAsset1ValueEth != asset1ValueEth ||
-            initialAsset2ValueEth != asset2ValueEth
-        ) {
-            // factoryTransfer(
-            //     0,
-            //     address(this),
-            //     (initialAsset1ValueEth - asset1ValueEth)
-            // );
-            // factoryTransfer(
-            //     1,
-            //     address(this),
-            //     (initialAsset2ValueEth - asset2ValueEth)
-            // );
-            // emit Deposit(
-            //     owner_,
-            //     address(this),
-            //     (initialAsset1ValueEth - asset1ValueEth),
-            //     (initialAsset2ValueEth - asset2ValueEth)
-            // );
-            factoryBurn(0, owner_, initialAsset1ValueEth - asset1ValueEth);
-            factoryBurn(1, owner_, initialAsset2ValueEth - asset2ValueEth);
-            //update user fee history
-            userMgmtFeeHistory[owner_] = getMgmtFeeFactorLength() - 1;
-        }
-
         //normal rebase operations
-        (uint256 asset1Units, uint256 asset2Units) = calculateRollOverValue(
-            owner_
-        );
+        (uint256 assetX, uint256 assetY) = calculateRollOverValue(owner_);
         lastRebaseCount[owner_] = getRebaseNumber();
-
-        if (asset1Units > asset1ValueEth) {
-            factoryMint(0, owner_, (asset1Units - asset1ValueEth));
-        } else {
-            factoryBurn(0, owner_, (asset1ValueEth - asset1Units));
-        }
-
-        if (asset2Units > asset2ValueEth) {
-            factoryMint(1, owner_, (asset2Units - asset2ValueEth));
-        } else {
-            factoryBurn(1, owner_, (asset2ValueEth - asset2Units));
-        }
-
+        factoryBalanceAdjust(owner_, assetX, assetY);
         emit RebaseApplied(owner_, getRebaseNumber());
     }
 
@@ -675,7 +676,14 @@ contract TokenFactory is
                 .div(lastUserRebase.BalanceFactorXY)
         ) + userLastRebaseInfo.Uy;
 
-        return ((netX + uX + uY), (netY + uY + uX)); //X,Y and info
+        return (
+            (netX + uX + uY).mul(lastRebase.FeeFactor).div(
+                lastUserRebase.FeeFactor
+            ),
+            (netY + uY + uX).mul(lastRebase.FeeFactor).div(
+                lastUserRebase.FeeFactor
+            )
+        ); //X,Y
     }
 
     function updateUserLastRebaseCount(address owner_) public {
@@ -739,9 +747,9 @@ contract TokenFactory is
      */
 
     function setManagementFeeRate(
-        uint32 rate
+        uint256 rate
     ) external onlyOwner returns (bool) {
-        if (!(rate <= MGMT_FEE_SCALING_FACTOR)) {
+        if (!(rate <= REBASE_INT_MULTIPLIER)) {
             revert TokenFactory__InvalidManagementFees();
         }
         managementFeesRate = rate;
@@ -760,12 +768,6 @@ contract TokenFactory is
     ) external onlyOwner returns (bool) {
         treasuryWallet = wallet;
         return true;
-    }
-
-    function updateManagementFeeSum() private {
-        uint mgmtFeeCycleCount = getMgmtFeeFactorLength() - 1;
-
-        mgmtFeeSum.push(mgmtFeeSum[mgmtFeeCycleCount - 1] + managementFeesRate);
     }
 
     function calculateManagementFee(
@@ -808,53 +810,9 @@ contract TokenFactory is
             .mul(mgmtFeesPerInterval)
             .mul(amount)
             .div(interval)
-            .div(MGMT_FEE_SCALING_FACTOR);
+            .div(REBASE_INT_MULTIPLIER);
 
         return userFees;
-    }
-
-    //This method is used to calculate mgmt fees when applying a rebase
-    function calculateMgmtFeeForRebase(
-        address tokensHolder, //address of the owner of the holding tokens
-        uint256 asset1ValueEth, // Self descriptive, first asset
-        uint256 asset2ValueEth // Self descriptive, second asset
-    ) private view returns (uint256, uint256) {
-        if (managementFeeEnabled) {
-            uint256 numberOfFeesCycle = getMgmtFeeFactorLength() - 1; //through rebase only
-            uint256 numberOfUserFeeCycle = userMgmtFeeHistory[tokensHolder]; //through rebase only
-
-            //calculate if user missed any mgmt fees for previous rebases
-            uint256 outstandingFeesCount = numberOfFeesCycle -
-                numberOfUserFeeCycle;
-
-            if (outstandingFeesCount > 0) {
-                uint256 sumOfFees = 0;
-
-                //find out the average fees the user missed since he last paid
-                uint256 firstFeeMissedIndex = numberOfFeesCycle -
-                    outstandingFeesCount;
-                sumOfFees =
-                    mgmtFeeSum[numberOfFeesCycle] -
-                    mgmtFeeSum[firstFeeMissedIndex];
-
-                //calculte the fees wrt to the average
-                uint256 asset1ValueEthFees = calculateManagementFee(
-                    asset1ValueEth,
-                    false,
-                    sumOfFees
-                );
-
-                uint256 asset2ValueEthFees = calculateManagementFee(
-                    asset2ValueEth,
-                    false,
-                    sumOfFees
-                );
-                //update the token amount after fees payment
-                asset1ValueEth -= asset1ValueEthFees;
-                asset2ValueEth -= asset2ValueEthFees;
-            }
-        }
-        return (asset1ValueEth, asset2ValueEth);
     }
 
     function rebaseCheck(address user) private {
@@ -893,7 +851,7 @@ contract TokenFactory is
         return lastTimeStamp;
     }
 
-    function getManagementFeeRate() public view returns (uint32) {
+    function getManagementFeeRate() public view returns (uint256) {
         return managementFeesRate;
     }
 
@@ -903,10 +861,6 @@ contract TokenFactory is
 
     function getRebaseNumber() public view returns (uint256) {
         return rebaseElements.length - 1; //adjusted since rebaseElements is also filled on initialization
-    }
-
-    function getMgmtFeeFactorLength() public view returns (uint256) {
-        return mgmtFeesHistory.length;
     }
 
     function getUserLastRebaseCount(
