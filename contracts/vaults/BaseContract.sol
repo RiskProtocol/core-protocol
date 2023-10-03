@@ -17,7 +17,7 @@ error BaseContract__WithdrawCircuitBreaker();
 error BaseContract__TransferCircuitBreaker();
 error BaseContract__RebaseCircuitBreaker();
 
-// @title BaseContract
+/// @title BaseContract
 /// @dev This contract primarily tracks sanctioned wallets from Chainalysis and
 /// provides circuit breaker functionalities. It is utilized by TokenFactory and SmartTokens
 /// to manage interactions with potentially sanctioned addresses and to handle

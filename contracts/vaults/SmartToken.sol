@@ -22,7 +22,7 @@ error SmartToken__RedeemMoreThanMax();
 error SmartToken__OnlyAssetOwner();
 error SmartToken__ZeroDeposit();
 
-/// @title SmartToken ERC20/4626  compatible Tokens (RiskON/RiskOFF)
+/// @title SmartToken Contract ERC20/4626  compatible Tokens (RiskON/RiskOFF)
 /// @dev This is a rebasing token, part of Risk Protocol's system
 /// The same contract is used by both RiskON and RiskOFF
 /// Whenever a user deposit a unit of underlying in the Vault(TokenFactory), the user
@@ -108,6 +108,7 @@ contract SmartToken is
         address receiver,
         uint256 amount
     ) external onlyTokenFactory {
+        //erc20 mint
         _mint(receiver, amount);
     }
 
@@ -116,6 +117,7 @@ contract SmartToken is
     /// @param account The address of the account from which tokens will be burned.
     /// @param amount The amount of tokens to burn.
     function burn(address account, uint256 amount) external onlyTokenFactory {
+        //erc20 burn
         _burn(account, amount);
     }
 
@@ -143,7 +145,7 @@ contract SmartToken is
         return true;
     }
 
-    /// @notice This is deprecated, will be removed on
+    //@note This is deprecated and will be replaced in upcoming commits
     function smartTransfer(
         address recipient,
         uint256 amount
@@ -431,7 +433,6 @@ contract SmartToken is
         return tokenFactory.maxAmountToWithdraw(owner_);
     }
 
-    /** @dev See {IERC4626-previewWithdraw}. */
     /// @notice Provide a preview of number of shares(RiskOn/Off) required to withdraw an amount of underlying assets.
     /// @dev It overrides the `previewWithdraw` function from the `IERC4626Upgradeable` interface.
     /// @param assets The amount of assets to withdraw.
@@ -464,7 +465,7 @@ contract SmartToken is
         returns (uint256)
     {
         // checks for any pending rebases for the receiver and applies them if necessary
-        // below is deprecated and will be replaced accordingly
+        //@note This is deprecated and will be replaced in upcoming commits
         if (
             tokenFactory.getUserLastRebaseCount(receiver) !=
             tokenFactory.getScallingFactorLength()
@@ -527,7 +528,7 @@ contract SmartToken is
         returns (uint256)
     {
         // checks for any pending rebases for the receiver and applies them if necessary
-        // below is deprecated and will be replaced accordingly
+        //@note This is deprecated and will be replaced in upcoming commits
         if (
             tokenFactory.getUserLastRebaseCount(receiver) !=
             tokenFactory.getScallingFactorLength()
