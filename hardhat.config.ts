@@ -64,6 +64,8 @@ const config: HardhatUserConfig = {
         before you use localhost  to deploy, the terminal will be showing logs as you work */
       chainId: 31337,
       allowUnlimitedContractSize: true,
+      gas: 7000000,
+      gasPrice: 10000000000,
     },
   },
   etherscan: {
