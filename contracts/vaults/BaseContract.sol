@@ -18,8 +18,7 @@ error BaseContract__TransferCircuitBreaker();
 error BaseContract__RebaseCircuitBreaker();
 
 /// @title BaseContract
-/// @dev This contract primarily tracks sanctioned wallets from Chainalysis and
-/// provides circuit breaker functionalities. It is utilized by TokenFactory and SmartTokens
+/// @dev It is utilized by TokenFactory and SmartTokens
 /// to manage interactions with potentially sanctioned addresses and to handle
 /// emergency situations by halting certain operations.
 /// @notice Please refer to Chainalysis documentation (https://go.chainalysis.com/chainalysis-oracle-docs.html)
