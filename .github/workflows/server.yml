@@ -22,12 +22,12 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: '18.x'
-      - run: yarn --ignore-scripts
+      - run: yarn
         shell: bash
       - name: Create local node and deploy
         run: |
           yarn hardhat node &
-          yarn hardhat deploy --network localhost
+          yarn hardhat deploy --network hardhat
       - name: Run Tests
         run: yarn hardhat test     
 
