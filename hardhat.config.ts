@@ -66,6 +66,11 @@ const config: HardhatUserConfig = {
       allowUnlimitedContractSize: true,
       gas: 7000000,
       gasPrice: 10000000000,
+      accounts: {
+        mnemonic:
+          "risk protocol risk protocol risk protocol risk protocol risk protocol risk protocol",
+        accountsBalance: "1000000000000000000000000",
+      },
     },
   },
   etherscan: {
