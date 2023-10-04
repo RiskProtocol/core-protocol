@@ -62,12 +62,7 @@ const config: HardhatUserConfig = {
       /* you get the url abv when you run "yarn hardhat node" it comes with several address
        and private key, you don't need to specify accounts. The terminal needs to be active
         before you use localhost  to deploy, the terminal will be showing logs as you work */
-      allowBlocksWithSameTimestamp: true,
       chainId: 31337,
-      forking: {
-        url: process.env.MAINNET_RPC_URL!,
-        blockNumber: 17268750, // hardhat recommends forking from a specific block number. for more infor -->https://hardhat.org/hardhat-network/docs/guides/forking-other-networks
-      },
       allowUnlimitedContractSize: true,
     },
   },
