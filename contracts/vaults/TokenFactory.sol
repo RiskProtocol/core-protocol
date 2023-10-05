@@ -15,15 +15,6 @@ import "./SmartToken.sol";
 import "./BaseContract.sol";
 import "./../interfaces/IERC20Update.sol";
 
-error TokenFactory__MethodNotAllowed();
-error TokenFactory__InvalidDivision();
-error TokenFactory__InvalidSequenceNumber();
-error TokenFactory__InvalidNaturalRebase();
-error TokenFactory__AlreadyInitialized();
-error TokenFactory__InvalidSignature();
-error TokenFactory__InvalidSignatureLength();
-error TokenFactory__InvalidManagementFees();
-
 /// @title The Vault or TokenFactory contract.
 /// @notice The main purposes of this contract is to act as a vault as well as it contains the shared logic
 /// used by riskON/OFF tokens.
@@ -36,6 +27,16 @@ contract TokenFactory is
     UUPSUpgradeable,
     BaseContract
 {
+    //errors
+    error TokenFactory__MethodNotAllowed();
+    error TokenFactory__InvalidDivision();
+    error TokenFactory__InvalidSequenceNumber();
+    error TokenFactory__InvalidNaturalRebase();
+    error TokenFactory__AlreadyInitialized();
+    error TokenFactory__InvalidSignature();
+    error TokenFactory__InvalidSignatureLength();
+    error TokenFactory__InvalidManagementFees();
+
     using MathUpgradeable for uint256;
     using SafeMathUpgradeable for uint256;
     using SafeMathUpgradeable for uint8;

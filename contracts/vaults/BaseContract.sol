@@ -11,12 +11,6 @@ interface SanctionsList {
     function isSanctioned(address addr) external view returns (bool);
 }
 
-error BaseContract__SanctionedAddress();
-error BaseContract__DepositCircuitBreaker();
-error BaseContract__WithdrawCircuitBreaker();
-error BaseContract__TransferCircuitBreaker();
-error BaseContract__RebaseCircuitBreaker();
-
 /// @title BaseContract
 /// @dev It is utilized by TokenFactory and SmartTokens
 /// to manage interactions with potentially sanctioned addresses and to handle
@@ -24,6 +18,13 @@ error BaseContract__RebaseCircuitBreaker();
 /// @notice Please refer to Chainalysis documentation (https://go.chainalysis.com/chainalysis-oracle-docs.html)
 /// for the sanctions list.
 contract BaseContract is Initializable, OwnableUpgradeable {
+    //errors
+    error BaseContract__SanctionedAddress();
+    error BaseContract__DepositCircuitBreaker();
+    error BaseContract__WithdrawCircuitBreaker();
+    error BaseContract__TransferCircuitBreaker();
+    error BaseContract__RebaseCircuitBreaker();
+
     address private sanctionsContract;
 
     bool private depositCircuitBreaker;

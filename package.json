@@ -14,7 +14,10 @@
     "coverage": "hardhat coverage",
     "typechain": "hardhat typechain",
     "prepare": "husky install",
-    "forge": "forge install forge-std"
+    "forge": "forge install forge-std",
+    "forge:docs-gen":"forge doc",
+    "forge:docs-build":"forge doc --build",
+    "forge:docs-serve":"forge doc --serve --port 4000"
   },
   "devDependencies": {
     "@ethersproject/abi": "^5.4.7",

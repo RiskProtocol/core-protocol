@@ -13,15 +13,6 @@ import "./../interfaces/IERC20Update.sol";
 import "./TokenFactory.sol";
 import "./BaseContract.sol";
 
-error SmartToken__NotTokenFactory();
-error SmartToken__MethodNotAllowed();
-error SmartToken__DepositMoreThanMax();
-error SmartToken__MintMoreThanMax();
-error SmartToken__WithdrawMoreThanMax();
-error SmartToken__RedeemMoreThanMax();
-error SmartToken__OnlyAssetOwner();
-error SmartToken__ZeroDeposit();
-
 /// @title SmartToken Contract ERC20/4626  compatible Tokens (RiskON/RiskOFF)
 /// @dev This is a rebasing token, part of Risk Protocol's system
 /// The same contract is used by both RiskON and RiskOFF
@@ -39,6 +30,16 @@ contract SmartToken is
     IERC4626Upgradeable,
     ReentrancyGuardUpgradeable
 {
+    //errors
+    error SmartToken__NotTokenFactory();
+    error SmartToken__MethodNotAllowed();
+    error SmartToken__DepositMoreThanMax();
+    error SmartToken__MintMoreThanMax();
+    error SmartToken__WithdrawMoreThanMax();
+    error SmartToken__RedeemMoreThanMax();
+    error SmartToken__OnlyAssetOwner();
+    error SmartToken__ZeroDeposit();
+
     /// @notice The tokenFactory instance
     TokenFactory private tokenFactory;
     /// @notice The underlyingToken instance
