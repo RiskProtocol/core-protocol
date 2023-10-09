@@ -568,7 +568,7 @@ contract TokenFactory is
         uint256 amount, //amount to calculate fee against
         bool isDefault, //When set to true, the method takes the default management
         //fee to calculate, otherwise uses the value in the next parameter
-        uint256 mgmtFee //calculates both for fee and refund // same cal/ in wei scale
+        uint256 mgmtFee //calculates both for fee and refund // same cal in wei scale
     ) public view returns (uint256) {
         uint256 internalManagementFeesRate;
         if (isDefault) {
