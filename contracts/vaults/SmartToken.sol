@@ -35,6 +35,16 @@ contract SmartToken is
     TokenFactory private tokenFactory;
     IERC20Update private underlyingToken;
 
+    ///@notice This is gaps to be used in case of upgrades to prevent storage collisions
+    ///Example
+    /// V1
+    ///uint256[49] private __gap;
+    ///
+    ///V2
+    ///address private myNewAddressVar;
+    ///uint256[48] private __gap;
+    uint256[49] private __gap;
+
     modifier onlyTokenFactory() {
         _onlyTokenFactory();
         _;
@@ -231,7 +241,9 @@ contract SmartToken is
     )
         public
         stopDeposit
-        validateDepositAmount(assets, receiver) returns (uint256) {
+        validateDepositAmount(assets, receiver)
+        returns (uint256)
+    {
         uint256 shares = previewDeposit(assets);
         underlyingToken.permit(
             _msgSender(),
@@ -269,10 +281,7 @@ contract SmartToken is
     function mint(
         uint256 shares,
         address receiver
-    ) public virtual
-      override
-      stopDeposit
-      returns (uint256) {
+    ) public virtual override stopDeposit returns (uint256) {
         if (shares > maxMint(receiver)) revert SmartToken__MintMoreThanMax();
 
         uint256 assets = previewMint(shares);
@@ -386,5 +395,4 @@ contract SmartToken is
         if (assets > maxDeposit(receiver))
             revert SmartToken__DepositMoreThanMax();
     }
-
 }

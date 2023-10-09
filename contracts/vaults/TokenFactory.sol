@@ -74,19 +74,32 @@ contract TokenFactory is
     ScheduledRebase[] private scheduledRebases;
     uint256 private nextSequenceNumber;
 
+    ///@notice This is gaps to be used in case of upgrades
+    ///Example
+    /// V1
+    ///uint256[49] private __gap;
+    ///
+    ///V2
+    ///address private myNewAddressVar;
+    ///uint256[48] private __gap;
+    uint256[49] private __gap;
+
     // Events
-    event RebaseApplied(address userAddress, uint256 rebaseCount);
-    event Rebase(uint256 rebaseCount);
+    event RebaseApplied(
+        address indexed userAddress,
+        uint256 indexed rebaseCount
+    );
+    event Rebase(uint256 indexed rebaseCount);
     event Deposit(
-        address caller,
-        address receiver,
+        address indexed caller,
+        address indexed receiver,
         uint256 assets,
         uint256 shares
     );
     event Withdraw(
-        address caller,
-        address receiver,
-        address owner,
+        address indexed caller,
+        address indexed receiver,
+        address indexed owner,
         uint256 assets,
         uint256 shares
     );
@@ -157,11 +170,7 @@ contract TokenFactory is
         IERC20 asset_
     ) private view returns (bool, uint8) {
         (bool success, bytes memory encodedDecimals) = address(asset_)
-            .staticcall(
-                abi.encodeWithSelector(
-                    IERC20MetadataUpgradeable.decimals.selector
-                )
-            );
+            .staticcall(abi.encodeCall(IERC20MetadataUpgradeable.decimals, ()));
         if (
             success &&
             encodedDecimals.length >= 32 &&
@@ -521,7 +530,6 @@ contract TokenFactory is
         return data;
     }
 
-
     function setSignersAddress(address addr) public onlyOwner {
         signersAddress = addr;
     }
@@ -551,7 +559,7 @@ contract TokenFactory is
     }
 
     function updateManagementFeeSum() private {
-        uint mgmtFeeCycleCount = getMgmtFeeFactorLength() - 1;
+        uint256 mgmtFeeCycleCount = getMgmtFeeFactorLength() - 1;
 
         mgmtFeeSum.push(mgmtFeeSum[mgmtFeeCycleCount - 1] + managementFeesRate);
     }
