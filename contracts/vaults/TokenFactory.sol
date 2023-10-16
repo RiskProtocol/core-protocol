@@ -496,15 +496,19 @@ contract TokenFactory is
         }
     }
 
-    // the Fee charging mechanism
+    ///@notice Charges the management fees
+    ///@dev This function is responsible for charging the fees of the whole universe
+    /// and related functionalities.
     function chargeFees() private {
         if (
             lastRebaseFees != 0 ||
             smartTokenArray[0].balanceOf(address(this)) > 0
         ) {
+            //We check and apply rebase to the contract and treasury address
             rebaseCheck(address(this));
             rebaseCheck(treasuryWallet);
 
+            //We charge the fees due by the contract as well
             lastRebaseFees -= calculateManagementFee(lastRebaseFees, true, 0);
 
             uint256 fee = (smartTokenArray[0].balanceOf(address(this)) >=
