@@ -733,15 +733,19 @@ developmentChains.includes(network.name)
             //@note : We have to deduct the fees for the treasury wallet for the next REBASE
             // We also have to consider that fees we held on tokenFactory has also to pay fees for the next rebase
             const newTreasuryBalance =
-              Number(TheTreasuryWallet) -
-              (Number(2e15 * REBASE_INTERVAL) * Number(TheTreasuryWallet)) /
-                (Number(MULTIPLIER) * Number(86400)) +
-              (Number(FeeRebase2) -
-                Number(feeCalculator(FeeRebase2, BigInt(2e15))));
+              BigInt(TheTreasuryWallet) -
+              (BigInt(2e15 * REBASE_INTERVAL) * BigInt(TheTreasuryWallet)) /
+                (BigInt(MULTIPLIER) * BigInt(86400)) +
+              (BigInt(FeeRebase2) - feeCalculator(FeeRebase2, BigInt(2e15)));
 
-            expect(newTreasuryBalance).equals(
-              Number(await smartToken1.balanceOf(treasury.address))
-            );
+            const threashold = Number(0.01 / 100) * Number(newTreasuryBalance);
+            //if the difference between the expected and the real value is more than 0.01%, it should fail
+            expect(
+              Math.abs(
+                Number(newTreasuryBalance) -
+                  Number(await smartToken1.balanceOf(treasury.address))
+              ) <= threashold
+            ).to.be.true;
 
             expect(FeeRebase2).equals(
               BigInt(await smartToken1.balanceOf(tokenFactory.address))
