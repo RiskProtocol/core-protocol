@@ -132,7 +132,7 @@ contract BaseContract is Initializable, OwnableUpgradeable {
     }
 
     /// @notice Checks if the deposit circuit breaker is active.
-    /// @return A boolean value indicating whether the deposit circuit breaker is active pr not
+    /// @return A boolean value indicating whether the deposit circuit breaker is active or not
     function isDepositCircuitBreaker() external view returns (bool) {
         return depositCircuitBreaker;
     }
