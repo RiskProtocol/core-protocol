@@ -233,7 +233,7 @@ contract SmartToken is
     }
 
     /// @notice Handles pending rebases for the sender and receiver addresses.
-    /// @dev This function checks if the sender or receiver has a pending rebase and applies the rebase if neede.
+    /// @dev This function checks if the sender or receiver has a pending rebase and applies the rebase if needed.
     /// @param sender The address of the sender involved in a transfer operation.
     /// @param receiver The address of the receiver involved in a transfer operation.
     function handlePendingRebase(address sender, address receiver) public {
