@@ -195,7 +195,7 @@ contract SmartToken is
         return
             //'getUserLastRebaseCount' returns the amount of rebase applied to account
             tokenFactory.getUserLastRebaseCount(account) !=
-            //'getScallingFactorLength' returns the total mount of rebases
+            //'getScallingFactorLength' returns the total amount of rebases
             tokenFactory.getScallingFactorLength();
     }
 
