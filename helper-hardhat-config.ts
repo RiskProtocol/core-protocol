@@ -34,6 +34,10 @@ export const REBASE_INTERVAL = 7890000; // 3months in seconds
 export const defaultOperators: string[] = [];
 export const sanctionsContractAddress =
   "0x40C57923924B5c5c5455c48D93317139ADDaC8fb"; //polygon network
+export const sanctionsContractAddressGoerli =
+  "0x2eB36718718BD2543eBE3CED5a2AA378e3fb80Df";
+export const sanctionsContractAddressSepolia =
+  "0xdEbD1E868c696b5710e2F8a5E7489FE5Bf7c1573";
 export const signersAddress = "0x786d956DBc070815F9b53a6dd03D38EDf33EE2C7"; //signer address on the webservice
 export const encodedNaturalRebase1 = {
   signature:

@@ -16,7 +16,7 @@ const deployMocks: DeployFunction = async ({
   /* We deploy this only for local development, remember if you are deploying to a localhost,
      you'll need a local network running to interact eg yarn hardhat node
     */
-  if (developmentChains.includes(network.name)) {
+  if (true) {
     log("Local network detected! Deploying mocks...");
 
     log("Deploying MockERC20TokenWithPermit...");
@@ -27,6 +27,18 @@ const deployMocks: DeployFunction = async ({
       log: true,
     });
     log("MockERC20Token Deployed!");
+    log(`MockERC20Token deployed at ${mockToken.address}`);
+    log("----------------------------------");
+
+    log("Deploying MockERC20TokenUSDC...");
+    const usdc = await deploy("MockERC20TokenUSDC", {
+      contract: "MockERC20TokenUSDC",
+      from: deployer,
+      args: [], // from github MockV3Aggragator has 2 argument for the contructors
+      log: true,
+    });
+    log("usdc Deployed!");
+    log(`usdc deployed at ${usdc.address}`);
     log("----------------------------------");
   }
 };
