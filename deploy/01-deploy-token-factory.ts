@@ -6,6 +6,8 @@ import {
   REBASE_INTERVAL,
   sanctionsContractAddress,
   signersAddress,
+  sanctionsContractAddressGoerli,
+  sanctionsContractAddressSepolia,
 } from "../helper-hardhat-config";
 import { verify } from "../utils/verify";
 const { ethers, upgrades } = require("hardhat");
@@ -20,7 +22,7 @@ const func: DeployFunction = async ({
 
   let baseTokenAddress: string;
 
-  if (developmentChains.includes(network.name)) {
+  if (true) {
     const mockERC20TokenWithPermit = await deployments.get(
       "MockERC20TokenWithPermit"
     );
@@ -36,7 +38,7 @@ const func: DeployFunction = async ({
     [
       baseTokenAddress,
       REBASE_INTERVAL,
-      sanctionsContractAddress,
+      sanctionsContractAddressSepolia,
       signersAddress,
     ],
     { initializer: "initialize", kind: "uups" }
@@ -53,17 +55,12 @@ const func: DeployFunction = async ({
   log("TokenFactory Deployed!");
   log("----------------------------------");
 
-  if (
-    !developmentChains.includes(network.name) &&
-    process.env.ETHERSCAN_API_KEY
-  ) {
-    await verify(TokenFactory.address, [
-      baseTokenAddress,
-      REBASE_INTERVAL,
-      sanctionsContractAddress,
-      signersAddress,
-    ]);
-  }
+  // if (
+  //   !developmentChains.includes(network.name) &&
+  //   process.env.ETHERSCAN_API_KEY
+  // ) {
+  //   await verify(TokenFactory.address, []);
+  // }
 };
 export default func;
 func.tags = ["all"];

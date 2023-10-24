@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ethers } from "ethers";
+import { BigNumber, ethers } from "ethers";
 import { Buffer } from "buffer";
 import {
   tokenFactoryAddress,
@@ -14,15 +14,15 @@ import {
   uniswapV2FactoryABI,
   uniswapV2PairABI,
   underlyingTokenAbi,
-  underlyingTokenWithPermitAbi
+  underlyingTokenWithPermitAbi,
+  erc20ABI,
 } from "../contants";
 
 function App() {
-
-  const testAccountAddress = '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266';
-  const test1AccountAddress = '0x70997970C51812dc3A010C7d01b50e0d17dc79C8';
+  const testAccountAddress = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266";
+  const test1AccountAddress = "0x70997970C51812dc3A010C7d01b50e0d17dc79C8";
   const [depositAmount, setDepositAmount] = useState();
-  const [approvalAmount, setApprovalAmount] = useState();  
+  const [approvalAmount, setApprovalAmount] = useState();
   const [withdrawalAmount, setWithdrawalAmount] = useState();
   const [transferAddress, setTransferAddress] = useState(
     "0x70997970C51812dc3A010C7d01b50e0d17dc79C8"
@@ -40,71 +40,87 @@ function App() {
     name: domainName,
     version: domainVersion,
     verifyingContract: contractAddress,
-    chainId
-  }
+    chainId,
+  };
 
   const domainType = [
-    { name: 'name', type: 'string' },
-    { name: 'version', type: 'string' },
-    { name: 'chainId', type: 'uint256' },
-    { name: 'verifyingContract', type: 'address' },
-  ]
+    { name: "name", type: "string" },
+    { name: "version", type: "string" },
+    { name: "chainId", type: "uint256" },
+    { name: "verifyingContract", type: "address" },
+  ];
 
   const splitSig = (sig) => {
     // splits the signature to r, s, and v values.
-    const pureSig = sig.replace("0x", "")
+    const pureSig = sig.replace("0x", "");
 
-    const r = new Buffer(pureSig.substring(0, 64), 'hex')
-    const s = new Buffer(pureSig.substring(64, 128), 'hex')
-    const v = new Buffer((parseInt(pureSig.substring(128, 130), 16)).toString());
-
+    const r = new Buffer(pureSig.substring(0, 64), "hex");
+    const s = new Buffer(pureSig.substring(64, 128), "hex");
+    const v = new Buffer(parseInt(pureSig.substring(128, 130), 16).toString());
 
     return {
-      r, s, v
-    }
+      r,
+      s,
+      v,
+    };
+  };
+  async function requestAccounts() {
+    const accounts = await window.ethereum.request({
+      method: "eth_requestAccounts",
+    });
+    return accounts;
   }
-
   const signTyped = (dataToSign) => {
     // call this method to sign EIP 712 data
     return new Promise((resolve, reject) => {
-      web3.currentProvider.sendAsync({
-        method: "eth_signTypedData_v4",
-        params: [testAccountAddress, dataToSign],
-        from: testAccountAddress
-      }, (err, result) => {
-        if (err) return reject(err);
-        resolve(result.result)
-      })
-    })
-  }
+      web3.currentProvider.sendAsync(
+        {
+          method: "eth_signTypedData_v4",
+          params: [testAccountAddress, dataToSign],
+          from: testAccountAddress,
+        },
+        (err, result) => {
+          if (err) return reject(err);
+          resolve(result.result);
+        }
+      );
+    });
+  };
 
   async function createPermit(spender, value, nonce, deadline) {
-    const permit = { owner: testAccountAddress, spender, value, nonce, deadline }
+    const permit = {
+      owner: testAccountAddress,
+      spender,
+      value,
+      nonce,
+      deadline,
+    };
     const Permit = [
       { name: "owner", type: "address" },
       { name: "spender", type: "address" },
       { name: "value", type: "uint256" },
       { name: "nonce", type: "uint256" },
       { name: "deadline", type: "uint256" },
-    ]
-    
+    ];
+
     const dataToSign = JSON.stringify({
-        types: {
-            EIP712Domain: domainType,
-            Permit: Permit
-        },
-        domain: domain,
-        primaryType: "Permit",
-        message: permit
+      types: {
+        EIP712Domain: domainType,
+        Permit: Permit,
+      },
+      domain: domain,
+      primaryType: "Permit",
+      message: permit,
     });
 
-    const signature = await signTyped(dataToSign)
-    const split = splitSig(signature)
+    const signature = await signTyped(dataToSign);
+    const split = splitSig(signature);
 
     return {
-      ...split, signature
-    }
-  } 
+      ...split,
+      signature,
+    };
+  }
   // permit function implementation ends here
 
   async function requestAccounts() {
@@ -117,9 +133,16 @@ function App() {
       const provider = new ethers.providers.Web3Provider(window.ethereum);
       const signer = provider.getSigner();
       const accounts = await requestAccounts();
-      contract = new ethers.Contract(smartTokenXAddress, smartTokenAbi, provider);
+      contract = new ethers.Contract(
+        smartTokenXAddress,
+        smartTokenAbi,
+        provider
+      );
       try {
-        const data = await contract.mint(smartTokenXAddress, smartTokenYAddress);
+        const data = await contract.mint(
+          smartTokenXAddress,
+          smartTokenYAddress
+        );
       } catch (err) {
         console.log("Error: ", err);
       }
@@ -131,17 +154,31 @@ function App() {
       let contract;
       const provider = new ethers.providers.Web3Provider(window.ethereum);
       const accounts = await requestAccounts();
+      const testAccountAddress = accounts[0];
       if (smartToken == "x") {
-        contract = new ethers.Contract(smartTokenXAddress, smartTokenAbi, provider);
+        contract = new ethers.Contract(
+          smartTokenXAddress,
+          smartTokenAbi,
+          provider
+        );
       } else {
-        contract = new ethers.Contract(smartTokenYAddress, smartTokenAbi, provider);
+        contract = new ethers.Contract(
+          smartTokenYAddress,
+          smartTokenAbi,
+          provider
+        );
       }
       try {
         const data = await contract.balanceOf(testAccountAddress);
         console.log(
           `balance of ${
-          smartToken == "x" ? "tokenX" : "tokenY"
+            smartToken == "x" ? "tokenX" : "tokenY"
           } is ${data.toString()}`
+        );
+        alert(
+          `balance of ${
+            smartToken == "x" ? "tokenX" : "tokenY"
+          } is ${ethers.utils.formatEther(data)}`
         );
       } catch (err) {
         console.log("Error: ", err);
@@ -159,21 +196,22 @@ function App() {
       );
       const underlyingToken = new ethers.Contract(
         underlyingTokenAddress,
-        underlyingTokenAbi,
+        erc20ABI,
         signer
       );
       try {
         const allowance = await underlyingToken.allowance(
           testAccountAddress,
           tokenFactoryAddress
-        );        
+        );
         console.log(`allowance : ${allowance}`);
 
-        await underlyingToken.approve(
+        const tx = await underlyingToken.approve(
           tokenFactoryAddress,
           ethers.utils.parseEther(approvalAmount)
-        );        
+        );
         console.log("Approval...");
+        alert(`Approval : ${JSON.stringify(tx)}`);
       } catch (err) {
         console.log("Error: ", err);
       }
@@ -184,12 +222,14 @@ function App() {
     if (typeof window.ethereum !== "undefined") {
       const provider = new ethers.providers.Web3Provider(window.ethereum);
       const signer = provider.getSigner();
+      const accounts = await requestAccounts();
+      const testAccountAddress = accounts[0];
       const contract = new ethers.Contract(
-        tokenFactoryAddress,
-        tokenFactoryAbi,
+        smartTokenXAddress,
+        smartTokenAbi,
         signer
-      );     
-      try { 
+      );
+      try {
         await contract.deposit(
           `${ethers.utils.parseEther(depositAmount)}`,
           testAccountAddress
@@ -217,19 +257,31 @@ function App() {
         signer
       );
       try {
-        const currentNounce = await underlyingToken.nonces(testAccountAddress);      
+        const currentNounce = await underlyingToken.nonces(testAccountAddress);
         const allowance = await underlyingToken.allowance(
           testAccountAddress,
           tokenFactoryAddress
         );
         console.log(`allowance : ${allowance}`);
 
-        const permit = await createPermit(tokenFactoryAddress,  `${ethers.utils.parseEther(depositAmount)}`, +currentNounce.toString(), permitDeadline)
-        console.log(`r: 0x${permit.r.toString('hex')}, s: 0x${permit.s.toString('hex')}, v: ${permit.v}, sig: ${permit.signature}`)
+        const permit = await createPermit(
+          tokenFactoryAddress,
+          `${ethers.utils.parseEther(depositAmount)}`,
+          +currentNounce.toString(),
+          permitDeadline
+        );
+        console.log(
+          `r: 0x${permit.r.toString("hex")}, s: 0x${permit.s.toString(
+            "hex"
+          )}, v: ${permit.v}, sig: ${permit.signature}`
+        );
         await smartTokenX.depositWithPermit(
           `${ethers.utils.parseEther(depositAmount)}`,
           testAccountAddress,
-          permitDeadline, `${permit.v}`, permit.r, permit.s
+          permitDeadline,
+          `${permit.v}`,
+          permit.r,
+          permit.s
         );
         console.log("Buying asset...");
       } catch (err) {
@@ -242,14 +294,16 @@ function App() {
     if (typeof window.ethereum !== "undefined") {
       const provider = new ethers.providers.Web3Provider(window.ethereum);
       const signer = provider.getSigner();
-      const smartTokenX = new ethers.Contract(
-        smartTokenXAddress,
-        smartTokenAbi,
-        signer
-      );
+      const accounts = await requestAccounts();
+      const testAccountAddress = accounts[0];
       try {
+        const smartTokenX = new ethers.Contract(
+          smartTokenXAddress,
+          smartTokenAbi,
+          signer
+        );
         const data = await smartTokenX.withdraw(
-          `${ethers.utils.parseEther(withdrawalAmount)}`,
+          BigNumber.from(`${ethers.utils.parseEther(withdrawalAmount)}`),
           testAccountAddress,
           testAccountAddress
         );
@@ -339,15 +393,23 @@ function App() {
       let contract;
       const provider = new ethers.providers.Web3Provider(window.ethereum);
       if (smartToken == "x") {
-        contract = new ethers.Contract(smartTokenXAddress, smartTokenAbi, provider);
+        contract = new ethers.Contract(
+          smartTokenXAddress,
+          smartTokenAbi,
+          provider
+        );
       } else {
-        contract = new ethers.Contract(smartTokenYAddress, smartTokenAbi, provider);
+        contract = new ethers.Contract(
+          smartTokenYAddress,
+          smartTokenAbi,
+          provider
+        );
       }
       try {
         const data = await contract.totalSupply();
         console.log(
           `total supply of ${
-          smartToken == "x" ? "tokenX" : "tokenY"
+            smartToken == "x" ? "tokenX" : "tokenY"
           } is ${data.toString()}`
         );
       } catch (err) {
@@ -559,8 +621,8 @@ function App() {
 
   return (
     <div className="App">
-      <div style={containerStyle}>      
-        <button style={buttonStyle} onClick={createPair}>
+      <div style={containerStyle}>
+        {/* <button style={buttonStyle} onClick={createPair}>
           Create Trading Pair
         </button>
         <button style={buttonStyle} onClick={getPair}>
@@ -580,7 +642,7 @@ function App() {
         </button>
         <button style={buttonStyle} onClick={callSync}>
           Trigger the Sync function
-        </button>
+        </button> */}
 
         <br />
         <br />
@@ -607,14 +669,14 @@ function App() {
         <button style={buttonStyle} onClick={buyWithoutPermit}>
           Buy Tokens (without Permit)
         </button>
-        <input
+        {/* <input
           style={inputStyle}
           onChange={(e) => setDepositAmount(e.target.value)}
           placeholder="Amount to Deposit"
         />
         <button style={buttonStyle} onClick={buy}>
           Buy Tokens <small>using permit</small>
-        </button>
+        </button> */}
         <input
           style={inputStyle}
           onChange={(e) => setWithdrawalAmount(e.target.value)}
@@ -623,7 +685,7 @@ function App() {
         <button style={buttonStyle} onClick={withdraw}>
           Withdraw Token
         </button>
-        <input
+        {/* <input
           style={inputStyle}
           value={transferAddress}
           onChange={(e) => setTransferAddress(e.target.value)}
@@ -649,7 +711,7 @@ function App() {
         </button>
         <button style={buttonStyle} onClick={test}>
           Test
-        </button>
+        </button> */}
       </div>
     </div>
   );
