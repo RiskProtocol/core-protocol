@@ -1,0 +1,7 @@
+title The Rebase Operation
+Engine->DB: Updates Db with proper Early/Normal rebase info
+Engine->Defender:Calls defender's webhook
+Defender->API:Fetches next rebase parameters
+API->DB: Fetches next rebase info
+API-->Defender: Returns encoded parameters with signature
+Defender->Smart Contract: Executes rebase operation
