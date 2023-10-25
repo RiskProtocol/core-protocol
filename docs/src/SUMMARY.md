@@ -1,0 +1,16 @@
+# Summary
+- [Home](README.md)
+# contracts
+  - [❱ interfaces](contracts/interfaces/README.md)
+    - [IERC20Update](contracts/interfaces/IERC20Update.sol/interface.IERC20Update.md)
+  - [❱ mocks](contracts/mocks/README.md)
+    - [MockERC20Token](contracts/mocks/MockERC20Token.sol/contract.MockERC20Token.md)
+    - [MockERC20TokenWithPermit](contracts/mocks/MockERC20TokenWithPermit.sol/contract.MockERC20TokenWithPermit.md)
+    - [MockERC20TokenWithoutPermit](contracts/mocks/MockERC20TokenWithoutPermit.sol/contract.MockERC20TokenWithoutPermit.md)
+    - [MockSanctionContract](contracts/mocks/MockSanctionContract.sol/contract.MockSanctionContract.md)
+    - [UUPSProxy](contracts/mocks/MockUUPSProxy.sol/contract.UUPSProxy.md)
+  - [❱ vaults](contracts/vaults/README.md)
+    - [SanctionsList](contracts/vaults/BaseContract.sol/interface.SanctionsList.md)
+    - [BaseContract](contracts/vaults/BaseContract.sol/contract.BaseContract.md)
+    - [SmartToken](contracts/vaults/SmartToken.sol/contract.SmartToken.md)
+    - [TokenFactory](contracts/vaults/TokenFactory.sol/contract.TokenFactory.md)
