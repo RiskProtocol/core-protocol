@@ -15,30 +15,28 @@ import "./SmartToken.sol";
 import "./BaseContract.sol";
 import "./../interfaces/IERC20Update.sol";
 
-error TokenFactory__MethodNotAllowed();
-error TokenFactory__InvalidDivision();
-error TokenFactory__InvalidSequenceNumber();
-error TokenFactory__InvalidNaturalRebase();
-error TokenFactory__AlreadyInitialized();
-error TokenFactory__InvalidSignature();
-error TokenFactory__InvalidSignatureLength();
-error TokenFactory__InvalidManagementFees();
-
-/**
- * @title ERC-20 Rebase Tokens
- * @author Okwuosa Chijioke
- * @notice Still under development
- * @dev This implements 2 ERC-20 tokens that will be minted in exactly the same proportion as the
- * underlying ERC-20 token transferred into the Factory contract.
- * The asset will be burned in exactly the same proportion when asked to redeem/withdrawal the underlying asset.
- * The contract will implement periodic rebalancing
- */
+/// @title The Vault or TokenFactory contract.
+/// @notice The main purposes of this contract is to act as a vault as well as it contains the shared logic
+/// used by riskON/OFF tokens.
+/// @dev Acts as the vault for holding the underlying assets/tokens. Also contains shared logic used by riskON/OFF
+// for multi purposes such as deposit or withdrawal. This contract is also responsible for rebases and related logic as
+// well as charging Asset under mamangemnt fees.
 contract TokenFactory is
     ReentrancyGuardUpgradeable,
     OwnableUpgradeable,
     UUPSUpgradeable,
     BaseContract
 {
+    //errors
+    error TokenFactory__MethodNotAllowed();
+    error TokenFactory__InvalidDivision();
+    error TokenFactory__InvalidSequenceNumber();
+    error TokenFactory__InvalidNaturalRebase();
+    error TokenFactory__AlreadyInitialized();
+    error TokenFactory__InvalidSignature();
+    error TokenFactory__InvalidSignatureLength();
+    error TokenFactory__InvalidManagementFees();
+
     using MathUpgradeable for uint256;
     using SafeMathUpgradeable for uint256;
     using SafeMathUpgradeable for uint8;
@@ -51,13 +49,22 @@ contract TokenFactory is
     uint256 private constant REBASE_INT_MULTIPLIER = 10 ** 18;
 
     SmartToken[] private smartTokenArray;
+    /// @notice This mapping keeps track of the last rebase applied to a user/address
     mapping(address => uint256) private lastRebaseCount;
+    /// @notice This is the instance of the underlying Token
     IERC20Update private baseToken;
+    /// @notice The number of decimals of the underlying Asset/Token
     uint8 private baseTokenDecimals;
+    /// @notice The rebase interval in seconds
     uint256 private interval;
+    /// @notice The timestamp of the last rebase
     uint256 private lastTimeStamp;
+    /// @notice This boolean keeps track if the smart tokens(RiskON/OFF) have already been initialized in the system
     bool private smartTokenInitialized;
+    /// @notice This is the signers address of RP api's that generate encoded params for rebase
     address private signersAddress;
+    /// @notice This keeps track of the 'sequenceNumber' of a rebase which helps guarding against the same rebase being
+    // applied twice in the system
     mapping(uint256 => bool) private sequenceNumberApplied;
     //management fees
     uint256 private managementFeesRate; //Mgmt fee is per day & scalin Factor is now 10E18
@@ -65,11 +72,16 @@ contract TokenFactory is
     uint256 private lastRebaseFees;
     address private treasuryWallet;
 
+    /// @notice Struct to store information regarding a scheduled rebase.
+    /// @dev This struct holds the data for rebases that are scheduled to be executed.
     struct ScheduledRebase {
-        //ScheduledRebase
+        // A unique number assigned to each rebase, used to manage execution order and guard againts duplicates
         uint256 sequenceNumber;
+        //Indicates whether this is a natural rebase (occurs at regular planned intervals) or an early rebase.
         bool isNaturalRebase;
+        // The price of the underlying asset at the rebase time
         uint256 price;
+        // The price of the smart token X at the rebase time
         uint256 smartTokenXprice;
     }
     //Factors to be calculated at rebase
@@ -86,7 +98,11 @@ contract TokenFactory is
         uint256 Uy;
     }
 
+    /// @dev An array to hold all the scheduled rebases.
+    /// This helps in storing rebases in the order they are scheduled till they are all executed
     ScheduledRebase[] private scheduledRebases;
+    /// @dev A counter to generate a unique sequence number for each rebase.
+    /// This ensures that rebases are executed in the order they are scheduled.
     uint256 private nextSequenceNumber;
 
     // Events
@@ -105,7 +121,9 @@ contract TokenFactory is
         uint256 assets,
         uint256 shares
     );
-
+    /// @notice Ensures the caller is one of the SmartTokens(RiskOn/Off).
+    /// @dev This modifier checks if the caller is either smartTokenArray[0] or smartTokenArray[1].
+    ///      If not, it reverts with a custom error message.
     modifier onlySmartTokens() {
         if (
             _msgSender() == address(smartTokenArray[0]) ||
@@ -128,12 +146,21 @@ contract TokenFactory is
         _disableInitializers();
     }
 
+    /// @notice Initializes(replacement for the constructor) the Vault (TokenFactory) contract with specified params
+    /// @dev This function sets up the initial state of the TokenFactory contract. Callable only once.
+    /// @param baseTokenAddress The address of the underlying token/asset
+    /// @param rebaseInterval The interval (in seconds) at which natural rebases are scheduled.
+    /// @param sanctionsContract_ The address of the sanctions contract(chainalysis contract) to verify
+    /// blacklisted addresses
+    /// @param signersAddress_ The address of the signer ( RP Api's) which signed the rebase data
     function initialize(
         IERC20Update baseTokenAddress,
         uint256 rebaseInterval, // in seconds
         address sanctionsContract_,
         address signersAddress_
     ) public initializer {
+        //initialize deriving contracts
+
         __BaseContract_init(sanctionsContract_);
         __Ownable_init();
         __UUPSUpgradeable_init();
@@ -142,6 +169,7 @@ contract TokenFactory is
         (bool success, uint8 assetDecimals) = _tryGetAssetDecimals(baseToken);
         baseTokenDecimals = success ? assetDecimals : 18;
         interval = rebaseInterval;
+        // We assign the lastTimeStamp to the timestamp at the beginning of the system
         lastTimeStamp = block.timestamp;
         managementFeesRate = 0;
         nextSequenceNumber = 1;
@@ -158,32 +186,47 @@ contract TokenFactory is
         );
     }
 
+    /// @notice Authorizes an upgrade to a new contract implementation.
+    /// @dev This function can only be called by the contract owner.
+    /// It overrides the `_authorizeUpgrade` function from the `UUPSUpgradeable`
+    /// contract to include the `onlyOwner` modifier, ensuring only the owner can authorize upgrades.
     function _authorizeUpgrade(
         address
     ) internal override(UUPSUpgradeable) onlyOwner {}
 
-    //note: renaming this method to avoid conflicts with upgradable initialize
+    /// @notice Initializes the smart tokens associated with this TokenFactory.
+    /// renaming this method to avoid conflicts with upgradable initialize
+    /// @dev This function can only be called once, and only by the contract owner.
+    /// @param token1 The first smart token
+    /// @param token2 The second smart token
     function initializeSMART(
         SmartToken token1,
         SmartToken token2
     ) external onlyOwner onlyIntializedOnce {
+        // smartTokenInitialized is set to true, vault cannot be initialized with other SMARTs
         smartTokenInitialized = true;
         smartTokenArray.push(token1);
         smartTokenArray.push(token2);
     }
 
-    /**
-     * @dev Attempts to fetch the asset decimals. A return value of false indicates that the attempt failed in some way.
-     */
+    /// @notice Attempts to fetch the decimals of underlying token
+    /// @dev This function uses a static call to query the decimals from the asset.
+    /// If the call fails or the returned data is invalid, it defaults to 0.
+    /// @param asset_ The address of the underlying token
+    /// @return A return vaule containing a boolean indicating success and the decimals of the token. or false
+    /// if it failed somehow
     function _tryGetAssetDecimals(
         IERC20 asset_
     ) private view returns (bool, uint8) {
+        // Performing a static call to the 'decimals' function of the underlying token
         (bool success, bytes memory encodedDecimals) = address(asset_)
             .staticcall(
                 abi.encodeWithSelector(
                     IERC20MetadataUpgradeable.decimals.selector
                 )
             );
+        // Checking if the call was successful, the length of the returned data,
+        // and the size of the decoded value.
         if (
             success &&
             encodedDecimals.length >= 32 &&
@@ -192,27 +235,29 @@ contract TokenFactory is
             uint256 returnedDecimals = abi.decode(encodedDecimals, (uint256));
             return (true, uint8(returnedDecimals));
         }
+        // If any of the conditions are not met, return false with a default value of 0.
         return (false, 0);
     }
 
-    /**
-     * @dev Decimals are read from the underlying asset in the constructor and cached. If this fails (e.g., the asset
-     * has not been created yet), the cached value is set to a default obtained by `super.decimals()` (which depends on
-     * inheritance but is most likely 18). Override this function in order to set a guaranteed hardcoded value.
-     * See {IERC20Metadata-decimals}.
-     */
+    /// @notice Fetches the decimal value of the underlying token
+    /// @dev This function returns the value of decimals that was set in the 'initialize' method
+    /// @return The number of decimals of the underlying token
     function decimals() public view virtual returns (uint8) {
         return baseTokenDecimals;
     }
 
+    /// @notice Retrieves the instance of the underlying token contract
+    /// @dev This function provides a way to access the instance of the underlying contract
+    /// @return The instance of the underlying contract
     function getBaseToken() public view virtual returns (IERC20Update) {
         return baseToken;
     }
 
-    /**
-     * @dev Returns the maximum amount of assets the owner can withdraw.
-     *      (ie this returns the smaller balance between token0 and token1)
-     */
+    /// @notice Returns the maximum amount of assets the owner can withdraw.
+    /// @dev This function compares the balance of both smart tokens(RiskON/OFF) for the owner
+    ///      and returns the balance of the smart token with the lesser amount.
+    /// @param owner_ The address of the owner
+    /// @return The maximum amount of assets the specified owner can withdraw.
     function maxAmountToWithdraw(
         address owner_
     ) public view virtual returns (uint256) {
@@ -226,11 +271,11 @@ contract TokenFactory is
         }
     }
 
-    /**
-     * @dev Returns the maximum amount of shares the account holds,
-     *      (ie this returns the bigger balance between token0 and token1)
-     *      this is not the max value the owner can withdraw.
-     */
+    /// @notice Determines the maximum amount of shares owned by the owner
+    /// @dev This function compares the balance of both smart tokens(RiskON/OFF) for the owner
+    ///      and returns the balance of the smart token with the greater amount.
+    /// @param owner_ The address of the owner
+    /// @return The maximum amount of shares owned by the specified owner.
     function maxSharesOwned(
         address owner_
     ) public view virtual returns (uint256) {
@@ -247,6 +292,14 @@ contract TokenFactory is
     /**
      * @dev Deposit/mint common workflow.
      */
+    /// @notice Deposit/mint common workflow, deposit underlying tokens, mints new shares(RiskON/OFF)
+    /// to the receiver, and also charges management fees
+    /// @dev This function can only be called by the smart tokens and requires the caller and
+    /// receiver to not be sanctioned.
+    /// @param caller The address of depositor
+    /// @param receiver The address of receiver
+    /// @param assets The amount of underlying tokens being deposited.
+    /// @param shares The amount of shares(RiskON/OFF) to mint to the receiver.
     function _deposit(
         address caller,
         address receiver,
@@ -255,19 +308,25 @@ contract TokenFactory is
     )
         external
         virtual
+        //Ensures that the caller and receiver is not sanctioned
         onlyNotSanctioned(caller)
         onlyNotSanctioned(receiver)
+        //Ensures this method is called only by RiskON/Off
         onlySmartTokens
     {
-        //rebase the user
+        //Verify if receiver has any pending rebase and apply his pending ones if any
         rebaseCheck(receiver);
-
+        // Transfer the underlying token from the caller to the Vault(tokenFactory/ THIS)
         SafeERC20.safeTransferFrom(baseToken, caller, address(this), assets);
+        // If the user is new to the system, we update his last rebase count to the latest
         updateUserLastRebaseCount(receiver);
         //mgmtFeeslogic
         if (managementFeeEnabled) {
+            //Calculate the management fees owed for the remaining period of the current rebase
             uint256 fees = calculateManagementFee(shares, true, 0);
             shares -= fees;
+            // Mint the fees to the Vault(TokenFcatory/This) --
+            //@note This is deprecated and will be replaced in upcoming commits
             factoryMint(0, address(this), fees);
             factoryMint(1, address(this), fees);
             emit Deposit(caller, address(this), fees, fees);
@@ -278,9 +337,15 @@ contract TokenFactory is
         emit Deposit(caller, receiver, assets, shares);
     }
 
-    /**
-     * @dev Withdraw/redeem common workflow.
-     */
+    /// @notice Withdraw/redeem common workflow. Handles the withdrawal of underlying token.
+    /// burns shares(RiskON/OFF) from the caller, and refund any management fees
+    /// @dev This function can only be called by the smart tokens and requires the caller and receiver
+    /// to not be sanctioned.
+    /// @param caller The address withdrawing.
+    /// @param receiver The address receiving the underlying token.
+    /// @param owner The owner of the shares.
+    /// @param assets The amount of underlying Token being withdrawn.
+    /// @param shares The amount of shares(RiskON/OFF) to burn from the caller.
     function _withdraw(
         address caller,
         address receiver,
@@ -290,27 +355,33 @@ contract TokenFactory is
     )
         external
         virtual
+        //Ensures that the caller and receiver is not sanctioned
         onlyNotSanctioned(caller)
         onlyNotSanctioned(receiver)
+        //Ensures this method is called only by RiskON/Off
         onlySmartTokens
     {
+        //Verify if receiver has any pending rebase and apply his pending ones if any
         rebaseCheck(receiver);
-        //mgmt fees logic
+        //mgmt fees logic, initialize the feesRefund to 0
         uint256 feesRefund = 0;
 
         if (managementFeeEnabled) {
+            //Calculate the management fees refund for the remaining period of the current rebase
             feesRefund = calculateManagementFee(assets, true, 0);
+            //Burn the refunded fees from the Vault(TokenFactory/This)
             factoryBurn(0, address(this), feesRefund);
             factoryBurn(1, address(this), feesRefund);
 
             emit Withdraw(caller, address(this), owner, feesRefund, feesRefund);
         }
+        //Burn the Shares(RiskON/OFF) the owner wants to withdraw
         factoryBurn(0, caller, assets);
         factoryBurn(1, caller, assets);
         if (feesRefund > 0) {
             assets += feesRefund;
         }
-
+        //Transfer the corresponding amount of underlying token/assets to the receiver
         SafeERC20.safeTransfer(baseToken, receiver, assets);
         emit Withdraw(caller, receiver, owner, assets, shares);
     }
@@ -405,6 +476,12 @@ contract TokenFactory is
         );
     }
 
+    /// @notice Mints the specified amount of Shares(RiskON/OFF) to the receiver
+    /// @dev It first previews the minting process to get the amount of Shares(RiskON/OFF)that will be minted,
+    /// and then performs the actual minting.
+    /// @param smartTokenIndex The index of the smart token in the smartTokenArray.
+    /// @param receiver The address of the receiver
+    /// @param amount The amount of Shares(RiskON/OFF) to mint.
     function factoryMint(
         uint256 smartTokenIndex,
         address receiver,
@@ -414,6 +491,7 @@ contract TokenFactory is
         uint256 prevBalY = smartTokenArray[1].unScaledbalanceOf(receiver);
 
         uint256 assets = smartTokenArray[smartTokenIndex].previewMint(amount);
+        // Mint either riskON/OFF to the receiver. Please see 'mintAsset' in SmartToken contract for more info.
         smartTokenArray[smartTokenIndex].mintAsset(receiver, assets);
         //Update the virtual records
         UserRebaseElements memory currentElement = userRebaseElements[receiver];
@@ -427,6 +505,11 @@ contract TokenFactory is
         userRebaseElements[receiver] = currentElement;
     }
 
+    /// @notice Burns the specified amount of Shares(either of RiskON/OFF)from the owner
+    /// @dev It calls the `burn` function on the smart token contract
+    /// @param smartTokenIndex The index of the smart token in the `smartTokenArray`.
+    /// @param owner_ The address of the owner
+    /// @param amount The amount of Shares(either of RiskON/OFF)  to burn.
     function factoryBurn(
         uint256 smartTokenIndex,
         address owner_,
@@ -465,14 +548,26 @@ contract TokenFactory is
         smartTokenArray[1].smartBalanceAdjust(account, amountY);
     }
 
+    /// @notice Executes a rebase based on the provided encoded data and signature.
+    /// @dev This function validates the rebase call, schedules it, and possibly triggers
+    /// a rebase if the sequence is in order. It first verifies the signature of the rebase params with
+    /// the signer's public key. Then we verify if the sequence number is aligned and not already used.
+    /// Then we push the rebase params into an array of scheduled rebases. Finally, if there is no gaps between the
+    /// previous rebase'sequence number, we execute this rebase
+    /// This function can only be called when rebase is not stopped  with the `stopRebase` modifier.
+    /// @param encodedData The encoded data containing the sequence number, the boolean value for natural rebase and the
+    /// price of underlying and smartTokenX
+    /// @param signature The signature of the encoded data to verify its authenticity.
     function executeRebase(
         bytes memory encodedData,
         bytes memory signature
     ) external stopRebase {
+        // Decodes and verifies the rebase params data against the provided signature.
         ScheduledRebase memory rebaseCall = verifyAndDecode(
             signature,
             encodedData
         );
+        // Checks if the sequence number of the rebase call is valid and not already applied.
 
         if (
             rebaseCall.sequenceNumber < nextSequenceNumber ||
@@ -480,17 +575,18 @@ contract TokenFactory is
         ) {
             revert TokenFactory__InvalidSequenceNumber();
         }
+        // Checks if the current block timestamp is valid for a natural rebase.
         if (
             block.timestamp < (lastTimeStamp + interval) &&
             rebaseCall.isNaturalRebase
         ) {
             revert TokenFactory__InvalidNaturalRebase();
         }
-        //This is to make sure that the sequence number can be applied only once
-
+        // Mark the sequence number as applied to prevent future rebases with the same sequence number.
         sequenceNumberApplied[rebaseCall.sequenceNumber] = true;
+        // Store the rebase data for later use if we have a gap in the sequence numbers
         scheduledRebases.push(rebaseCall);
-
+        // If the sequence number matches the next expected sequence number, execute the rebase.
         if (rebaseCall.sequenceNumber == nextSequenceNumber) {
             rebase();
         }
@@ -538,17 +634,23 @@ contract TokenFactory is
         lastRebaseFees = fees;
     }
 
+    /// @notice Handles the actual rebasing mechanism.
+    /// @dev This function processes up to 5 scheduled rebases per call.
+    /// Different factors that will help calculating user balances are calculated here
+    /// using the rebase params.
+    //@note This is deprecated and will be replaced in upcoming commits
     function rebase() private {
         uint256 i = 0;
         while (i < scheduledRebases.length && i < 5) {
             // a maximum of 5 rebases per transaction
             ScheduledRebase memory scheduledRebase = scheduledRebases[i];
-
+            // Skip to the next iteration if the sequence number doesn't match
             if (scheduledRebase.sequenceNumber != nextSequenceNumber) {
                 i++;
                 continue;
             }
             //rebase functionalities
+            // Update the last timestamp if it's a natural rebase
             if (scheduledRebase.isNaturalRebase) {
                 lastTimeStamp += interval;
             }
@@ -629,10 +731,9 @@ contract TokenFactory is
 
             emit Rebase(getRebaseNumber());
 
-            //other items
-
+            // Increment the sequence number for the next rebase
             nextSequenceNumber++;
-
+            // Remove the processed rebase from the queue
             removeRebase(i);
 
             // Do not increment i if we just removed an element from the array
@@ -642,6 +743,11 @@ contract TokenFactory is
         }
     }
 
+    /// @notice Applies rebase to an account
+    /// @dev This function adjusts the balance of smart tokens(RiskON/RiskOFF) according to the rollOverValue.
+    /// This function can only be called when rebase is stopped. It also calculates and applies management fees.
+    //@note This is deprecated and will be replaced in upcoming commits
+    /// @param owner_ The address of the account to which the rebase will be applied.
     function applyRebase(address owner_) public stopRebase {
         //normal rebase operations
         (uint256 assetX, uint256 assetY) = calculateRollOverValue(owner_);
@@ -650,6 +756,12 @@ contract TokenFactory is
         emit RebaseApplied(owner_, getRebaseNumber());
     }
 
+    /// @notice Calculates the rollover value(Units of RiskON/OFF) for an account
+    /// @dev This function calculates the net balance(Units of RiskON/OFF) of a user after rebase and
+    /// management fees are applied.
+    //@note This is deprecated and will be replaced in upcoming commits
+    /// @param owner_ The address of the owner
+    /// @return The calculated roll over value.
     function calculateRollOverValue(
         address owner_
     ) public view returns (uint256, uint256) {
@@ -696,25 +808,36 @@ contract TokenFactory is
         ); //X,Y
     }
 
+    /// @notice Updates the last rebase count of a user.
+    /// @dev This function sets the last rebase count for a user if their unscaled balances for
+    /// both smart tokens(RiskON/RiskOFF) are zero. We may use this in cases where a receiever is new to the
+    /// system
+    /// @param owner_ The address of the user
     function updateUserLastRebaseCount(address owner_) public {
         if (
             smartTokenArray[0].unScaledbalanceOf(owner_) == 0 &&
             smartTokenArray[1].unScaledbalanceOf(owner_) == 0
         ) {
+            // If both balances are zero, update the last rebase count of the owner to the current scaling factor length
+            // Therefore user has no more pending rebases technically
             lastRebaseCount[owner_] = getRebaseNumber();
         }
     }
 
-    /*
-    note: The following functions will be used to decode the encoded data as well as verify
-    the signature in the function call
-     */
-
+    /// @notice Verifies the provided signature and decodes the encoded data into  `ScheduledRebase` struct.
+    /// @dev It recovers the address from the Ethereum signed message hash and the provided `signature`.
+    /// If the recovered address doesn't match the `signersAddress`, it reverts the transaction.
+    /// If the signature is valid, it decodes the `encodedData` into a `ScheduledRebase` struct and returns it.
+    /// @param signature The signature to be verified.
+    /// @param encodedData The data to be decoded into a `ScheduledRebase` struct.
+    /// @return data A `ScheduledRebase` struct containing the decoded data.
     function verifyAndDecode(
         bytes memory signature,
         bytes memory encodedData
     ) private view returns (ScheduledRebase memory) {
+        // Hash the encoded data
         bytes32 hash = keccak256(encodedData);
+        // Convert the hash to an Ethereum signed message hash
         bytes32 ethSignedMessageHash = ECDSAUpgradeable.toEthSignedMessageHash(
             hash
         );
@@ -729,7 +852,7 @@ contract TokenFactory is
             revert TokenFactory__InvalidSignature();
         }
 
-        // If the signature is valid, decode the encodedData
+        // If the signature is valid, decode the encodedData into a  `ScheduledRebase` struct
         (
             uint256 sequenceNumber,
             bool isNaturalRebase,
@@ -745,17 +868,23 @@ contract TokenFactory is
         return data;
     }
 
+    /// @notice Update the address authorized to sign rebase transactions.
+    /// @dev This function can only be called by the owner of the contract.
+    /// It updates the `signersAddress` address with the provided `addr` address.
+    /// @param addr The new address
     function setSignersAddress(address addr) public onlyOwner {
         signersAddress = addr;
     }
 
-    /*
-    Mgmt Fees Block
-    note:rate is per day
-    scaling factor is 100000
-    Example 5% per day = 5000
-     */
-
+    /// @notice Updates the rate of management fees.
+    /// @dev It updates the `managementFeesRate` state variable with the provided `rate` value,
+    /// if the rate is within a valid range, otherwise, it reverts the transaction.
+    /// The rate is in terms of percentage per day
+    ///    scaling factor is 100000
+    ///    Example 5% per day = 5000
+    //@note This is deprecated and will be replaced in upcoming commits
+    /// @param rate The new rate of management fees.
+    /// @return A boolean value
     function setManagementFeeRate(
         uint256 rate
     ) external onlyOwner returns (bool) {
@@ -766,6 +895,11 @@ contract TokenFactory is
         return true;
     }
 
+    /// @notice Toggles the state of management fee collection.
+    /// @dev This function can only be called by the contract owner.
+    /// It either enables or disables the management fee collection
+    /// @param state The new state of management fee collection.
+    /// @return A boolean value
     function setManagementFeeState(
         bool state
     ) external onlyOwner returns (bool) {
@@ -780,22 +914,33 @@ contract TokenFactory is
         return true;
     }
 
+    /// @notice Calculates the management fee for a given amount over a particular time span.
+    /// @dev It computes the management fee either using the default management fee rate or a provided fee rate.
+    /// This function can be used both for deposit and withdrawal scenarios.
+    /// @param amount The amount of RiskON/OFF to calculate the fee against.
+    /// @param isDefault When set to true, the method uses the default management fee rate,
+    // otherwise uses the value in the `mgmtFee` parameter.
+    /// @param mgmtFee The management fee rate to use if `isDefault` is set to false.
+    /// @return userFees The calculated management fee
     function calculateManagementFee(
-        uint256 amount, //amount to calculate fee against
-        bool isDefault, //When set to true, the method takes the default management
-        //fee to calculate, otherwise uses the value in the next parameter
-        uint256 mgmtFee //calculates both for fee and refund // same cal/ in wei scale
+        uint256 amount,
+        bool isDefault,
+        uint256 mgmtFee
     ) public view returns (uint256) {
         uint256 internalManagementFeesRate;
         if (isDefault) {
+            // Use the default management fee rate if `isDefault` is true.
             internalManagementFeesRate = managementFeesRate;
         } else {
+            // Otherwise, use the provided `mgmtFee`.
             internalManagementFeesRate = mgmtFee;
         }
         //estimate the nextRebase Timestamp
         uint256 nextRebaseTimeStamp = lastTimeStamp + interval;
 
         //Estimate the mgmt fee per interval with respect to the fees per day value
+        //The management fee rate is in terms of points per day, please checkout 'setManagementFee' Method
+        // for more info
         uint256 mgmtFeesPerInterval = internalManagementFeesRate
             .mul(interval)
             .div(1 days);
@@ -811,11 +956,11 @@ contract TokenFactory is
         } else {
             userDepositCycle = 0;
         }
-
+        // deposit cycle should be atleast 1 second before rebase
         if (userDepositCycle == 0 || interval == 0) {
             revert TokenFactory__InvalidDivision();
         }
-        //calculate user fees
+        //calculate user fees (Pro-rata)
         uint256 userFees = userDepositCycle
             .mul(mgmtFeesPerInterval)
             .mul(amount)
@@ -825,26 +970,41 @@ contract TokenFactory is
         return userFees;
     }
 
+    /// @notice Checks if a user is an existing user and applies user rebase when needed.
+    /// @dev This function is triggered to ensure a user's balances are updated with any rebases
+    /// that have occurred since their last interaction with the contract.
+    /// @param user The address of the user
     function rebaseCheck(address user) private {
-        //checks if a user is an existing user and apply user rebase when needed
         if (
+            // Verify if the user is an existing user and if they have missed any rebase operations.
             lastRebaseCount[user] != 0 &&
             lastRebaseCount[user] != getRebaseNumber()
         ) {
+            // Apply rebase
             applyRebase(user);
         }
     }
 
+    /// @notice Removes a rebase entry from the `scheduledRebases` array at a specific index.
+    /// @dev It overwrites the rebase entry at the given index with the last entry in the array,
+    /// and then removes the last entry.
+    /// It is also guarded by 'nonReentrant' modifier.
+    /// @param index The index in the `scheduledRebases` array of the rebase entry to remove.
     function removeRebase(uint256 index) private nonReentrant {
         scheduledRebases[index] = scheduledRebases[scheduledRebases.length - 1];
         scheduledRebases.pop();
     }
 
-    //  other getter methods
+    /// @notice Retrieves the address of the signer
+    /// @dev This function is a getter for the `signersAddress` variable.
+    /// @return The address of the authorized signer.
     function getSignersAddress() public view returns (address) {
         return signersAddress;
     }
 
+    /// @notice Retrieves the array of ScheduledRebase
+    /// @dev This function is a getter for the `scheduledRebases` array variable.
+    /// @return The array of the scheduledRebases.
     function getScheduledRebases()
         public
         view
@@ -853,10 +1013,16 @@ contract TokenFactory is
         return scheduledRebases;
     }
 
+    /// @notice Retrieves the nextSequenceNumber
+    /// @dev This function is a getter for the `nextSequenceNumber` variable.
+    /// @return The anextSequenceNumber
     function getNextSequenceNumber() public view returns (uint256) {
         return nextSequenceNumber;
     }
 
+    /// @notice Retrieves the lastTimeStamp
+    /// @dev This function is a getter for the `lastTimeStamp` variable.
+    /// @return The lastTimeStamp
     function getLastTimeStamp() external view onlyOwner returns (uint256) {
         return lastTimeStamp;
     }
@@ -865,6 +1031,9 @@ contract TokenFactory is
         return managementFeesRate;
     }
 
+    /// @notice Retrieves the managementFeeEnabled
+    /// @dev This function is a getter for the `managementFeeEnabled` variable.
+    /// @return The managementFeeEnabled
     function getManagementFeeState() public view returns (bool) {
         return managementFeeEnabled;
     }
@@ -879,6 +1048,10 @@ contract TokenFactory is
         return lastRebaseCount[userAddress];
     }
 
+    /// @notice Retrieves the interval
+    /// @dev This function is a getter for the `interval` variable.
+    /// @param index The index of the SmartToken in the `smartTokenArray`.
+    /// @return The interval
     function getSmartTokenAddress(
         uint8 index
     ) public view returns (SmartToken) {
@@ -889,6 +1062,9 @@ contract TokenFactory is
         return treasuryWallet;
     }
 
+    /// @notice Retrieves the interval
+    /// @dev This function is a getter for the `interval` variable.
+    /// @return The interval
     function getInterval() public view returns (uint256) {
         return interval;
     }
