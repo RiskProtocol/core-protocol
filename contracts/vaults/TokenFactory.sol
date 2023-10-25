@@ -76,6 +76,7 @@ contract TokenFactory is
     bool private managementFeeEnabled;
     //@note This is deprecated and will be replaced in upcoming commits
     uint256[] private mgmtFeeSum;
+    address private orchestrator;
 
     /// @notice Struct to store information regarding a scheduled rebase.
     /// @dev This struct holds the data for rebases that are scheduled to be executed.
@@ -124,6 +125,12 @@ contract TokenFactory is
         } else {
             revert TokenFactory__MethodNotAllowed();
         }
+    }
+    modifier onlyOrchestrator() {
+        if (_msgSender() != address(orchestrator)) {
+            revert TokenFactory__MethodNotAllowed();
+        }
+        _;
     }
     modifier onlyIntializedOnce() {
         if (smartTokenInitialized) {
@@ -193,6 +200,10 @@ contract TokenFactory is
         smartTokenInitialized = true;
         smartTokenArray.push(token1);
         smartTokenArray.push(token2);
+    }
+
+    function initializeOrchestrator(address orchestrator_) external onlyOwner {
+        orchestrator = orchestrator_;
     }
 
     /// @notice Attempts to fetch the decimals of underlying token
@@ -437,7 +448,7 @@ contract TokenFactory is
     function executeRebase(
         bytes memory encodedData,
         bytes memory signature
-    ) external stopRebase {
+    ) external stopRebase onlyOrchestrator {
         // Decodes and verifies the rebase params data against the provided signature.
         ScheduledRebase memory rebaseCall = verifyAndDecode(
             signature,

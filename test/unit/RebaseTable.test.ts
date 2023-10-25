@@ -119,6 +119,21 @@ developmentChains.includes(network.name)
         ]);
         await tokenFactory2.deployed();
 
+        //deploy orchestrator
+
+        const OrchestratorFactory = await ethers.getContractFactory(
+          "Orchestrator",
+          deployer
+        );
+
+        const orchestrator = await upgrades.deployProxy(OrchestratorFactory, [
+          tokenFactory.address,
+        ]);
+        await orchestrator.deployed();
+
+        //initialize the orchestrator
+        await tokenFactory.initializeOrchestrator(orchestrator.address);
+
         // Fixtures can return anything you consider useful for your tests
         return {
           smartToken1,
@@ -128,6 +143,7 @@ developmentChains.includes(network.name)
           deployer,
           tester,
           tokenFactory2,
+          orchestrator,
         };
       }
 
@@ -141,6 +157,7 @@ developmentChains.includes(network.name)
               smartToken1,
               smartToken2,
               tester,
+              orchestrator,
             } = await loadFixture(deployTokenFixture);
             const depositAmount = item.depositValue;
             const transferAmount = ethers.utils.parseEther("1");
@@ -162,7 +179,7 @@ developmentChains.includes(network.name)
             const nextRebaseTimeStamp = BigInt(now) + BigInt(REBASE_INTERVAL);
             await time.setNextBlockTimestamp(nextRebaseTimeStamp);
             // trigger a rebase
-            await tokenFactory.executeRebase(
+            await orchestrator.rebase(
               encodedNaturalRebase1.encodedData,
               encodedNaturalRebase1.signature
             );
@@ -190,6 +207,7 @@ developmentChains.includes(network.name)
             smartToken1,
             smartToken2,
             tester,
+            orchestrator,
           } = await loadFixture(deployTokenFixture);
 
           const depositAmount = ethers.utils.parseEther("1");
@@ -205,13 +223,13 @@ developmentChains.includes(network.name)
           await smartToken1.deposit(depositAmount, deployer.address);
 
           // trigger a rebase
-          await tokenFactory.executeRebase(
+          await orchestrator.rebase(
             encodedEarlyRebase1.encodedData,
             encodedEarlyRebase1.signature
           );
           expect(await tokenFactory.getNextSequenceNumber()).to.equal(2);
 
-          await tokenFactory.executeRebase(
+          await orchestrator.rebase(
             encodedEarlyRebase2.encodedData,
             encodedEarlyRebase2.signature
           );
@@ -226,6 +244,7 @@ developmentChains.includes(network.name)
             smartToken1,
             smartToken2,
             tester,
+            orchestrator,
           } = await loadFixture(deployTokenFixture);
 
           const depositAmount = ethers.utils.parseEther("1");
@@ -241,18 +260,18 @@ developmentChains.includes(network.name)
           await smartToken1.deposit(depositAmount, deployer.address);
 
           // trigger a rebase
-          await tokenFactory.executeRebase(
+          await orchestrator.rebase(
             encodedEarlyRebase1.encodedData,
             encodedEarlyRebase1.signature
           );
 
-          await tokenFactory.executeRebase(
+          await orchestrator.rebase(
             encodedEarlyRebase3.encodedData,
             encodedEarlyRebase3.signature
           );
 
           expect(await tokenFactory.getNextSequenceNumber()).to.equal(2);
-          await tokenFactory.executeRebase(
+          await orchestrator.rebase(
             encodedEarlyRebase2.encodedData,
             encodedEarlyRebase2.signature
           );
@@ -268,6 +287,7 @@ developmentChains.includes(network.name)
             smartToken1,
             smartToken2,
             tester,
+            orchestrator,
           } = await loadFixture(deployTokenFixture);
 
           const depositAmount = ethers.utils.parseEther("1");
@@ -283,15 +303,15 @@ developmentChains.includes(network.name)
           await smartToken1.deposit(depositAmount, deployer.address);
 
           // trigger a rebase
-          await tokenFactory.executeRebase(
+          await orchestrator.rebase(
             encodedEarlyRebase1.encodedData,
             encodedEarlyRebase1.signature
           );
-          await tokenFactory.executeRebase(
+          await orchestrator.rebase(
             encodedEarlyRebase2.encodedData,
             encodedEarlyRebase2.signature
           );
-          await tokenFactory.executeRebase(
+          await orchestrator.rebase(
             encodedEarlyRebase3.encodedData,
             encodedEarlyRebase3.signature
           );
@@ -307,6 +327,7 @@ developmentChains.includes(network.name)
             smartToken1,
             smartToken2,
             tester,
+            orchestrator,
           } = await loadFixture(deployTokenFixture);
 
           const depositAmount = ethers.utils.parseEther("1");
@@ -322,17 +343,17 @@ developmentChains.includes(network.name)
           await smartToken1.deposit(depositAmount, deployer.address);
 
           // trigger a rebase
-          await tokenFactory.executeRebase(
+          await orchestrator.rebase(
             encodedEarlyRebase1.encodedData,
             encodedEarlyRebase1.signature
           );
-          await tokenFactory.executeRebase(
+          await orchestrator.rebase(
             encodedEarlyRebase2.encodedData,
             encodedEarlyRebase2.signature
           );
 
           await expect(
-            tokenFactory.executeRebase(
+            orchestrator.rebase(
               encodedEarlyRebase1.encodedData,
               encodedEarlyRebase1.signature
             )
@@ -351,6 +372,7 @@ developmentChains.includes(network.name)
           smartToken1,
           smartToken2,
           tester,
+          orchestrator,
         } = await loadFixture(deployTokenFixture);
 
         const depositAmount = ethers.utils.parseEther("1");
@@ -368,7 +390,7 @@ developmentChains.includes(network.name)
         // trigger a rebase
 
         await expect(
-          tokenFactory.executeRebase(
+          orchestrator.rebase(
             encodedEarlyRebase1.encodedData,
             encodedEarlyRebase2.signature //invalid sig
           )

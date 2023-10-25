@@ -125,6 +125,21 @@ developmentChains.includes(network.name)
 
         await tokenFactory2.deployed();
 
+        //deploy orchestrator
+
+        const OrchestratorFactory = await ethers.getContractFactory(
+          "Orchestrator",
+          deployer
+        );
+
+        const orchestrator = await upgrades.deployProxy(OrchestratorFactory, [
+          tokenFactory.address,
+        ]);
+        await orchestrator.deployed();
+
+        //initialize the orchestrator
+        await tokenFactory.initializeOrchestrator(orchestrator.address);
+
         // Fixtures can return anything you consider useful for your tests
         return {
           smartToken1,
@@ -134,6 +149,7 @@ developmentChains.includes(network.name)
           deployer,
           tester,
           tokenFactory2,
+          orchestrator,
         };
       }
 
@@ -183,6 +199,7 @@ developmentChains.includes(network.name)
               smartToken1,
               smartToken2,
               tester,
+              orchestrator,
             } = await loadFixture(deployTokenFixture);
             const depositAmount = item.depositValue;
 
@@ -209,7 +226,7 @@ developmentChains.includes(network.name)
 
             const nextRebaseTimeStamp = BigInt(now) + BigInt(REBASE_INTERVAL);
             await time.setNextBlockTimestamp(nextRebaseTimeStamp);
-            await tokenFactory.executeRebase(
+            await orchestrator.rebase(
               encodedNaturalRebase1.encodedData,
               encodedNaturalRebase1.signature
             );
@@ -387,6 +404,7 @@ developmentChains.includes(network.name)
               smartToken1,
               smartToken2,
               tester,
+              orchestrator,
             } = await loadFixture(deployTokenFixture);
             const depositAmount = item.depositValue;
             const transferAmount = ethers.utils.parseEther("1");
@@ -411,7 +429,7 @@ developmentChains.includes(network.name)
 
             const initialManagementFeeHistory =
               await tokenFactory.getMgmtFeeFactorLength();
-            await tokenFactory.executeRebase(
+            await orchestrator.rebase(
               encodedEarlyRebase1.encodedData,
               encodedEarlyRebase1.signature
             );
@@ -432,6 +450,7 @@ developmentChains.includes(network.name)
               smartToken1,
               smartToken2,
               tester,
+              orchestrator,
             } = await loadFixture(deployTokenFixture);
             const depositAmount = item.depositValue;
 
@@ -449,7 +468,7 @@ developmentChains.includes(network.name)
             //contract call and make a rebase
             const nextRebase = BigInt(lastRebase) + BigInt(REBASE_INTERVAL);
             await time.setNextBlockTimestamp(nextRebase);
-            await tokenFactory.executeRebase(
+            await orchestrator.rebase(
               encodedNaturalRebase1.encodedData,
               encodedNaturalRebase1.signature
             );
@@ -483,6 +502,7 @@ developmentChains.includes(network.name)
               smartToken1,
               smartToken2,
               tester,
+              orchestrator,
             } = await loadFixture(deployTokenFixture);
             const depositAmount = item.depositValue;
 
@@ -514,21 +534,21 @@ developmentChains.includes(network.name)
             //contract call and make 3 rebase
             const nextRebase = BigInt(lastRebase) + BigInt(REBASE_INTERVAL);
             await time.setNextBlockTimestamp(nextRebase);
-            await tokenFactory.executeRebase(
+            await orchestrator.rebase(
               encodedNaturalRebase1.encodedData,
               encodedNaturalRebase1.signature
             );
 
             const secondRebase = BigInt(nextRebase) + BigInt(REBASE_INTERVAL);
             await time.setNextBlockTimestamp(secondRebase);
-            await tokenFactory.executeRebase(
+            await orchestrator.rebase(
               encodedNaturalRebase2.encodedData,
               encodedNaturalRebase2.signature
             );
 
             const thirdRebase = BigInt(secondRebase) + BigInt(REBASE_INTERVAL);
             await time.setNextBlockTimestamp(thirdRebase);
-            await tokenFactory.executeRebase(
+            await orchestrator.rebase(
               encodedNaturalRebase3.encodedData,
               encodedNaturalRebase3.signature
             );
