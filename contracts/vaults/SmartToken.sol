@@ -7,9 +7,10 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/interfaces/IERC4626Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PermitUpgradeable.sol";
+
 import "./../interfaces/IERC20Update.sol";
+import "./../lib/ERC20/ERC20Upgradeable.sol";
+import "./../lib/ERC20/extensions/ERC20PermitUpgradeable.sol";
 import "./TokenFactory.sol";
 import "./BaseContract.sol";
 
@@ -44,6 +45,8 @@ contract SmartToken is
     TokenFactory private tokenFactory;
     /// @notice The underlyingToken instance
     IERC20Update private underlyingToken;
+    bool private isX;
+
     /// @dev Ensures that the function is only callable by the TokenFactory contract.
     /// Calls the helper function `_onlyTokenFactory` to check the caller.
     modifier onlyTokenFactory() {
@@ -82,7 +85,8 @@ contract SmartToken is
         string memory tokenName,
         string memory tokenSymbol,
         address factoryAddress,
-        address sanctionsContract_
+        address sanctionsContract_,
+        bool isX_ //is this token X or Y?
     ) public initializer {
         //initialize deriving contracts
         __ERC20_init(tokenName, tokenSymbol);
@@ -93,6 +97,7 @@ contract SmartToken is
         __UUPSUpgradeable_init();
         tokenFactory = TokenFactory(factoryAddress);
         underlyingToken = tokenFactory.getBaseToken();
+        isX = isX_;
     }
 
     /// @notice Authorizes an upgrade to a new contract implementation.
@@ -142,16 +147,45 @@ contract SmartToken is
         returns (bool)
     {
         handlePendingRebase(_msgSender(), recipient);
-        super.transfer(recipient, amount);
-        return true;
+
+        uint256[4] memory bals = tokenFactory.getUserRecords(
+            _msgSender(),
+            recipient
+        );
+
+        bool result = super.transfer(recipient, amount);
+
+        tokenFactory.transferRecords(
+            _msgSender(),
+            recipient,
+            isX,
+            amount,
+            bals[0],
+            bals[1],
+            bals[2],
+            bals[3]
+        );
+
+        return result;
     }
 
-    //@note This is deprecated and will be replaced in upcoming commits
-    function smartTransfer(
-        address recipient,
+    function smartTreasuryTransfer(
+        address treasuryAddress,
         uint256 amount
     ) external onlyTokenFactory {
-        super.transfer(recipient, amount);
+        tokenFactory.updateRecord(isX, amount);
+
+        super.treasuryTransfer(treasuryAddress, amount);
+    }
+
+    function smartBalanceAdjust(
+        address account,
+        uint256 amount
+    ) external onlyTokenFactory {
+        //update the internal record
+        tokenFactory.updateRecord(isX, account, amount);
+
+        super.balanceAdjust(account, amount);
     }
 
     /// @notice Returns the balance of the specified account
@@ -170,9 +204,13 @@ contract SmartToken is
         returns (uint256)
     {
         if (hasPendingRebase(account)) {
-            //if an account has pending rebase(s), the returned value is calculated by using
-            // 'calculateRollOverValue' method of the Vault(TokenFactory)
-            return tokenFactory.calculateRollOverValue(account);
+            (uint256 asset1Units, uint256 asset2Units) = tokenFactory
+                .calculateRollOverValue(account);
+
+            if (isX) {
+                return asset1Units;
+            }
+            return asset2Units;
         } else {
             return unScaledbalanceOf(account);
         }
@@ -195,8 +233,7 @@ contract SmartToken is
         return
             //'getUserLastRebaseCount' returns the amount of rebase applied to account
             tokenFactory.getUserLastRebaseCount(account) !=
-            //'getScallingFactorLength' returns the total amount of rebases
-            tokenFactory.getScallingFactorLength();
+            tokenFactory.getRebaseNumber();
     }
 
     /// @notice Retrieves the address of the Vault (TokenFactory) contract.
@@ -229,7 +266,20 @@ contract SmartToken is
         returns (bool)
     {
         handlePendingRebase(sender, recipient);
-        return super.transferFrom(sender, recipient, amount);
+        uint256[4] memory bals = tokenFactory.getUserRecords(sender, recipient);
+        bool result = super.transferFrom(sender, recipient, amount);
+        tokenFactory.transferRecords(
+            sender,
+            recipient,
+            isX,
+            amount,
+            bals[0],
+            bals[1],
+            bals[2],
+            bals[3]
+        );
+
+        return result;
     }
 
     /// @notice Handles pending rebases for the sender and receiver addresses.
@@ -361,7 +411,6 @@ contract SmartToken is
         validateDepositAmount(assets, receiver)
         returns (uint256)
     {
-        //Use 'previewDeposit' method to get the converted amount of underlying assets to shares
         uint256 shares = previewDeposit(assets);
         underlyingToken.permit(
             _msgSender(),
@@ -469,7 +518,7 @@ contract SmartToken is
         //@note This is deprecated and will be replaced in upcoming commits
         if (
             tokenFactory.getUserLastRebaseCount(receiver) !=
-            tokenFactory.getScallingFactorLength()
+            tokenFactory.getRebaseNumber()
         ) {
             tokenFactory.applyRebase(receiver);
         }
@@ -532,7 +581,7 @@ contract SmartToken is
         //@note This is deprecated and will be replaced in upcoming commits
         if (
             tokenFactory.getUserLastRebaseCount(receiver) !=
-            tokenFactory.getScallingFactorLength()
+            tokenFactory.getRebaseNumber()
         ) {
             tokenFactory.applyRebase(receiver);
         }

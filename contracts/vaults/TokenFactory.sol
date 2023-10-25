@@ -43,9 +43,11 @@ contract TokenFactory is
     using SafeMathUpgradeable for uint32;
 
     // State variables
-    //@note This is deprecated and will be replaced in upcoming commits
-    uint256[] private scallingFactorX;
-    /// @notice This is the array of the smart tokens(RiskON/OFF)
+
+    RebaseElements[] private rebaseElements;
+    mapping(address => UserRebaseElements) private userRebaseElements;
+    uint256 private constant REBASE_INT_MULTIPLIER = 10 ** 18;
+
     SmartToken[] private smartTokenArray;
     /// @notice This mapping keeps track of the last rebase applied to a user/address
     mapping(address => uint256) private lastRebaseCount;
@@ -64,18 +66,11 @@ contract TokenFactory is
     /// @notice This keeps track of the 'sequenceNumber' of a rebase which helps guarding against the same rebase being
     // applied twice in the system
     mapping(uint256 => bool) private sequenceNumberApplied;
-    //management fees scaling factor
-    uint32 private constant MGMT_FEE_SCALING_FACTOR = 100000;
-    /// @notice This keeps track of the management fee rate, which is in terms of point per day. example 0.02% per day
-    uint32 private managementFeesRate;
-    //@note This is deprecated and will be replaced in upcoming commits
-    uint32[] private mgmtFeesHistory;
-    //@note This is deprecated and will be replaced in upcoming commits
-    mapping(address => uint256) private userMgmtFeeHistory;
-    /// @notice This keeps track if the management fee is enabled or disabled in the system
+    //management fees
+    uint256 private managementFeesRate; //Mgmt fee is per day & scalin Factor is now 10E18
     bool private managementFeeEnabled;
-    //@note This is deprecated and will be replaced in upcoming commits
-    uint256[] private mgmtFeeSum;
+    uint256 private lastRebaseFees;
+    address private treasuryWallet;
     address private orchestrator;
 
     /// @notice Struct to store information regarding a scheduled rebase.
@@ -90,6 +85,20 @@ contract TokenFactory is
         // The price of the smart token X at the rebase time
         uint256 smartTokenXprice;
     }
+    //Factors to be calculated at rebase
+    struct RebaseElements {
+        uint256 BalanceFactorXY;
+        uint256 BalanceFactorUx;
+        uint256 BalanceFactorUy;
+        uint256 FeeFactor;
+    }
+    struct UserRebaseElements {
+        uint256 netX;
+        uint256 netY;
+        uint256 Ux;
+        uint256 Uy;
+    }
+
     /// @dev An array to hold all the scheduled rebases.
     /// This helps in storing rebases in the order they are scheduled till they are all executed
     ScheduledRebase[] private scheduledRebases;
@@ -170,13 +179,18 @@ contract TokenFactory is
         // We assign the lastTimeStamp to the timestamp at the beginning of the system
         lastTimeStamp = block.timestamp;
         managementFeesRate = 0;
-        //@note This is deprecated and will be replaced in upcoming commits
-        mgmtFeesHistory.push(managementFeesRate);
-        mgmtFeeSum.push(managementFeesRate);
-        /// nextSequence starts at 1
         nextSequenceNumber = 1;
         smartTokenInitialized = false;
         signersAddress = signersAddress_;
+        lastRebaseFees = 0;
+        rebaseElements.push(
+            RebaseElements({
+                BalanceFactorXY: 1 * REBASE_INT_MULTIPLIER,
+                BalanceFactorUx: 0,
+                BalanceFactorUy: 0,
+                FeeFactor: 1 * REBASE_INT_MULTIPLIER
+            })
+        );
     }
 
     /// @notice Authorizes an upgrade to a new contract implementation.
@@ -328,12 +342,9 @@ contract TokenFactory is
             factoryMint(1, address(this), fees);
             emit Deposit(caller, address(this), fees, fees);
         }
-        //@note This is deprecated and will be replaced in upcoming commits
-        userMgmtFeeHistory[receiver] = getMgmtFeeFactorLength() - 1;
-        //Mint the shares(RiskON/OFF) that the user should receive after the fees if any
+
         factoryMint(0, receiver, shares);
         factoryMint(1, receiver, shares);
-
         emit Deposit(caller, receiver, assets, shares);
     }
 
@@ -372,6 +383,7 @@ contract TokenFactory is
             //Burn the refunded fees from the Vault(TokenFactory/This)
             factoryBurn(0, address(this), feesRefund);
             factoryBurn(1, address(this), feesRefund);
+
             emit Withdraw(caller, address(this), owner, feesRefund, feesRefund);
         }
         //Burn the Shares(RiskON/OFF) the owner wants to withdraw
@@ -382,8 +394,97 @@ contract TokenFactory is
         }
         //Transfer the corresponding amount of underlying token/assets to the receiver
         SafeERC20.safeTransfer(baseToken, receiver, assets);
-
         emit Withdraw(caller, receiver, owner, assets, shares);
+    }
+
+    function getUserRecords(
+        address sender,
+        address recipient
+    ) external view onlySmartTokens returns (uint256[4] memory) {
+        uint256 prevBalXsender = smartTokenArray[0].unScaledbalanceOf(sender);
+        uint256 prevBalYsender = smartTokenArray[1].unScaledbalanceOf(sender);
+        uint256 prevBalXrecipient = smartTokenArray[0].unScaledbalanceOf(
+            recipient
+        );
+        uint256 prevBalYrecipient = smartTokenArray[1].unScaledbalanceOf(
+            recipient
+        );
+        return (
+            [
+                prevBalXsender,
+                prevBalYsender,
+                prevBalXrecipient,
+                prevBalYrecipient
+            ]
+        );
+    }
+
+    function transferRecords(
+        address sender,
+        address recipient,
+        bool tokenType,
+        uint256 amount,
+        uint256 prevBalXsender,
+        uint256 prevBalYsender,
+        uint256 prevBalXrecipient,
+        uint256 prevBalYrecipient
+    ) external onlySmartTokens {
+        uint256 newSenderX = tokenType
+            ? prevBalXsender - amount
+            : prevBalXsender;
+        uint256 newSenderY = tokenType
+            ? prevBalYsender
+            : prevBalYsender - amount;
+        uint256 newRecipientX = tokenType
+            ? prevBalXrecipient + amount
+            : prevBalXrecipient;
+        uint256 newRecipientY = tokenType
+            ? prevBalYrecipient
+            : prevBalYrecipient + amount;
+        userRebaseElements[sender] = UserRebaseElements(
+            newSenderX,
+            newSenderY,
+            0,
+            0
+        );
+        userRebaseElements[recipient] = UserRebaseElements(
+            newRecipientX,
+            newRecipientY,
+            0,
+            0
+        );
+    }
+
+    //for general users
+    function updateRecord(
+        bool tokenType,
+        address account,
+        uint256 amount
+    ) external onlySmartTokens {
+        uint256 prevBalX = smartTokenArray[0].unScaledbalanceOf(account);
+        uint256 prevBalY = smartTokenArray[1].unScaledbalanceOf(account);
+        userRebaseElements[account] = UserRebaseElements(
+            tokenType ? amount : prevBalX,
+            tokenType ? prevBalY : amount,
+            0,
+            0
+        );
+    }
+
+    //for treasury only
+    function updateRecord(
+        bool tokenType,
+        uint256 amount
+    ) external onlySmartTokens {
+        uint256 prevBalX = smartTokenArray[0].unScaledbalanceOf(address(this));
+        uint256 prevBalY = smartTokenArray[1].unScaledbalanceOf(address(this));
+
+        userRebaseElements[address(this)] = UserRebaseElements(
+            tokenType ? (prevBalX + amount) : prevBalX,
+            tokenType ? prevBalY : (prevBalY + amount),
+            0,
+            0
+        );
     }
 
     /// @notice Mints the specified amount of Shares(RiskON/OFF) to the receiver
@@ -397,10 +498,22 @@ contract TokenFactory is
         address receiver,
         uint256 amount
     ) private {
-        //Preview the minting amount. Please see 'previewMint' in SmartToken contract for more info.
+        uint256 prevBalX = smartTokenArray[0].unScaledbalanceOf(receiver);
+        uint256 prevBalY = smartTokenArray[1].unScaledbalanceOf(receiver);
+
         uint256 assets = smartTokenArray[smartTokenIndex].previewMint(amount);
         // Mint either riskON/OFF to the receiver. Please see 'mintAsset' in SmartToken contract for more info.
         smartTokenArray[smartTokenIndex].mintAsset(receiver, assets);
+        //Update the virtual records
+        UserRebaseElements memory currentElement = userRebaseElements[receiver];
+        if (smartTokenIndex == 0) {
+            currentElement.netX = prevBalX + assets;
+        } else {
+            currentElement.netY = prevBalY + assets;
+        }
+        currentElement.Ux = 0;
+        currentElement.Uy = 0;
+        userRebaseElements[receiver] = currentElement;
     }
 
     /// @notice Burns the specified amount of Shares(either of RiskON/OFF)from the owner
@@ -413,26 +526,37 @@ contract TokenFactory is
         address owner_,
         uint256 amount
     ) private {
-        // Burn either riskON/OFF of the owner. Please see 'burn' in SmartToken contract for more info
+        uint256 prevBalX = smartTokenArray[0].unScaledbalanceOf(owner_);
+        uint256 prevBalY = smartTokenArray[1].unScaledbalanceOf(owner_);
+
         smartTokenArray[smartTokenIndex].burn(owner_, amount);
-    }
+        //Update the virtual records
+        UserRebaseElements memory currentElement = userRebaseElements[owner_];
 
-    //@note This is deprecated and will be replaced in upcoming commits
-    function factoryTransfer(
-        uint256 smartTokenIndex,
-        address receiver,
-        uint256 amount
-    ) private {
-        smartTokenArray[smartTokenIndex].smartTransfer(receiver, amount);
-    }
-
-    //@note This is deprecated and will be replaced in upcoming commits
-    function subUnchecked(
-        uint256 scallingFactorX_
-    ) public view returns (uint256) {
-        unchecked {
-            return (10 ** decimals()) - scallingFactorX_;
+        if (smartTokenIndex == 0) {
+            currentElement.netX = prevBalX - amount;
+        } else {
+            currentElement.netY = prevBalY - amount;
         }
+        currentElement.Ux = 0;
+        currentElement.Uy = 0;
+        userRebaseElements[owner_] = currentElement;
+    }
+
+    //create and transfer fees to tokenFactory to hold for 1 rebase
+    function factoryTreasuryTransfer(uint256 amount) private {
+        smartTokenArray[0].smartTreasuryTransfer(address(this), amount);
+        smartTokenArray[1].smartTreasuryTransfer(address(this), amount);
+    }
+
+    //Adjust balance of users based on applied rebase
+    function factoryBalanceAdjust(
+        address account,
+        uint256 amountX,
+        uint256 amountY
+    ) private {
+        smartTokenArray[0].smartBalanceAdjust(account, amountX);
+        smartTokenArray[1].smartBalanceAdjust(account, amountY);
     }
 
     /// @notice Executes a rebase based on the provided encoded data and signature.
@@ -479,6 +603,48 @@ contract TokenFactory is
         }
     }
 
+    ///@notice Charges the management fees
+    ///@dev This function is responsible for charging the fees of the whole universe
+    /// and related functionalities.
+    function chargeFees() private {
+        if (
+            lastRebaseFees != 0 ||
+            smartTokenArray[0].balanceOf(address(this)) > 0
+        ) {
+            //We check and apply rebase to the contract and treasury address
+            rebaseCheck(address(this));
+            rebaseCheck(treasuryWallet);
+
+            //We charge the fees due by the contract as well
+            lastRebaseFees -= calculateManagementFee(lastRebaseFees, true, 0);
+
+            uint256 fee = (smartTokenArray[0].balanceOf(address(this)) >=
+                lastRebaseFees &&
+                smartTokenArray[1].balanceOf(address(this)) >= lastRebaseFees &&
+                lastRebaseFees != 0)
+                ? lastRebaseFees
+                : (
+                    smartTokenArray[0].balanceOf(address(this)) <
+                        smartTokenArray[1].balanceOf(address(this))
+                        ? smartTokenArray[0].balanceOf(address(this))
+                        : smartTokenArray[1].balanceOf(address(this))
+                );
+
+            smartTokenArray[0].transfer(treasuryWallet, fee);
+            smartTokenArray[1].transfer(treasuryWallet, fee);
+        }
+        //now we check if we have fees to charge for the upcoming rebase
+        //totalSupply for X ===Y hence we care for only 1
+        uint256 totalSupplyX = smartTokenArray[0].totalSupply();
+        //total user fees
+        uint256 fees = calculateManagementFee(totalSupplyX, true, 0);
+
+        //here we create and hold
+        factoryTreasuryTransfer(fees);
+
+        lastRebaseFees = fees;
+    }
+
     /// @notice Handles the actual rebasing mechanism.
     /// @dev This function processes up to 5 scheduled rebases per call.
     /// Different factors that will help calculating user balances are calculated here
@@ -499,29 +665,82 @@ contract TokenFactory is
             if (scheduledRebase.isNaturalRebase) {
                 lastTimeStamp += interval;
             }
-            // Compute rebase price, asset price, and divisor for scaling
-            // We assume that the prices are as such
-            // if underlying has 18 decimals and the price of underlying is 2000$
-            // Then the price is 2000 x 10e18
-            // The same logic applies to the price of the smartTokenX.
-            //@note This is deprecated and will be replaced in upcoming commits
-            uint256 rebasePrice = scheduledRebase.price / 10 ** decimals();
-            uint256 asset1Price = scheduledRebase.smartTokenXprice; //x 10e18
-            uint256 divisor = rebasePrice.ceilDiv(2);
-            // We store the scallingFactorX, which will help us later in calculating the
-            // value of X and Y a user should get post rebase in the  'calculateRollOver' method
-            //@note This is deprecated and will be replaced in upcoming commits
-            scallingFactorX.push((asset1Price / 2) / divisor);
-            if (managementFeeEnabled && scheduledRebase.isNaturalRebase) {
-                // We calculate the cummulative sum of the management fees at every natural rebase whenever the
-                // management fee is enabled. This would later help us to calculate fees of users for
-                // cummulative rebase periods
-                //@note This is deprecated and will be replaced in upcoming commits
-                mgmtFeesHistory.push(managementFeesRate);
-                updateManagementFeeSum();
+
+            //get previous rebase info
+            RebaseElements memory lastRebase = rebaseElements[
+                rebaseElements.length - 1
+            ];
+
+            uint256 smartTokenYprice = scheduledRebase.price -
+                scheduledRebase.smartTokenXprice;
+            uint256 minimumPrice = scheduledRebase.smartTokenXprice;
+            if (
+                scheduledRebase.smartTokenXprice >
+                (scheduledRebase.price - scheduledRebase.smartTokenXprice)
+            ) {
+                minimumPrice =
+                    scheduledRebase.price -
+                    scheduledRebase.smartTokenXprice;
             }
 
-            emit Rebase(getScallingFactorLength());
+            uint256 balanceFactorXY = lastRebase
+                .BalanceFactorXY
+                .mul(2)
+                .mul(minimumPrice)
+                .div(scheduledRebase.price);
+
+            uint256 balanceFactorUx = lastRebase.BalanceFactorUx +
+                (
+                    lastRebase
+                        .BalanceFactorXY
+                        .mul(
+                            scheduledRebase.smartTokenXprice > smartTokenYprice
+                                ? (scheduledRebase.smartTokenXprice -
+                                    smartTokenYprice)
+                                : 0
+                        )
+                        .div(scheduledRebase.price)
+                );
+
+            uint256 balanceFactorUy = lastRebase.BalanceFactorUy +
+                (
+                    lastRebase
+                        .BalanceFactorXY
+                        .mul(
+                            smartTokenYprice > scheduledRebase.smartTokenXprice
+                                ? (smartTokenYprice -
+                                    scheduledRebase.smartTokenXprice)
+                                : 0
+                        )
+                        .div(scheduledRebase.price)
+                );
+            uint256 feeFactor = lastRebase
+                .FeeFactor
+                .mul(
+                    REBASE_INT_MULTIPLIER -
+                        (
+                            scheduledRebase.isNaturalRebase
+                                ? managementFeesRate.mul(interval).div(1 days)
+                                : 0
+                        )
+                )
+                .div(REBASE_INT_MULTIPLIER);
+
+            rebaseElements.push(
+                RebaseElements({
+                    BalanceFactorXY: balanceFactorXY,
+                    BalanceFactorUx: balanceFactorUx,
+                    BalanceFactorUy: balanceFactorUy,
+                    FeeFactor: feeFactor
+                })
+            );
+
+            if (managementFeeEnabled && scheduledRebase.isNaturalRebase) {
+                //we transfer fees that we had for last rebase to our wallet
+                chargeFees();
+            }
+
+            emit Rebase(getRebaseNumber());
 
             // Increment the sequence number for the next rebase
             nextSequenceNumber++;
@@ -541,66 +760,11 @@ contract TokenFactory is
     //@note This is deprecated and will be replaced in upcoming commits
     /// @param owner_ The address of the account to which the rebase will be applied.
     function applyRebase(address owner_) public stopRebase {
-        // Retrieve unscaled balances of the owner for both smart tokens
-        //for more info, please checkout 'unScaledbalanceOf' method in the SmartToken Contract
-        uint256 asset1ValueEth = smartTokenArray[0].unScaledbalanceOf(owner_);
-        uint256 asset2ValueEth = smartTokenArray[1].unScaledbalanceOf(owner_);
-        // Store initial unscaled balances for later comparison
-        uint256 initialAsset1ValueEth = asset1ValueEth;
-        uint256 initialAsset2ValueEth = asset2ValueEth;
-
-        //calculate the net balance of users after the rebases are to be applied
-        (asset1ValueEth, asset2ValueEth) = calculateMgmtFeeForRebase(
-            owner_,
-            asset1ValueEth,
-            asset2ValueEth
-        );
-        //verify if the user really had any pending mgmt fees
-        if (
-            initialAsset1ValueEth != asset1ValueEth ||
-            initialAsset2ValueEth != asset2ValueEth
-        ) {
-            // Transfer management fees to the Vault(TokenFcatory), therefore the user pays
-            // his pending fees
-            factoryTransfer(
-                0,
-                address(this),
-                (initialAsset1ValueEth - asset1ValueEth)
-            );
-            factoryTransfer(
-                1,
-                address(this),
-                (initialAsset2ValueEth - asset2ValueEth)
-            );
-            emit Deposit(
-                owner_,
-                address(this),
-                (initialAsset1ValueEth - asset1ValueEth),
-                (initialAsset2ValueEth - asset2ValueEth)
-            );
-            //update user fee history so that he is not charged for management fees for the rebased periods
-            userMgmtFeeHistory[owner_] = getMgmtFeeFactorLength() - 1;
-        }
-
-        // Calculate the rollOverValue for the owner, that is the new amount of RiskON/OFF he ll have post rebase
-        // For more info, please check 'rollOverValue' method
-        uint256 rollOverValue = calculateRollOverValue(owner_);
-        // Update the owner's last rebase count
-        lastRebaseCount[owner_] = getScallingFactorLength();
-        // Adjust the owner's balances
-        if (rollOverValue > asset1ValueEth) {
-            factoryMint(0, owner_, (rollOverValue - asset1ValueEth));
-        } else {
-            factoryBurn(0, owner_, (asset1ValueEth - rollOverValue));
-        }
-
-        if (rollOverValue > asset2ValueEth) {
-            factoryMint(1, owner_, (rollOverValue - asset2ValueEth));
-        } else {
-            factoryBurn(1, owner_, (asset2ValueEth - rollOverValue));
-        }
-
-        emit RebaseApplied(owner_, getScallingFactorLength());
+        //normal rebase operations
+        (uint256 assetX, uint256 assetY) = calculateRollOverValue(owner_);
+        lastRebaseCount[owner_] = getRebaseNumber();
+        factoryBalanceAdjust(owner_, assetX, assetY);
+        emit RebaseApplied(owner_, getRebaseNumber());
     }
 
     /// @notice Calculates the rollover value(Units of RiskON/OFF) for an account
@@ -611,28 +775,48 @@ contract TokenFactory is
     /// @return The calculated roll over value.
     function calculateRollOverValue(
         address owner_
-    ) public view returns (uint256) {
-        // Retrieve the scaling factor for the owner's last rebase
-        uint256 scallingFactorX_ = scallingFactorX[lastRebaseCount[owner_]];
-        uint256 scallingFactorY = subUnchecked(scallingFactorX_);
-        // The denominator is 10 raised to the power of the number of underlying token
-        uint256 denominator = 10 ** decimals();
-        // Get the unscaled balances of the owner for both riskON/OFF
-        uint256 asset1Balance = smartTokenArray[0].unScaledbalanceOf(owner_);
-        uint256 asset2Balance = smartTokenArray[1].unScaledbalanceOf(owner_);
+    ) public view returns (uint256, uint256) {
+        RebaseElements memory lastRebase = rebaseElements[
+            rebaseElements.length - 1
+        ];
 
-        //Calculate the net balance of user after rebases are to be applied
-        // and after the management fees are applied
-        //For more info, please checkout 'calculateMgmtFeeForRebase' method
-        (asset1Balance, asset2Balance) = calculateMgmtFeeForRebase(
-            owner_,
-            asset1Balance,
-            asset2Balance
-        );
-        //@note This is deprecated and will be replaced in upcoming commits
-        uint256 rollOverValue = ((asset1Balance * scallingFactorX_) +
-            (asset2Balance * scallingFactorY)) / denominator;
-        return rollOverValue;
+        RebaseElements memory lastUserRebase = rebaseElements[
+            (lastRebaseCount[owner_])
+        ];
+
+        UserRebaseElements memory userLastRebaseInfo = userRebaseElements[
+            owner_
+        ];
+
+        uint256 netX = userLastRebaseInfo
+            .netX
+            .mul(lastRebase.BalanceFactorXY)
+            .div(lastUserRebase.BalanceFactorXY);
+
+        uint256 netY = userLastRebaseInfo
+            .netY
+            .mul(lastRebase.BalanceFactorXY)
+            .div(lastUserRebase.BalanceFactorXY);
+
+        uint256 uX = (
+            (lastRebase.BalanceFactorUx - lastUserRebase.BalanceFactorUx)
+                .mul(userLastRebaseInfo.netX)
+                .div(lastUserRebase.BalanceFactorXY)
+        ) + userLastRebaseInfo.Ux;
+        uint256 uY = (
+            (lastRebase.BalanceFactorUy - lastUserRebase.BalanceFactorUy)
+                .mul(userLastRebaseInfo.netY)
+                .div(lastUserRebase.BalanceFactorXY)
+        ) + userLastRebaseInfo.Uy;
+
+        return (
+            (netX + uX + uY).mul(lastRebase.FeeFactor).div(
+                lastUserRebase.FeeFactor
+            ),
+            (netY + uY + uX).mul(lastRebase.FeeFactor).div(
+                lastUserRebase.FeeFactor
+            )
+        ); //X,Y
     }
 
     /// @notice Updates the last rebase count of a user.
@@ -647,7 +831,7 @@ contract TokenFactory is
         ) {
             // If both balances are zero, update the last rebase count of the owner to the current scaling factor length
             // Therefore user has no more pending rebases technically
-            lastRebaseCount[owner_] = getScallingFactorLength();
+            lastRebaseCount[owner_] = getRebaseNumber();
         }
     }
 
@@ -713,9 +897,9 @@ contract TokenFactory is
     /// @param rate The new rate of management fees.
     /// @return A boolean value
     function setManagementFeeRate(
-        uint32 rate
+        uint256 rate
     ) external onlyOwner returns (bool) {
-        if (!(rate <= MGMT_FEE_SCALING_FACTOR)) {
+        if (!(rate <= REBASE_INT_MULTIPLIER)) {
             revert TokenFactory__InvalidManagementFees();
         }
         managementFeesRate = rate;
@@ -734,14 +918,11 @@ contract TokenFactory is
         return true;
     }
 
-    /// @notice Updates the cumulative sum of management fees over rebase cycles.
-    /// @dev This function is called internally to maintain a commulative sum of management fees,
-    /// which can be used for calculating fees owed over time.
-    //@note This is deprecated and will be replaced in upcoming commits
-    function updateManagementFeeSum() private {
-        uint mgmtFeeCycleCount = getMgmtFeeFactorLength() - 1;
-
-        mgmtFeeSum.push(mgmtFeeSum[mgmtFeeCycleCount - 1] + managementFeesRate);
+    function setTreasuryWallet(
+        address wallet
+    ) external onlyOwner returns (bool) {
+        treasuryWallet = wallet;
+        return true;
     }
 
     /// @notice Calculates the management fee for a given amount over a particular time span.
@@ -795,61 +976,9 @@ contract TokenFactory is
             .mul(mgmtFeesPerInterval)
             .mul(amount)
             .div(interval)
-            .div(MGMT_FEE_SCALING_FACTOR);
+            .div(REBASE_INT_MULTIPLIER);
 
         return userFees;
-    }
-
-    //This method is used to calculate mgmt fees when applying a rebase
-    //@note This is deprecated and will be replaced in upcoming commits
-    /// @notice Calculates the outstanding management fee for a token holder over past rebases.
-    /// @dev It calculates any missed management fees from previous rebases, computes the fees and
-    ///adjusts the RiskON/OFF values accordingly.
-    /// @param tokensHolder The address of the owner
-    /// @param asset1ValueEth The value of the first SmartTokenX(RiskON) held by the token holder.
-    /// @param asset2ValueEth The value of the second SmartTokenY(RiskOFF) held by the token holder.
-    /// @return The adjusted values of RiskON/OFF after deduction of any management fees.
-    function calculateMgmtFeeForRebase(
-        address tokensHolder,
-        uint256 asset1ValueEth,
-        uint256 asset2ValueEth
-    ) private view returns (uint256, uint256) {
-        if (managementFeeEnabled) {
-            uint256 numberOfFeesCycle = getMgmtFeeFactorLength() - 1; //through rebase only
-            uint256 numberOfUserFeeCycle = userMgmtFeeHistory[tokensHolder]; //through rebase only
-
-            //calculate if user missed any mgmt fees for previous rebases
-            uint256 outstandingFeesCount = numberOfFeesCycle -
-                numberOfUserFeeCycle;
-
-            if (outstandingFeesCount > 0) {
-                uint256 sumOfFees = 0;
-
-                //find out the average fees the user missed since he last paid
-                uint256 firstFeeMissedIndex = numberOfFeesCycle -
-                    outstandingFeesCount;
-                sumOfFees =
-                    mgmtFeeSum[numberOfFeesCycle] -
-                    mgmtFeeSum[firstFeeMissedIndex];
-
-                //calculte the fees wrt to the average
-                uint256 asset1ValueEthFees = calculateManagementFee(
-                    asset1ValueEth,
-                    false,
-                    sumOfFees
-                );
-
-                uint256 asset2ValueEthFees = calculateManagementFee(
-                    asset2ValueEth,
-                    false,
-                    sumOfFees
-                );
-                //update the token amount after fees payment
-                asset1ValueEth -= asset1ValueEthFees;
-                asset2ValueEth -= asset2ValueEthFees;
-            }
-        }
-        return (asset1ValueEth, asset2ValueEth);
     }
 
     /// @notice Checks if a user is an existing user and applies user rebase when needed.
@@ -860,7 +989,7 @@ contract TokenFactory is
         if (
             // Verify if the user is an existing user and if they have missed any rebase operations.
             lastRebaseCount[user] != 0 &&
-            lastRebaseCount[user] != getScallingFactorLength()
+            lastRebaseCount[user] != getRebaseNumber()
         ) {
             // Apply rebase
             applyRebase(user);
@@ -909,10 +1038,7 @@ contract TokenFactory is
         return lastTimeStamp;
     }
 
-    /// @notice Retrieves the managementFeesRate
-    /// @dev This function is a getter for the `managementFeesRate` variable.
-    /// @return The managementFeesRate
-    function getManagementFeeRate() public view returns (uint32) {
+    function getManagementFeeRate() public view returns (uint256) {
         return managementFeesRate;
     }
 
@@ -923,24 +1049,10 @@ contract TokenFactory is
         return managementFeeEnabled;
     }
 
-    /// @notice Retrieves the length of scallingFactorX
-    /// @dev This function is a getter for the length of `scallingFactorX` array.
-    /// @return The length of scallingFactorX
-    function getScallingFactorLength() public view returns (uint256) {
-        return scallingFactorX.length;
+    function getRebaseNumber() public view returns (uint256) {
+        return rebaseElements.length - 1; //adjusted since rebaseElements is also filled on initialization
     }
 
-    /// @notice Retrieves the length of mgmtFeesHistory
-    /// @dev This function is a getter for the length of `mgmtFeesHistory` array.
-    /// @return The length of mgmtFeesHistory
-    function getMgmtFeeFactorLength() public view returns (uint256) {
-        return mgmtFeesHistory.length;
-    }
-
-    /// @notice Retrieves the UserLastRebaseCount
-    /// @dev This function is a getter for the UserLastRebaseCount
-    /// @param userAddress The address of the user whose rebase count is being queried.
-    /// @return The UserLastRebaseCount
     function getUserLastRebaseCount(
         address userAddress
     ) public view returns (uint256) {
@@ -955,6 +1067,10 @@ contract TokenFactory is
         uint8 index
     ) public view returns (SmartToken) {
         return smartTokenArray[index];
+    }
+
+    function getTreasuryAddress() public view returns (address) {
+        return treasuryWallet;
     }
 
     /// @notice Retrieves the interval

@@ -58,6 +58,7 @@ developmentChains.includes(network.name)
           TOKEN1_SYMBOL,
           tokenFactory.address,
           sanctionsContract.address,
+          true,
         ]);
         await SmartToken1.deployed();
 
@@ -72,6 +73,7 @@ developmentChains.includes(network.name)
           TOKEN2_SYMBOL,
           tokenFactory.address,
           sanctionsContract.address,
+          false,
         ]);
         await SmartToken2.deployed();
 
@@ -338,7 +340,7 @@ developmentChains.includes(network.name)
               encodedEarlyRebase1.signature
             )
           ).to.emit(tokenFactory, "Rebase");
-          expect(await tokenFactory.getScallingFactorLength()).to.equal(2);
+          expect(await tokenFactory.getRebaseNumber()).to.equal(2);
         });
         it(`it should revert everything if added tx fails`, async function () {
           let {
@@ -379,7 +381,7 @@ developmentChains.includes(network.name)
             Orchestrator,
             "Orchestrator_FailedOperation"
           );
-          expect(await tokenFactory.getScallingFactorLength()).to.equal(0);
+          expect(await tokenFactory.getRebaseNumber()).to.equal(0);
         });
         it(`should be access controlled`, async function () {
           let { tokenFactory, tester, Orchestrator } = await loadFixture(

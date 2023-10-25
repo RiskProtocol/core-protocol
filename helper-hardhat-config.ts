@@ -20,7 +20,7 @@ export const networkConfig: networkConfigInfo = {
 };
 
 export const developmentChains = ["localhost", "hardhat"];
-
+export const MULTIPLIER = 1e18;
 export const DECIMALS = "18";
 export const INITIAL_PRICE = "2000000000000000000000"; // 2000, we then add the 18 decimals which is 18 zeros
 export const SmartTokenXValue = "667000000000000000000"; // 667, we then add the 18 decimals which is 18 zeros
@@ -72,4 +72,66 @@ export const encodedEarlyRebase3 = {
     "0x68511d0bb601f492ef6d5cee19446f774a8f4d4147930f1a1abd8b9527fd2ed6490696b59dbb662c09baa8fc8c517c1d6a561b1801a159e790e9ce8dd2ef2e321b",
   encodedData:
     "0x0000000000000000000000000000000000000000000000000000000000000003000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000006c6b935b8bbd40000000000000000000000000000000000000000000000000002423dbc92e946aaaaa",
+};
+export const feeCalculator = (assetBal1: bigint, mgmtFee: bigint) => {
+  const depositCycle = REBASE_INTERVAL;
+  const oneDay: bigint = BigInt(86400);
+  const mgmtFeePerInterval: bigint =
+    (BigInt(mgmtFee) * BigInt(REBASE_INTERVAL)) / oneDay;
+  const scallingFactorMgmtFee = MULTIPLIER;
+  return (
+    (BigInt(depositCycle) * BigInt(mgmtFeePerInterval) * BigInt(assetBal1)) /
+    BigInt(REBASE_INTERVAL) /
+    BigInt(scallingFactorMgmtFee)
+  );
+};
+
+export type RebaseElements = {
+  BalanceFactorXY: BigInt;
+  BalanceFactorUx: BigInt;
+  BalanceFactorUy: BigInt;
+};
+
+export type UserRebaseElements = {
+  netX: BigInt;
+  netY: BigInt;
+  Ux: BigInt;
+  Uy: BigInt;
+};
+
+export const callculateRolloverAmount = (
+  lastRebase: any,
+  lastUserRebase: any,
+  userLastRebaseInfo: any
+) => {
+  const netX =
+    (BigInt(userLastRebaseInfo.netX) * BigInt(lastRebase.BalanceFactorXY)) /
+    BigInt(lastUserRebase.BalanceFactorXY);
+  const netY =
+    (BigInt(userLastRebaseInfo.netY) * BigInt(lastRebase.BalanceFactorXY)) /
+    BigInt(lastUserRebase.BalanceFactorXY);
+
+  const uX =
+    BigInt(
+      BigInt(lastRebase.BalanceFactorUx - lastUserRebase.BalanceFactorUx) *
+        BigInt(userLastRebaseInfo.netX)
+    ) /
+      BigInt(lastUserRebase.BalanceFactorXY) +
+    BigInt(userLastRebaseInfo.Ux);
+  const uY =
+    BigInt(
+      BigInt(lastRebase.BalanceFactorUy - lastUserRebase.BalanceFactorUy) *
+        BigInt(userLastRebaseInfo.netY)
+    ) /
+      BigInt(lastUserRebase.BalanceFactorXY) +
+    BigInt(userLastRebaseInfo.Uy);
+
+  const newUserRebaseElements = {
+    netX: netX,
+    netY: netY,
+    Ux: uX,
+    Uy: uY,
+  };
+
+  return [netX + uX + uY, netY + uY + uX, newUserRebaseElements];
 };

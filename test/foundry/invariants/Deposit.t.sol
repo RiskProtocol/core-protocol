@@ -35,7 +35,8 @@ contract Deposit is Test, TestHelper {
             TOKEN1_NAME,
             TOKEN1_SYMBOL,
             address(factoryWrapper),
-            sanctionsContract
+            sanctionsContract,
+            true
         );
         // deploy token Y
         smartTokenY = new SmartToken();
@@ -45,7 +46,8 @@ contract Deposit is Test, TestHelper {
             TOKEN2_NAME,
             TOKEN2_SYMBOL,
             address(factoryWrapper),
-            sanctionsContract
+            sanctionsContract,
+            false
         );
 
         // initialize dev tokens in token factory
