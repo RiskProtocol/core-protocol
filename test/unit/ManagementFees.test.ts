@@ -22,6 +22,7 @@ import {
 import { loadFixture, time } from "@nomicfoundation/hardhat-network-helpers";
 import { BigNumber } from "ethers";
 import { token } from "../../typechain-types/@openzeppelin/contracts";
+import { orchestrator } from "../../typechain-types/contracts";
 
 const rebaseTable = [
   {
@@ -586,6 +587,7 @@ developmentChains.includes(network.name)
               smartToken2,
               tester,
               treasury,
+              orchestrator,
             } = await loadFixture(deployTokenFixture);
             const depositAmount = item.depositValue;
 
@@ -623,7 +625,7 @@ developmentChains.includes(network.name)
             //contract call and make 3 rebase
             const nextRebase = BigInt(lastRebase) + BigInt(REBASE_INTERVAL);
             await time.setNextBlockTimestamp(nextRebase);
-            await tokenFactory.executeRebase(
+            await orchestrator.rebase(
               encodedNaturalRebase1.encodedData,
               encodedNaturalRebase1.signature
             );
@@ -641,7 +643,7 @@ developmentChains.includes(network.name)
 
             const secondRebase = BigInt(nextRebase) + BigInt(REBASE_INTERVAL);
             await time.setNextBlockTimestamp(secondRebase);
-            await tokenFactory.executeRebase(
+            await orchestrator.rebase(
               encodedNaturalRebase2.encodedData,
               encodedNaturalRebase2.signature
             );
@@ -662,7 +664,7 @@ developmentChains.includes(network.name)
 
             const thirdRebase = BigInt(secondRebase) + BigInt(REBASE_INTERVAL);
             await time.setNextBlockTimestamp(thirdRebase);
-            await tokenFactory.executeRebase(
+            await orchestrator.rebase(
               encodedNaturalRebase3.encodedData,
               encodedNaturalRebase3.signature
             );
@@ -685,6 +687,7 @@ developmentChains.includes(network.name)
               smartToken2,
               tester,
               treasury,
+              orchestrator,
             } = await loadFixture(deployTokenFixture);
             const depositAmount = item.depositValue;
 
@@ -713,7 +716,7 @@ developmentChains.includes(network.name)
             //contract call and make a rebase
             const nextRebase = BigInt(lastRebase) + BigInt(REBASE_INTERVAL);
             await time.setNextBlockTimestamp(nextRebase);
-            await tokenFactory.executeRebase(
+            await orchestrator.rebase(
               encodedNaturalRebase1.encodedData,
               encodedNaturalRebase1.signature
             );
@@ -745,7 +748,7 @@ developmentChains.includes(network.name)
             //contract call and make a rebase
             const nextRebase2 = BigInt(lastRebase2) + BigInt(REBASE_INTERVAL);
             await time.setNextBlockTimestamp(nextRebase2);
-            await tokenFactory.executeRebase(
+            await orchestrator.rebase(
               encodedNaturalRebase2.encodedData,
               encodedNaturalRebase2.signature
             );

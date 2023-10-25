@@ -78,6 +78,17 @@ developmentChains.includes(network.name)
           false,
         ]);
         await smartToken2.deployed();
+        const OrchestratorFactory = await ethers.getContractFactory(
+          "Orchestrator",
+          deployer
+        );
+
+        const orchestrator = await upgrades.deployProxy(OrchestratorFactory, [
+          tokenFactory.address,
+        ]);
+        await orchestrator.deployed();
+
+        await tokenFactory.initializeOrchestrator(orchestrator.address);
 
         // Fixtures can return anything you consider useful for your tests
         return {
@@ -88,6 +99,7 @@ developmentChains.includes(network.name)
           deployer,
           tester,
           sanctionsContract,
+          orchestrator,
         };
       }
 
@@ -170,6 +182,7 @@ developmentChains.includes(network.name)
             underlyingToken,
             deployer,
             tester,
+            orchestrator,
           } = await loadFixture(deployTokenFixture);
           await tokenFactory.initializeSMART(
             smartToken1.address,
@@ -255,7 +268,7 @@ developmentChains.includes(network.name)
           );
 
           //apply rebase
-          await tokenFactory.executeRebase(
+          await orchestrator.rebase(
             encodedEarlyRebase1.encodedData,
             encodedEarlyRebase1.signature
           );
