@@ -85,6 +85,21 @@ developmentChains.includes(network.name)
         ]);
         await smartToken2.deployed();
 
+        //deploy orchestrator
+
+        const OrchestratorFactory = await ethers.getContractFactory(
+          "Orchestrator",
+          deployer
+        );
+
+        const orchestrator = await upgrades.deployProxy(OrchestratorFactory, [
+          tokenFactory.address,
+        ]);
+        await orchestrator.deployed();
+
+        //initialize the orchestrator
+        await tokenFactory.initializeOrchestrator(orchestrator.address);
+
         // other instances to mock fake underlying token
         const TokenFactory2 = await ethers.getContractFactory(
           "TokenFactory",
@@ -165,6 +180,7 @@ developmentChains.includes(network.name)
           smartTokenX,
           smartTokenY,
           sanctionsContract,
+          orchestrator,
         };
       }
 
@@ -546,6 +562,7 @@ developmentChains.includes(network.name)
             underlyingToken,
             smartToken1,
             smartToken2,
+            orchestrator,
           } = await loadFixture(deployTokenFixture);
           const depositAmount = ethers.utils.parseEther("6");
 
@@ -562,7 +579,7 @@ developmentChains.includes(network.name)
           const nextRebaseTimeStamp = BigInt(now) + BigInt(REBASE_INTERVAL);
           await time.setNextBlockTimestamp(nextRebaseTimeStamp);
           // trigger rebase
-          await tokenFactory.executeRebase(
+          await orchestrator.rebase(
             encodedNaturalRebase1.encodedData,
             encodedNaturalRebase1.signature
           );
@@ -586,6 +603,7 @@ developmentChains.includes(network.name)
             underlyingToken,
             smartToken1,
             smartToken2,
+            orchestrator,
           } = await loadFixture(deployTokenFixture);
           const depositAmount = ethers.utils.parseEther("6");
 
@@ -602,7 +620,7 @@ developmentChains.includes(network.name)
           const nextRebaseTimeStamp = BigInt(now) + BigInt(REBASE_INTERVAL);
           await time.setNextBlockTimestamp(nextRebaseTimeStamp);
           // trigger rebase
-          await tokenFactory.executeRebase(
+          await orchestrator.rebase(
             encodedNaturalRebase1.encodedData,
             encodedNaturalRebase1.signature
           );
@@ -950,6 +968,7 @@ developmentChains.includes(network.name)
             underlyingToken,
             smartToken1,
             smartToken2,
+            orchestrator,
           } = await loadFixture(deployTokenFixture);
           const depositAmount = ethers.utils.parseEther("6");
 
@@ -966,7 +985,7 @@ developmentChains.includes(network.name)
           const nextRebaseTimeStamp = BigInt(now) + BigInt(REBASE_INTERVAL);
           await time.setNextBlockTimestamp(nextRebaseTimeStamp);
           // trigger rebase
-          await tokenFactory.executeRebase(
+          await orchestrator.rebase(
             encodedNaturalRebase1.encodedData,
             encodedNaturalRebase1.signature
           );
@@ -1301,7 +1320,7 @@ developmentChains.includes(network.name)
 
       describe("Rebase", async function () {
         it("it can be triggered by any one apart from the deployer", async function () {
-          const { tokenFactory, tester } = await loadFixture(
+          const { tokenFactory, tester, orchestrator } = await loadFixture(
             deployTokenFixture
           );
           const now = await tokenFactory.getLastTimeStamp();
@@ -1309,9 +1328,9 @@ developmentChains.includes(network.name)
           const nextRebaseTimeStamp = BigInt(now) + BigInt(REBASE_INTERVAL);
           await time.setNextBlockTimestamp(nextRebaseTimeStamp);
           await expect(
-            tokenFactory
+            orchestrator
               .connect(tester)
-              .executeRebase(
+              .rebase(
                 encodedNaturalRebase1.encodedData,
                 encodedNaturalRebase1.signature
               )
@@ -1319,7 +1338,7 @@ developmentChains.includes(network.name)
         });
 
         it("it can be triggered by the deployer", async function () {
-          const { tokenFactory, tester } = await loadFixture(
+          const { tokenFactory, tester, orchestrator } = await loadFixture(
             deployTokenFixture
           );
           const now = await tokenFactory.getLastTimeStamp();
@@ -1327,7 +1346,7 @@ developmentChains.includes(network.name)
           const nextRebaseTimeStamp = BigInt(now) + BigInt(REBASE_INTERVAL);
           await time.setNextBlockTimestamp(nextRebaseTimeStamp);
           await expect(
-            tokenFactory.executeRebase(
+            orchestrator.rebase(
               encodedNaturalRebase1.encodedData,
               encodedNaturalRebase1.signature
             )
@@ -1342,6 +1361,7 @@ developmentChains.includes(network.name)
             smartToken1,
             smartToken2,
             tester,
+            orchestrator,
           } = await loadFixture(deployTokenFixture);
           const depositAmount = ethers.utils.parseEther("10");
           const transferAmount = ethers.utils.parseEther("1");
@@ -1367,7 +1387,7 @@ developmentChains.includes(network.name)
 
           const nextRebaseTimeStamp = BigInt(now) + BigInt(REBASE_INTERVAL);
           await time.setNextBlockTimestamp(nextRebaseTimeStamp);
-          await tokenFactory.executeRebase(
+          await orchestrator.rebase(
             encodedNaturalRebase1.encodedData,
             encodedNaturalRebase1.signature
           );
@@ -1404,6 +1424,7 @@ developmentChains.includes(network.name)
             smartToken1,
             smartToken2,
             tester,
+            orchestrator,
           } = await loadFixture(deployTokenFixture);
           const depositAmount = ethers.utils.parseEther("10");
           const transferAmount = ethers.utils.parseEther("1");
@@ -1481,7 +1502,7 @@ developmentChains.includes(network.name)
 
           const nextRebaseTimeStamp = BigInt(now) + BigInt(REBASE_INTERVAL);
           await time.setNextBlockTimestamp(nextRebaseTimeStamp);
-          await tokenFactory.executeRebase(
+          await orchestrator.rebase(
             encodedNaturalRebase1.encodedData,
             encodedNaturalRebase1.signature
           );
@@ -1490,7 +1511,7 @@ developmentChains.includes(network.name)
           const nextNextRebaseTimeStamp =
             BigInt(lastTimeStamp) + BigInt(REBASE_INTERVAL);
           await time.setNextBlockTimestamp(nextNextRebaseTimeStamp);
-          await tokenFactory.executeRebase(
+          await orchestrator.rebase(
             encodedNaturalRebase2.encodedData,
             encodedNaturalRebase2.signature
           );
@@ -1527,6 +1548,7 @@ developmentChains.includes(network.name)
             smartToken1,
             smartToken2,
             tester,
+            orchestrator,
           } = await loadFixture(deployTokenFixture);
           const depositAmount = ethers.utils.parseEther("10");
           const transferAmount = ethers.utils.parseEther("1");
@@ -1615,7 +1637,7 @@ developmentChains.includes(network.name)
 
           const nextRebaseTimeStamp = BigInt(now) + BigInt(REBASE_INTERVAL);
           await time.setNextBlockTimestamp(nextRebaseTimeStamp);
-          await tokenFactory.executeRebase(
+          await orchestrator.rebase(
             encodedNaturalRebase1.encodedData,
             encodedNaturalRebase1.signature
           );
