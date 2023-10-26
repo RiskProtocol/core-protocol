@@ -667,7 +667,7 @@ function App() {
           placeholder="Amount to Deposit"
         />
         <button style={buttonStyle} onClick={buyWithoutPermit}>
-          Buy Tokens (without Permit)
+          Deposit underlyingToken (Get smartTokens)
         </button>
         {/* <input
           style={inputStyle}
