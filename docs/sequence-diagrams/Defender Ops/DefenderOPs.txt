@@ -1,0 +1,5 @@
+title The Defender Ops
+Defender->API: Fetches next rebase params
+Defender-> Smart Contract: Executes rebase operation
+Smart Contract-->Defender: Returns transaction info
+Defender->API: Calls the update rebase transaction endpoint

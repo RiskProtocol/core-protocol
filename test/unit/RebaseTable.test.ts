@@ -24,7 +24,10 @@ const rebaseTable = [
       x: "9000000000000000000", // we simiulate that one of token X has been traded before rebase
       y: "10000000000000000000",
     },
-    afterRebase: "9666500000000000000",
+    afterRebase: {
+      x: "9333000000000000000",
+      y: "10000000000000000000",
+    },
   },
   {
     depositValue: "5000000000000000000",
@@ -32,7 +35,10 @@ const rebaseTable = [
       x: "4000000000000000000", // we simiulate that one of token X has been traded before rebase
       y: "5000000000000000000",
     },
-    afterRebase: "4666500000000000000",
+    afterRebase: {
+      x: "4333000000000000000",
+      y: "5000000000000000000",
+    },
   },
   {
     depositValue: "4335000000000000000",
@@ -40,7 +46,10 @@ const rebaseTable = [
       x: "3335000000000000000", // we simiulate that one of token X has been traded before rebase
       y: "4335000000000000000",
     },
-    afterRebase: "4001500000000000000",
+    afterRebase: {
+      x: "3668000000000000000",
+      y: "4335000000000000000",
+    },
   },
 ];
 
@@ -88,6 +97,7 @@ developmentChains.includes(network.name)
           TOKEN1_SYMBOL,
           tokenFactory.address,
           sanctionsContract.address,
+          true,
         ]);
         await smartToken1.deployed();
 
@@ -102,6 +112,7 @@ developmentChains.includes(network.name)
           TOKEN2_SYMBOL,
           tokenFactory.address,
           sanctionsContract.address,
+          false,
         ]);
         await smartToken2.deployed();
 
@@ -119,6 +130,21 @@ developmentChains.includes(network.name)
         ]);
         await tokenFactory2.deployed();
 
+        //deploy orchestrator
+
+        const OrchestratorFactory = await ethers.getContractFactory(
+          "Orchestrator",
+          deployer
+        );
+
+        const orchestrator = await upgrades.deployProxy(OrchestratorFactory, [
+          tokenFactory.address,
+        ]);
+        await orchestrator.deployed();
+
+        //initialize the orchestrator
+        await tokenFactory.initializeOrchestrator(orchestrator.address);
+
         // Fixtures can return anything you consider useful for your tests
         return {
           smartToken1,
@@ -128,6 +154,7 @@ developmentChains.includes(network.name)
           deployer,
           tester,
           tokenFactory2,
+          orchestrator,
         };
       }
 
@@ -141,6 +168,7 @@ developmentChains.includes(network.name)
               smartToken1,
               smartToken2,
               tester,
+              orchestrator,
             } = await loadFixture(deployTokenFixture);
             const depositAmount = item.depositValue;
             const transferAmount = ethers.utils.parseEther("1");
@@ -162,19 +190,20 @@ developmentChains.includes(network.name)
             const nextRebaseTimeStamp = BigInt(now) + BigInt(REBASE_INTERVAL);
             await time.setNextBlockTimestamp(nextRebaseTimeStamp);
             // trigger a rebase
-            await tokenFactory.executeRebase(
+            await orchestrator.rebase(
               encodedNaturalRebase1.encodedData,
               encodedNaturalRebase1.signature
             );
 
             // confirm user balances when rebase has taken place
+
             assert.equal(
               await smartToken1.balanceOf(deployer.address),
-              item.afterRebase
+              item.afterRebase.x
             );
             assert.equal(
               await smartToken2.balanceOf(deployer.address),
-              item.afterRebase
+              item.afterRebase.y
             );
           });
         });
@@ -190,6 +219,7 @@ developmentChains.includes(network.name)
             smartToken1,
             smartToken2,
             tester,
+            orchestrator,
           } = await loadFixture(deployTokenFixture);
 
           const depositAmount = ethers.utils.parseEther("1");
@@ -205,13 +235,13 @@ developmentChains.includes(network.name)
           await smartToken1.deposit(depositAmount, deployer.address);
 
           // trigger a rebase
-          await tokenFactory.executeRebase(
+          await orchestrator.rebase(
             encodedEarlyRebase1.encodedData,
             encodedEarlyRebase1.signature
           );
           expect(await tokenFactory.getNextSequenceNumber()).to.equal(2);
 
-          await tokenFactory.executeRebase(
+          await orchestrator.rebase(
             encodedEarlyRebase2.encodedData,
             encodedEarlyRebase2.signature
           );
@@ -226,6 +256,7 @@ developmentChains.includes(network.name)
             smartToken1,
             smartToken2,
             tester,
+            orchestrator,
           } = await loadFixture(deployTokenFixture);
 
           const depositAmount = ethers.utils.parseEther("1");
@@ -241,18 +272,18 @@ developmentChains.includes(network.name)
           await smartToken1.deposit(depositAmount, deployer.address);
 
           // trigger a rebase
-          await tokenFactory.executeRebase(
+          await orchestrator.rebase(
             encodedEarlyRebase1.encodedData,
             encodedEarlyRebase1.signature
           );
 
-          await tokenFactory.executeRebase(
+          await orchestrator.rebase(
             encodedEarlyRebase3.encodedData,
             encodedEarlyRebase3.signature
           );
 
           expect(await tokenFactory.getNextSequenceNumber()).to.equal(2);
-          await tokenFactory.executeRebase(
+          await orchestrator.rebase(
             encodedEarlyRebase2.encodedData,
             encodedEarlyRebase2.signature
           );
@@ -268,6 +299,7 @@ developmentChains.includes(network.name)
             smartToken1,
             smartToken2,
             tester,
+            orchestrator,
           } = await loadFixture(deployTokenFixture);
 
           const depositAmount = ethers.utils.parseEther("1");
@@ -283,15 +315,15 @@ developmentChains.includes(network.name)
           await smartToken1.deposit(depositAmount, deployer.address);
 
           // trigger a rebase
-          await tokenFactory.executeRebase(
+          await orchestrator.rebase(
             encodedEarlyRebase1.encodedData,
             encodedEarlyRebase1.signature
           );
-          await tokenFactory.executeRebase(
+          await orchestrator.rebase(
             encodedEarlyRebase2.encodedData,
             encodedEarlyRebase2.signature
           );
-          await tokenFactory.executeRebase(
+          await orchestrator.rebase(
             encodedEarlyRebase3.encodedData,
             encodedEarlyRebase3.signature
           );
@@ -307,6 +339,7 @@ developmentChains.includes(network.name)
             smartToken1,
             smartToken2,
             tester,
+            orchestrator,
           } = await loadFixture(deployTokenFixture);
 
           const depositAmount = ethers.utils.parseEther("1");
@@ -322,17 +355,17 @@ developmentChains.includes(network.name)
           await smartToken1.deposit(depositAmount, deployer.address);
 
           // trigger a rebase
-          await tokenFactory.executeRebase(
+          await orchestrator.rebase(
             encodedEarlyRebase1.encodedData,
             encodedEarlyRebase1.signature
           );
-          await tokenFactory.executeRebase(
+          await orchestrator.rebase(
             encodedEarlyRebase2.encodedData,
             encodedEarlyRebase2.signature
           );
 
           await expect(
-            tokenFactory.executeRebase(
+            orchestrator.rebase(
               encodedEarlyRebase1.encodedData,
               encodedEarlyRebase1.signature
             )
@@ -351,6 +384,7 @@ developmentChains.includes(network.name)
           smartToken1,
           smartToken2,
           tester,
+          orchestrator,
         } = await loadFixture(deployTokenFixture);
 
         const depositAmount = ethers.utils.parseEther("1");
@@ -368,7 +402,7 @@ developmentChains.includes(network.name)
         // trigger a rebase
 
         await expect(
-          tokenFactory.executeRebase(
+          orchestrator.rebase(
             encodedEarlyRebase1.encodedData,
             encodedEarlyRebase2.signature //invalid sig
           )

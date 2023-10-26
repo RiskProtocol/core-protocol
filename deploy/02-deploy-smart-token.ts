@@ -46,6 +46,7 @@ const func: DeployFunction = async ({
       TOKEN1_SYMBOL,
       tokenFactory.address,
       sanctionsContractAddressSepolia,
+      true,
     ],
     { initializer: "initialize", kind: "uups" }
   );
@@ -75,6 +76,7 @@ const func: DeployFunction = async ({
       TOKEN2_SYMBOL,
       tokenFactory.address,
       sanctionsContractAddressSepolia,
+      false,
     ],
     { initializer: "initialize", kind: "uups" }
   );

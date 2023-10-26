@@ -61,6 +61,7 @@ developmentChains.includes(network.name)
           TOKEN1_SYMBOL,
           tokenFactory.address,
           sanctionsContract.address,
+          true,
         ]);
         await SmartToken1.deployed();
 
@@ -75,6 +76,7 @@ developmentChains.includes(network.name)
           TOKEN2_SYMBOL,
           tokenFactory.address,
           sanctionsContract.address,
+          false,
         ]);
         await SmartToken2.deployed();
 
@@ -125,6 +127,7 @@ developmentChains.includes(network.name)
           TOKEN1_SYMBOL,
           tokenFactory3.address,
           sanctionsContract.address,
+          true,
         ]);
         await SmartTokenX.deployed();
 
@@ -139,6 +142,7 @@ developmentChains.includes(network.name)
           TOKEN2_SYMBOL,
           tokenFactory3.address,
           sanctionsContract.address,
+          false,
         ]);
         await SmartTokenY.deployed();
 

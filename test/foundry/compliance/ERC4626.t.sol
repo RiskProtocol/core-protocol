@@ -37,7 +37,8 @@ contract ERC4626Test is Test, TestHelper {
             TOKEN1_NAME,
             TOKEN1_SYMBOL,
             address(factoryWrapper),
-            sanctionsContract
+            sanctionsContract,
+            true
         );
 
         vault2 = new SmartToken();
@@ -47,7 +48,8 @@ contract ERC4626Test is Test, TestHelper {
             TOKEN2_NAME,
             TOKEN2_SYMBOL,
             address(factoryWrapper),
-            sanctionsContract
+            sanctionsContract,
+            false
         );
 
         // initialize dev tokens in token factory
@@ -62,7 +64,8 @@ contract ERC4626Test is Test, TestHelper {
             TOKEN1_NAME,
             TOKEN1_SYMBOL,
             address(factoryWrapper),
-            sanctionsContract
+            sanctionsContract,
+            true
         );
 
         assertEq(vltWrapper.name(), TOKEN1_NAME);

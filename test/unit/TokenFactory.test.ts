@@ -12,11 +12,15 @@ import {
   signersAddress,
   encodedNaturalRebase1,
   encodedNaturalRebase2,
+  RebaseElements,
+  UserRebaseElements,
+  callculateRolloverAmount,
+  MULTIPLIER,
 } from "../../helper-hardhat-config";
 import { loadFixture, time } from "@nomicfoundation/hardhat-network-helpers";
 import { token } from "../../typechain-types/@openzeppelin/contracts";
 import { days } from "@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time/duration";
-import { BigNumber } from "ethers";
+import { BigNumber, utils } from "ethers";
 
 developmentChains.includes(network.name)
   ? describe("TokenFactory", async function () {
@@ -62,6 +66,7 @@ developmentChains.includes(network.name)
           TOKEN1_SYMBOL,
           tokenFactory.address,
           sanctionsContract.address,
+          true,
         ]);
         await smartToken1.deployed();
 
@@ -76,8 +81,24 @@ developmentChains.includes(network.name)
           TOKEN2_SYMBOL,
           tokenFactory.address,
           sanctionsContract.address,
+          false,
         ]);
         await smartToken2.deployed();
+
+        //deploy orchestrator
+
+        const OrchestratorFactory = await ethers.getContractFactory(
+          "Orchestrator",
+          deployer
+        );
+
+        const orchestrator = await upgrades.deployProxy(OrchestratorFactory, [
+          tokenFactory.address,
+        ]);
+        await orchestrator.deployed();
+
+        //initialize the orchestrator
+        await tokenFactory.initializeOrchestrator(orchestrator.address);
 
         // other instances to mock fake underlying token
         const TokenFactory2 = await ethers.getContractFactory(
@@ -126,6 +147,7 @@ developmentChains.includes(network.name)
           TOKEN1_SYMBOL,
           tokenFactory3.address,
           sanctionsContract.address,
+          true,
         ]);
         await smartTokenX.deployed();
 
@@ -140,6 +162,7 @@ developmentChains.includes(network.name)
           TOKEN2_SYMBOL,
           tokenFactory3.address,
           sanctionsContract.address,
+          false,
         ]);
         await smartTokenY.deployed();
 
@@ -157,6 +180,7 @@ developmentChains.includes(network.name)
           smartTokenX,
           smartTokenY,
           sanctionsContract,
+          orchestrator,
         };
       }
 
@@ -538,6 +562,7 @@ developmentChains.includes(network.name)
             underlyingToken,
             smartToken1,
             smartToken2,
+            orchestrator,
           } = await loadFixture(deployTokenFixture);
           const depositAmount = ethers.utils.parseEther("6");
 
@@ -554,7 +579,7 @@ developmentChains.includes(network.name)
           const nextRebaseTimeStamp = BigInt(now) + BigInt(REBASE_INTERVAL);
           await time.setNextBlockTimestamp(nextRebaseTimeStamp);
           // trigger rebase
-          await tokenFactory.executeRebase(
+          await orchestrator.rebase(
             encodedNaturalRebase1.encodedData,
             encodedNaturalRebase1.signature
           );
@@ -578,6 +603,7 @@ developmentChains.includes(network.name)
             underlyingToken,
             smartToken1,
             smartToken2,
+            orchestrator,
           } = await loadFixture(deployTokenFixture);
           const depositAmount = ethers.utils.parseEther("6");
 
@@ -594,7 +620,7 @@ developmentChains.includes(network.name)
           const nextRebaseTimeStamp = BigInt(now) + BigInt(REBASE_INTERVAL);
           await time.setNextBlockTimestamp(nextRebaseTimeStamp);
           // trigger rebase
-          await tokenFactory.executeRebase(
+          await orchestrator.rebase(
             encodedNaturalRebase1.encodedData,
             encodedNaturalRebase1.signature
           );
@@ -942,6 +968,7 @@ developmentChains.includes(network.name)
             underlyingToken,
             smartToken1,
             smartToken2,
+            orchestrator,
           } = await loadFixture(deployTokenFixture);
           const depositAmount = ethers.utils.parseEther("6");
 
@@ -958,7 +985,7 @@ developmentChains.includes(network.name)
           const nextRebaseTimeStamp = BigInt(now) + BigInt(REBASE_INTERVAL);
           await time.setNextBlockTimestamp(nextRebaseTimeStamp);
           // trigger rebase
-          await tokenFactory.executeRebase(
+          await orchestrator.rebase(
             encodedNaturalRebase1.encodedData,
             encodedNaturalRebase1.signature
           );
@@ -1065,13 +1092,17 @@ developmentChains.includes(network.name)
           ).to.be.revertedWith("Ownable: caller is not the owner");
         });
 
-        it(`Should allow management fee rate to be 10000(100%)`, async () => {
+        it(`Should allow management fee rate to be 1e18(100%)`, async () => {
           const { tokenFactory, deployer } = await loadFixture(
             deployTokenFixture
           );
 
-          await tokenFactory.connect(deployer).setManagementFeeRate(10000);
-          expect(await tokenFactory.getManagementFeeRate()).to.equal(10000);
+          await tokenFactory
+            .connect(deployer)
+            .setManagementFeeRate(BigNumber.from("1000000000000000000"));
+          expect(await tokenFactory.getManagementFeeRate()).to.equal(
+            utils.parseEther("1")
+          );
         });
 
         it(`Should allow management fee rate to be 0(0%)`, async () => {
@@ -1083,13 +1114,15 @@ developmentChains.includes(network.name)
           expect(await tokenFactory.getManagementFeeRate()).to.equal(0);
         });
 
-        it(`Should allow not allow management fee rate to be more than 100000(100%)`, async () => {
+        it(`Should allow not allow management fee rate to be more than 1e18(100%)`, async () => {
           const { tokenFactory, deployer } = await loadFixture(
             deployTokenFixture
           );
 
           await expect(
-            tokenFactory.connect(deployer).setManagementFeeRate(100001)
+            tokenFactory
+              .connect(deployer)
+              .setManagementFeeRate(utils.parseEther("1.000000000000000001"))
           ).to.be.reverted;
         });
 
@@ -1148,7 +1181,7 @@ developmentChains.includes(network.name)
             Math.trunc(
               (userDepositCycle * Number(mgmtFeePerInterval) * amount) /
                 Number(REBASE_INTERVAL)
-            ) / 100000
+            ) / MULTIPLIER
           );
 
           expect(fee).to.equal(BigNumber.from(Math.trunc(expectFee)));
@@ -1232,7 +1265,7 @@ developmentChains.includes(network.name)
               BigInt(amount.toString())) /
             BigInt(REBASE_INTERVAL);
 
-          const expectedFee: bigint = expectedFeeUnscaled2 / BigInt(100000);
+          const expectedFee: bigint = expectedFeeUnscaled2 / BigInt(MULTIPLIER);
           expect(fee).to.equal(expectedFee);
         });
       });
@@ -1287,7 +1320,7 @@ developmentChains.includes(network.name)
 
       describe("Rebase", async function () {
         it("it can be triggered by any one apart from the deployer", async function () {
-          const { tokenFactory, tester } = await loadFixture(
+          const { tokenFactory, tester, orchestrator } = await loadFixture(
             deployTokenFixture
           );
           const now = await tokenFactory.getLastTimeStamp();
@@ -1295,9 +1328,9 @@ developmentChains.includes(network.name)
           const nextRebaseTimeStamp = BigInt(now) + BigInt(REBASE_INTERVAL);
           await time.setNextBlockTimestamp(nextRebaseTimeStamp);
           await expect(
-            tokenFactory
+            orchestrator
               .connect(tester)
-              .executeRebase(
+              .rebase(
                 encodedNaturalRebase1.encodedData,
                 encodedNaturalRebase1.signature
               )
@@ -1305,7 +1338,7 @@ developmentChains.includes(network.name)
         });
 
         it("it can be triggered by the deployer", async function () {
-          const { tokenFactory, tester } = await loadFixture(
+          const { tokenFactory, tester, orchestrator } = await loadFixture(
             deployTokenFixture
           );
           const now = await tokenFactory.getLastTimeStamp();
@@ -1313,7 +1346,7 @@ developmentChains.includes(network.name)
           const nextRebaseTimeStamp = BigInt(now) + BigInt(REBASE_INTERVAL);
           await time.setNextBlockTimestamp(nextRebaseTimeStamp);
           await expect(
-            tokenFactory.executeRebase(
+            orchestrator.rebase(
               encodedNaturalRebase1.encodedData,
               encodedNaturalRebase1.signature
             )
@@ -1328,11 +1361,13 @@ developmentChains.includes(network.name)
             smartToken1,
             smartToken2,
             tester,
+            orchestrator,
           } = await loadFixture(deployTokenFixture);
           const depositAmount = ethers.utils.parseEther("10");
           const transferAmount = ethers.utils.parseEther("1");
-          const expectedBalance = "9666500000000000000";
-          const expectedBalanceAfterTransfer = "8666500000000000000";
+          const expectedBalanceX = "9333000000000000000";
+          const expectedBalanceY = "10000000000000000000";
+          const expectedBalanceAfterTransferx = "8333000000000000000";
 
           await tokenFactory.initializeSMART(
             smartToken1.address,
@@ -1352,7 +1387,7 @@ developmentChains.includes(network.name)
 
           const nextRebaseTimeStamp = BigInt(now) + BigInt(REBASE_INTERVAL);
           await time.setNextBlockTimestamp(nextRebaseTimeStamp);
-          await tokenFactory.executeRebase(
+          await orchestrator.rebase(
             encodedNaturalRebase1.encodedData,
             encodedNaturalRebase1.signature
           );
@@ -1360,11 +1395,11 @@ developmentChains.includes(network.name)
           // confirm user balances when rebase has taken place
           assert.equal(
             await smartToken1.balanceOf(deployer.address),
-            expectedBalance
+            expectedBalanceX
           );
           assert.equal(
             await smartToken2.balanceOf(deployer.address),
-            expectedBalance
+            expectedBalanceY
           );
 
           // do a transaction to simulate the actual reflection of the rebase on chain
@@ -1373,11 +1408,11 @@ developmentChains.includes(network.name)
           // confirm user balances after rebase has been applied on chain
           assert.equal(
             await smartToken1.balanceOf(deployer.address),
-            expectedBalanceAfterTransfer
+            expectedBalanceAfterTransferx
           );
           assert.equal(
             await smartToken2.balanceOf(deployer.address),
-            expectedBalance
+            expectedBalanceY
           );
         });
 
@@ -1389,11 +1424,65 @@ developmentChains.includes(network.name)
             smartToken1,
             smartToken2,
             tester,
+            orchestrator,
           } = await loadFixture(deployTokenFixture);
           const depositAmount = ethers.utils.parseEther("10");
           const transferAmount = ethers.utils.parseEther("1");
-          const expectedBalance = "9333500000000000000";
-          const expectedBalanceAfterTransfer = "8333500000000000000";
+          const expectedBalanceX = "9555111000000000000";
+          const expectedBalanceY = "10000000000000000000";
+          const expectedBalanceAfterTransferX = "8555111000000000000";
+
+          const priceX = BigInt(667);
+          const priceX2 = BigInt(666666666666666666666);
+          const priceY = BigInt(1333);
+          const priceU = BigInt(2000);
+          const priceU2 = BigInt(2000000000000000000000);
+          const priceY2 = priceU2 - priceX2;
+
+          const lastUserRebase: RebaseElements = {
+            BalanceFactorXY: BigInt(1e18),
+            BalanceFactorUx: BigInt(0),
+            BalanceFactorUy: BigInt(0),
+          };
+
+          const rebase1: RebaseElements = {
+            BalanceFactorXY: BigInt(
+              (BigInt(1e18) * BigInt(2) * priceX) / priceU
+            ),
+            BalanceFactorUx: BigInt(0),
+            BalanceFactorUy: BigInt(
+              (BigInt(1e18) * BigInt(priceY - priceX)) / priceU
+            ),
+          };
+          const rebase2: RebaseElements = {
+            BalanceFactorXY: BigInt(
+              (BigInt(rebase1.BalanceFactorXY.toString()) *
+                BigInt(2) *
+                priceX2) /
+                priceU2
+            ),
+            BalanceFactorUx: BigInt(0),
+            BalanceFactorUy: BigInt(
+              BigInt(rebase1.BalanceFactorUy.toString()) +
+                (BigInt(rebase1.BalanceFactorXY.toString()) *
+                  (priceY2 - priceX2)) /
+                  priceU2
+            ),
+          };
+
+          const lastUserRebaseElements: UserRebaseElements = {
+            netX: BigInt(1e19),
+            netY: BigInt(9e18),
+            Ux: BigInt(0),
+            Uy: BigInt(0),
+          };
+
+          //const firstRebase :any[]= callculateRolloverAmount(rebase1,lastUserRebase,lastUserRebaseElements);
+          const secondRebase: any[] = callculateRolloverAmount(
+            rebase2,
+            lastUserRebase,
+            lastUserRebaseElements
+          );
 
           await tokenFactory.initializeSMART(
             smartToken1.address,
@@ -1413,7 +1502,7 @@ developmentChains.includes(network.name)
 
           const nextRebaseTimeStamp = BigInt(now) + BigInt(REBASE_INTERVAL);
           await time.setNextBlockTimestamp(nextRebaseTimeStamp);
-          await tokenFactory.executeRebase(
+          await orchestrator.rebase(
             encodedNaturalRebase1.encodedData,
             encodedNaturalRebase1.signature
           );
@@ -1422,18 +1511,19 @@ developmentChains.includes(network.name)
           const nextNextRebaseTimeStamp =
             BigInt(lastTimeStamp) + BigInt(REBASE_INTERVAL);
           await time.setNextBlockTimestamp(nextNextRebaseTimeStamp);
-          await tokenFactory.executeRebase(
+          await orchestrator.rebase(
             encodedNaturalRebase2.encodedData,
             encodedNaturalRebase2.signature
           );
           // confirm user balances when rebase has taken place
+
           assert.equal(
-            await smartToken1.balanceOf(deployer.address),
-            expectedBalance
+            Number(await smartToken1.balanceOf(deployer.address)),
+            Number(secondRebase[0])
           );
           assert.equal(
-            await smartToken2.balanceOf(deployer.address),
-            expectedBalance
+            Number(await smartToken2.balanceOf(deployer.address)),
+            Number(secondRebase[1])
           );
 
           // do a transaction to simulate the actual reflection of the rebase on chain
@@ -1441,12 +1531,12 @@ developmentChains.includes(network.name)
 
           // confirm user balances after rebase has been applied on chain
           assert.equal(
-            await smartToken1.balanceOf(deployer.address),
-            expectedBalanceAfterTransfer
+            Number(await smartToken1.balanceOf(deployer.address)),
+            Number(secondRebase[0] - BigInt(1e18))
           );
           assert.equal(
-            await smartToken2.balanceOf(deployer.address),
-            expectedBalance
+            Number(await smartToken2.balanceOf(deployer.address)),
+            Number(secondRebase[1])
           );
         });
 
@@ -1458,6 +1548,7 @@ developmentChains.includes(network.name)
             smartToken1,
             smartToken2,
             tester,
+            orchestrator,
           } = await loadFixture(deployTokenFixture);
           const depositAmount = ethers.utils.parseEther("10");
           const transferAmount = ethers.utils.parseEther("1");
@@ -1490,12 +1581,63 @@ developmentChains.includes(network.name)
             .connect(tester)
             .transfer(deployer.address, transferAmount);
 
+          //AT this moment
+          // tester has 10 X and 9 Y
+          // deployer has 10 X and 11Y
+          const priceX = BigInt(667);
+          const priceX2 = BigInt(666666666666666666666);
+          const priceY = BigInt(1333);
+          const priceU = BigInt(2000);
+          const priceU2 = BigInt(2000000000000000000000);
+          const priceY2 = priceU2 - priceX2;
+
+          const lastUserRebase: RebaseElements = {
+            BalanceFactorXY: BigInt(1e18),
+            BalanceFactorUx: BigInt(0),
+            BalanceFactorUy: BigInt(0),
+          };
+
+          const rebase1: RebaseElements = {
+            BalanceFactorXY: BigInt(
+              (BigInt(1e18) * BigInt(2) * priceX) / priceU
+            ),
+            BalanceFactorUx: BigInt(0),
+            BalanceFactorUy: BigInt(
+              (BigInt(1e18) * BigInt(priceY - priceX)) / priceU
+            ),
+          };
+
+          const lastUserRebaseElementsTester: UserRebaseElements = {
+            netX: BigInt(1e19),
+            netY: BigInt(9e18),
+            Ux: BigInt(0),
+            Uy: BigInt(0),
+          };
+          const lastUserRebaseElementsDeployer: UserRebaseElements = {
+            netX: BigInt(1e19),
+            netY: BigInt(11e18),
+            Ux: BigInt(0),
+            Uy: BigInt(0),
+          };
+
+          //const firstRebase :any[]= callculateRolloverAmount(rebase1,lastUserRebase,lastUserRebaseElements);
+          const postRebaseTester: any[] = callculateRolloverAmount(
+            rebase1,
+            lastUserRebase,
+            lastUserRebaseElementsTester
+          );
+          const postRebaseDeplyer: any[] = callculateRolloverAmount(
+            rebase1,
+            lastUserRebase,
+            lastUserRebaseElementsDeployer
+          );
+
           // trigger a rebase
           const now = await tokenFactory.getLastTimeStamp();
 
           const nextRebaseTimeStamp = BigInt(now) + BigInt(REBASE_INTERVAL);
           await time.setNextBlockTimestamp(nextRebaseTimeStamp);
-          await tokenFactory.executeRebase(
+          await orchestrator.rebase(
             encodedNaturalRebase1.encodedData,
             encodedNaturalRebase1.signature
           );
@@ -1503,11 +1645,11 @@ developmentChains.includes(network.name)
           // confirm user balances when rebase has taken place
           assert.equal(
             await smartToken1.balanceOf(tester.address),
-            expectedBalance
+            postRebaseTester[0]
           );
           assert.equal(
             await smartToken2.balanceOf(tester.address),
-            expectedBalance
+            postRebaseTester[1]
           );
 
           // do a transaction to simulate the actual reflection of the rebase on chain
@@ -1517,12 +1659,12 @@ developmentChains.includes(network.name)
 
           // confirm user balances after rebase has been applied on chain
           assert.equal(
-            await smartToken1.balanceOf(tester.address),
-            expectedBalanceAfterTransfer
+            Number(await smartToken1.balanceOf(tester.address)),
+            Number(postRebaseTester[0] + BigInt(transferAmount.toString()))
           );
           assert.equal(
             await smartToken2.balanceOf(tester.address),
-            expectedBalance
+            postRebaseTester[1]
           );
         });
       });
