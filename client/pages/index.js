@@ -16,6 +16,10 @@ import {
   underlyingTokenAbi,
   underlyingTokenWithPermitAbi,
   erc20ABI,
+  bpoolAbi,
+  bpoolcoreABI,
+  bpoolAddress,
+  usdcAddress,
 } from "../contants";
 
 function App() {
@@ -23,6 +27,7 @@ function App() {
   const test1AccountAddress = "0x70997970C51812dc3A010C7d01b50e0d17dc79C8";
   const [depositAmount, setDepositAmount] = useState();
   const [approvalAmount, setApprovalAmount] = useState();
+  const [swapAmount, setSwapAmount] = useState();
   const [withdrawalAmount, setWithdrawalAmount] = useState();
   const [transferAddress, setTransferAddress] = useState(
     "0x70997970C51812dc3A010C7d01b50e0d17dc79C8"
@@ -35,6 +40,7 @@ function App() {
   const chainId = 31337;
   const permitDeadline = 100000000000000;
   const contractAddress = underlyingTokenAddress;
+  //new
 
   const domain = {
     name: domainName,
@@ -216,6 +222,253 @@ function App() {
         console.log("Error: ", err);
       }
     }
+  }
+
+  async function approveToken(tokenContract, amount, spender) {
+    if (typeof window.ethereum !== "undefined") {
+      try {
+        const tx = await tokenContract.approve(
+          spender,
+          ethers.utils.parseEther(amount)
+        );
+        await tx.wait();
+        console.log("Approval successful for amount:", amount);
+      } catch (err) {
+        console.error("Error in approval:", err);
+      }
+    }
+  }
+
+  async function performSwap(
+    fromTokenAddress,
+    amountIn,
+    toTokenAddress,
+    minAmountOut,
+    maxPrice
+  ) {
+    try {
+      const provider = new ethers.providers.Web3Provider(window.ethereum);
+      const signer = provider.getSigner();
+      const bpool = new ethers.Contract(bpoolAddress, bpoolAbi, signer);
+      const bcorepoolAddr = await bpool.bPool();
+
+      const bcorepool = new ethers.Contract(
+        bcorepoolAddr,
+        bpoolcoreABI,
+        signer
+      );
+
+      const yOut = await bcorepool.swapExactAmountIn(
+        fromTokenAddress,
+        ethers.utils.parseEther(amountIn),
+        toTokenAddress,
+        ethers.utils.parseEther(minAmountOut),
+        ethers.utils.parseEther(maxPrice)
+      );
+      await yOut.wait();
+      alert("Swap successful:", yOut);
+    } catch (err) {
+      alert("Error in swap:", err);
+    }
+  }
+
+  async function handleApproveUSDC() {
+    try {
+      const provider = new ethers.providers.Web3Provider(window.ethereum);
+      const signer = provider.getSigner();
+
+      const bpool = new ethers.Contract(bpoolAddress, bpoolAbi, signer);
+
+      const bcorepoolAddr = await bpool.bPool();
+      // const accounts = await requestAccounts();
+      // const testAccountAddress = accounts[0];
+      const contract = new ethers.Contract(usdcAddress, erc20ABI, signer);
+      await approveToken(contract, approvalAmount, bcorepoolAddr);
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
+  async function handleApproveX() {
+    try {
+      const provider = new ethers.providers.Web3Provider(window.ethereum);
+      const signer = provider.getSigner();
+
+      const bpool = new ethers.Contract(bpoolAddress, bpoolAbi, signer);
+
+      const bcorepoolAddr = await bpool.bPool();
+      // const accounts = await requestAccounts();
+      // const testAccountAddress = accounts[0];
+      const contract = new ethers.Contract(
+        smartTokenXAddress,
+        erc20ABI,
+        signer
+      );
+      await approveToken(contract, approvalAmount, bcorepoolAddr);
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
+  async function handleApproveY() {
+    try {
+      const provider = new ethers.providers.Web3Provider(window.ethereum);
+      const signer = provider.getSigner();
+
+      const bpool = new ethers.Contract(bpoolAddress, bpoolAbi, signer);
+
+      const bcorepoolAddr = await bpool.bPool();
+      // const accounts = await requestAccounts();
+      // const testAccountAddress = accounts[0];
+      const contract = new ethers.Contract(
+        smartTokenYAddress,
+        erc20ABI,
+        signer
+      );
+      await approveToken(contract, approvalAmount, bcorepoolAddr);
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
+  async function handleApproveUn() {
+    try {
+      const provider = new ethers.providers.Web3Provider(window.ethereum);
+      const signer = provider.getSigner();
+
+      const bpool = new ethers.Contract(bpoolAddress, bpoolAbi, signer);
+
+      const bcorepoolAddr = await bpool.bPool();
+      // const accounts = await requestAccounts();
+      // const testAccountAddress = accounts[0];
+      const contract = new ethers.Contract(
+        underlyingTokenAddress,
+        erc20ABI,
+        signer
+      );
+      await approveToken(contract, approvalAmount, bcorepoolAddr);
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
+  async function handleSwapUSDCForSmartTokenX() {
+    await performSwap(
+      usdcAddress,
+      swapAmount,
+      smartTokenXAddress,
+      "0",
+      "10000"
+    );
+  }
+
+  async function handleSwapUSDCForSmartTokenY() {
+    await performSwap(
+      usdcAddress,
+      swapAmount,
+      smartTokenYAddress,
+      "0",
+      "10000"
+    );
+  }
+
+  async function handleSwapUSDCForUnderlying() {
+    await performSwap(
+      usdcAddress,
+      swapAmount,
+      underlyingTokenAddress,
+      "0",
+      "10000"
+    );
+  }
+
+  async function handleSwapXforUSDC() {
+    await performSwap(
+      smartTokenXAddress,
+      swapAmount,
+      usdcAddress,
+      "0",
+      "10000"
+    );
+  }
+
+  async function handleSwapXForSmartTokenY() {
+    await performSwap(
+      smartTokenXAddress,
+      swapAmount,
+      smartTokenYAddress,
+      "0",
+      "10000"
+    );
+  }
+
+  async function handleSwapXForUnderlying() {
+    await performSwap(
+      smartTokenXAddress,
+      swapAmount,
+      underlyingTokenAddress,
+      "0",
+      "10000"
+    );
+  }
+
+  async function handleSwapYforUSDC() {
+    await performSwap(
+      smartTokenYAddress,
+      swapAmount,
+      usdcAddress,
+      "0",
+      "10000"
+    );
+  }
+
+  async function handleSwapYForSmartTokenX() {
+    await performSwap(
+      smartTokenYAddress,
+      swapAmount,
+      smartTokenXAddress,
+      "0",
+      "10000"
+    );
+  }
+
+  async function handleSwapYForUnderlying() {
+    await performSwap(
+      smartTokenYAddress,
+      swapAmount,
+      underlyingTokenAddress,
+      "0",
+      "10000"
+    );
+  }
+  async function handleSwapUnforUSDC() {
+    await performSwap(
+      underlyingTokenAddress,
+      swapAmount,
+      usdcAddress,
+      "0",
+      "10000"
+    );
+  }
+
+  async function handleSwapUnForSmartTokenX() {
+    await performSwap(
+      underlyingTokenAddress,
+      swapAmount,
+      smartTokenXAddress,
+      "0",
+      "10000"
+    );
+  }
+
+  async function handleSwapUnForY() {
+    await performSwap(
+      underlyingTokenAddress,
+      swapAmount,
+      smartTokenYAddress,
+      "0",
+      "10000"
+    );
   }
 
   async function buyWithoutPermit() {
@@ -643,15 +896,14 @@ function App() {
         <button style={buttonStyle} onClick={callSync}>
           Trigger the Sync function
         </button> */}
-
         <br />
         <br />
         <br />
         <button style={buttonStyle} onClick={tokenBalance.bind(this, "x")}>
-          Balance of Token X
+          Balance of R1 - smartX
         </button>
         <button style={buttonStyle} onClick={tokenBalance.bind(this, "y")}>
-          Balance of Token Y
+          Balance of R2 -smartY
         </button>
         <input
           style={inputStyle}
@@ -712,6 +964,82 @@ function App() {
         <button style={buttonStyle} onClick={test}>
           Test
         </button> */}
+        <br />
+        <br />
+        <br />
+        <label htmlFor="approveAmount">Approve Amount:</label>
+        <input
+          id="approveAmount"
+          type="text"
+          value={approvalAmount}
+          onChange={(e) => setApprovalAmount(e.target.value)}
+        />
+        <label htmlFor="swapAmount">Swap Amount:</label>
+        <input
+          id="swapAmount"
+          type="text"
+          value={swapAmount}
+          onChange={(e) => setSwapAmount(e.target.value)}
+        />
+        <br />
+        <div style={{ display: "flex", justifyContent: "space-between" }}>
+          <button style={buttonStyle} onClick={handleApproveUSDC}>
+            Approve USDC for swap
+          </button>
+          <button style={buttonStyle} onClick={handleApproveX}>
+            Approve R1 for swap
+          </button>
+          <button style={buttonStyle} onClick={handleApproveY}>
+            Approve R2 for swap
+          </button>
+          <button style={buttonStyle} onClick={handleApproveUn}>
+            Approve underlyingToken for swap
+          </button>
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between" }}>
+          <button style={buttonStyle} onClick={handleSwapUSDCForSmartTokenX}>
+            Perform Swap USDC for R1
+          </button>
+          <button style={buttonStyle} onClick={handleSwapUSDCForSmartTokenY}>
+            Perform Swap USDC for R2
+          </button>
+          <button style={buttonStyle} onClick={handleSwapUSDCForUnderlying}>
+            Perform Swap USDC for Underlying
+          </button>
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between" }}>
+          <button style={buttonStyle} onClick={handleSwapXforUSDC}>
+            Perform Swap R1 for USDC
+          </button>
+          <button style={buttonStyle} onClick={handleSwapXForSmartTokenY}>
+            Perform Swap R1 for R2
+          </button>
+          <button style={buttonStyle} onClick={handleSwapXForUnderlying}>
+            Perform Swap R1 for Underlying
+          </button>
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between" }}>
+          <button style={buttonStyle} onClick={handleSwapYforUSDC}>
+            Perform Swap R2 for USDC
+          </button>
+          <button style={buttonStyle} onClick={handleSwapYForSmartTokenX}>
+            Perform Swap R2 for R1
+          </button>
+          <button style={buttonStyle} onClick={handleSwapYForUnderlying}>
+            Perform Swap R2 for Underlying
+          </button>
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between" }}>
+          <button style={buttonStyle} onClick={handleSwapUnforUSDC}>
+            Perform Swap Underlying for USDC
+          </button>
+          <button style={buttonStyle} onClick={handleSwapUnForSmartTokenX}>
+            Perform Swap Underlying for R1
+          </button>
+          <button style={buttonStyle} onClick={handleSwapUnForY}>
+            Perform Swap underlying for R2
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -734,6 +1062,7 @@ const buttonStyle = {
   width: "100%",
   marginBottom: 15,
   height: "30px",
+  margin: "15 15px",
 };
 
 export default App;
