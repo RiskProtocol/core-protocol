@@ -340,6 +340,9 @@ developmentChains.includes(network.name)
               encodedEarlyRebase1.signature
             )
           ).to.emit(tokenFactory, "Rebase");
+
+          await tokenFactory.getScheduledRebases();
+
           expect(await tokenFactory.getRebaseNumber()).to.equal(2);
         });
         it(`it should revert everything if added tx fails`, async function () {

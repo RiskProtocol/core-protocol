@@ -284,6 +284,17 @@ developmentChains.includes(network.name)
           const { smartToken1 } = await loadFixture(deployTokenFixture);
           assert.equal(await smartToken1.convertToAssets("5"), "5");
         });
+
+        it("Should set and get the signer address correctly", async function () {
+          const { tokenFactory, deployer } = await loadFixture(
+            deployTokenFixture
+          );
+          await tokenFactory.setSignersAddress(deployer.address);
+          await expect(
+            await tokenFactory.getSignersAddress()
+          ).to.be.equal(deployer.address);
+
+        });
       });
 
       describe("Deposit", async function () {
@@ -1186,6 +1197,39 @@ developmentChains.includes(network.name)
 
           expect(fee).to.equal(BigNumber.from(Math.trunc(expectFee)));
         });
+        it(`Should throw error if rebase interval is not set`, async () => {
+            const { sanctionsContract, underlyingToken, deployer } = await loadFixture(
+              deployTokenFixture
+            );
+
+            const TokenFactory = await ethers.getContractFactory(
+              "TokenFactory",
+              deployer
+            );
+    
+            const tokenFactory = await upgrades.deployProxy(TokenFactory, [
+              underlyingToken.address,
+              0,
+              sanctionsContract.address,
+              signersAddress,
+            ]);
+            await tokenFactory.deployed();
+
+
+            const mgmtFee = 200; // Assuming 0.2% fee rate per day
+            await tokenFactory.connect(deployer).setManagementFeeRate(mgmtFee);
+            const amount = 1000;
+            const isDefault = true;
+
+            await expect(tokenFactory.calculateManagementFee(
+              amount,
+              false,
+              mgmtFee
+            )).to.be.revertedWithCustomError(
+              tokenFactory,
+              "TokenFactory__InvalidDivision"
+            );
+          });
 
         it(`Should calculate the correct fees amount for 0 ether`, async () => {
           const { tokenFactory, deployer } = await loadFixture(

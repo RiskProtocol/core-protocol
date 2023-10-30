@@ -318,6 +318,40 @@ developmentChains.includes(network.name)
               BigInt(ethers.utils.parseEther("10").toString())
           );
         });
+        it("Should validate max deposit", async function () {
+          const {
+            smartToken1,
+            tokenFactory,
+            smartToken2,
+            underlyingToken,
+            deployer,
+          } = await loadFixture(deployTokenFixture);
+          await tokenFactory.initializeSMART(
+            smartToken1.address,
+
+            smartToken2.address
+          );
+
+          await underlyingToken.approve(
+            tokenFactory.address,
+            ethers.constants.MaxUint256
+          );
+          await smartToken1.deposit(
+            ethers.constants.MaxUint256.div(2).add(1),
+            deployer.address
+          );
+
+          await expect(
+            await smartToken1.maxDeposit(deployer.address)).to.eq(ethers.constants.MaxUint256.div(2).toString());
+
+          await expect(
+            smartToken1.deposit(
+              ethers.constants.MaxUint256.div(2).add(2),
+              deployer.address
+            )
+          ).to.be.revertedWithCustomError(smartToken1, "SmartToken__DepositMoreThanMax");
+
+        });
       });
     })
   : describe.skip;
