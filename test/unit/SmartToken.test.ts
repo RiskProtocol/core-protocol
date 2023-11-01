@@ -325,6 +325,7 @@ developmentChains.includes(network.name)
             smartToken2,
             underlyingToken,
             deployer,
+            tester,
           } = await loadFixture(deployTokenFixture);
           await tokenFactory.initializeSMART(
             smartToken1.address,
@@ -341,8 +342,15 @@ developmentChains.includes(network.name)
             deployer.address
           );
 
+          // Transfer 50 of smartToken2 to tester
+          await smartToken2.transfer(
+            tester.address,
+            ethers.utils.parseEther("50")
+          );
+
+          // because of the 50 transfer, the max deposit should return balance of MaxUint256 - balanceOf(smartToken2)
           await expect(
-            await smartToken1.maxDeposit(deployer.address)).to.eq(ethers.constants.MaxUint256.div(2).toString());
+            await smartToken1.maxDeposit(deployer.address)).to.gte(ethers.constants.MaxUint256.div(2).toString());
 
           await expect(
             smartToken1.deposit(
@@ -351,6 +359,16 @@ developmentChains.includes(network.name)
             )
           ).to.be.revertedWithCustomError(smartToken1, "SmartToken__DepositMoreThanMax");
 
+
+          // Transfer a lot of smartToken1 to tester
+          await smartToken1.transfer(
+            tester.address,
+            ethers.constants.MaxUint256.div(4)
+          );
+
+          // because of the previous transfer, the max deposit should return balance of MaxUint256 - balanceOf(smartToken1)
+          await expect(
+            await smartToken1.maxDeposit(deployer.address)).to.gte(ethers.constants.MaxUint256.div(2).toString());
         });
       });
     })

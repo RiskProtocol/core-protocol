@@ -207,6 +207,45 @@ developmentChains.includes(network.name)
             );
           });
         });
+        it("Should throw an error if natural rebase is triggered at the wrong time", async function () {
+          const {
+            tokenFactory,
+            deployer,
+            underlyingToken,
+            smartToken1,
+            smartToken2,
+            tester,
+            orchestrator,
+          } = await loadFixture(deployTokenFixture);
+          const depositAmount = ethers.utils.parseEther("10");
+          const transferAmount = ethers.utils.parseEther("1");
+
+          await tokenFactory.initializeSMART(
+            smartToken1.address,
+
+            smartToken2.address
+          );
+
+          // deposit underlying token
+          await underlyingToken.approve(tokenFactory.address, depositAmount);
+          await smartToken1.deposit(depositAmount, deployer.address);
+
+          // to a transaction
+          await smartToken1.transfer(tester.address, transferAmount);
+          const now = await tokenFactory.getLastTimeStamp(); //block.timestamp;
+
+          const nextRebaseTimeStamp = BigInt(now) + BigInt(5260000); // set rebase interval to 2 months instead of 3 months contract was deployed with
+          await time.setNextBlockTimestamp(nextRebaseTimeStamp);
+          // trigger a rebase
+          await expect(orchestrator.rebase(
+            encodedNaturalRebase1.encodedData,
+            encodedNaturalRebase1.signature
+          )).to.be.revertedWithCustomError(
+            tokenFactory,
+            "TokenFactory__InvalidNaturalRebase"
+          );
+
+        });
       });
 
       //rebase sequences tests
