@@ -1,24 +1,3 @@
-export interface networkConfigItem {
-  priceFeed?: string;
-  blockConfirmations?: number;
-}
-
-export interface networkConfigInfo {
-  [key: string]: networkConfigItem;
-}
-
-export const networkConfig: networkConfigInfo = {
-  goerli: {
-    priceFeed: "0xD4a33860578De61DBAbDc8BFdb98FD742fA7028e",
-    blockConfirmations: 6,
-  },
-  polygon: {
-    priceFeed: "0xF9680D99D6C9589e2a93a78A04A279e509205945",
-  },
-  localhost: {},
-  hardhat: {},
-};
-
 export const developmentChains = ["localhost", "hardhat"];
 export const MULTIPLIER = 1e18;
 export const DECIMALS = "18";
@@ -30,14 +9,8 @@ export const TOKEN1_NAME = "RistP One";
 export const TOKEN1_SYMBOL = "R1";
 export const TOKEN2_NAME = "RistP Two";
 export const TOKEN2_SYMBOL = "R2";
-export const REBASE_INTERVAL = 1800; // 0.5h in seconds
+export const REBASE_INTERVAL = 1800; // 30 minutes
 export const defaultOperators: string[] = [];
-export const sanctionsContractAddress =
-  "0x40C57923924B5c5c5455c48D93317139ADDaC8fb"; //polygon network
-export const sanctionsContractAddressGoerli =
-  "0x2eB36718718BD2543eBE3CED5a2AA378e3fb80Df";
-export const sanctionsContractAddressSepolia =
-  "0xdEbD1E868c696b5710e2F8a5E7489FE5Bf7c1573";
 export const signersAddress = "0x786d956DBc070815F9b53a6dd03D38EDf33EE2C7"; //signer address on the webservice
 export const encodedNaturalRebase1 = {
   signature:

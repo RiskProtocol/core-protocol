@@ -1,14 +1,10 @@
 import { DeployFunction } from "hardhat-deploy/types";
 import {
-  developmentChains,
-  networkConfig,
   TOKEN1_NAME,
   TOKEN1_SYMBOL,
   TOKEN2_NAME,
   TOKEN2_SYMBOL,
-  sanctionsContractAddress,
-  sanctionsContractAddressGoerli,
-  sanctionsContractAddressSepolia,
+  BASE_TOKEN_ADDRESS,
 } from "../helper-hardhat-config";
 import { verify } from "../utils/verify";
 import { ethers, upgrades } from "hardhat";
@@ -22,18 +18,35 @@ const func: DeployFunction = async ({
   const { deployer } = await getNamedAccounts();
 
   const tokenFactoryDeployment = await deployments.get("TokenFactory");
-  const mockERC20TokenWithPermit = await deployments.get(
-    "MockERC20TokenWithPermit"
-  );
 
-  //const tokenFactory = await ethers.getContract("TokenFactory", deployer);
+  let baseTokenAddress: string;
+
+  if (['local', 'development'].includes(process.env.ENVIRONMENT!)) {
+    const mockERC20TokenWithPermit = await deployments.get(
+      "MockERC20TokenWithPermit"
+    );
+    baseTokenAddress = mockERC20TokenWithPermit.address;
+  } else {
+    baseTokenAddress = BASE_TOKEN_ADDRESS;
+  }
+
+  let sanctionsContractAddress: string;
+
+  if (process.env.ENVIRONMENT === "local") {
+    const mockSanctionContract = await deployments.get("MockSanctionContract");
+    sanctionsContractAddress = mockSanctionContract.address;
+  } else {
+    sanctionsContractAddress = process.env.SANCTIONS_CONTRACT_ADDRESS!;
+  }
+
+
   const tokenFactory = await ethers.getContractAt(
     "TokenFactory",
     tokenFactoryDeployment.address
   );
-  const mockTok = await ethers.getContractAt(
+  const mockERC20TokenWithPermit = await ethers.getContractAt(
     "MockERC20TokenWithPermit",
-    mockERC20TokenWithPermit.address
+    baseTokenAddress
   );
 
   log("Deploying SmartToken 1...");
@@ -45,7 +58,8 @@ const func: DeployFunction = async ({
       TOKEN1_NAME,
       TOKEN1_SYMBOL,
       tokenFactory.address,
-      sanctionsContractAddressSepolia,
+      sanctionsContractAddress,
+      true,
     ],
     { initializer: "initialize", kind: "uups" }
   );
@@ -58,13 +72,6 @@ const func: DeployFunction = async ({
     )}`
   );
   log("SmartToken 1 Deployed");
-  // if (
-  //   !developmentChains.includes(network.name) &&
-  //   process.env.ETHERSCAN_API_KEY
-  // ) {
-  //   await verify(SmartToken1.address, []);
-  // }
-
   log("----------------------------------");
 
   log("Deploying SmartToken 2...");
@@ -74,7 +81,8 @@ const func: DeployFunction = async ({
       TOKEN2_NAME,
       TOKEN2_SYMBOL,
       tokenFactory.address,
-      sanctionsContractAddressSepolia,
+      sanctionsContractAddress,
+      false,
     ],
     { initializer: "initialize", kind: "uups" }
   );
@@ -88,33 +96,23 @@ const func: DeployFunction = async ({
   );
 
   log("SmartToken 2 Deployed");
-  // if (
-  //   !developmentChains.includes(network.name) &&
-  //   process.env.ETHERSCAN_API_KEY
-  // ) {
-  //   await verify(SmartToken2.address, []);
-  // }
   log("----------------------------------");
 
   log("Intializing Tokens in Token Factory...");
   // initialize tokens
   await tokenFactory.initializeSMART(SmartToken1.address, SmartToken2.address);
-  const smT = await ethers.getContractAt("SmartToken", SmartToken1.address);
+  const smartToken1 = await ethers.getContractAt("SmartToken", SmartToken1.address);
 
-  const stat1 = await mockTok.approve(
+  const approveERC20Spender = await mockERC20TokenWithPermit.approve(
     tokenFactory.address,
     `${ethers.utils.parseEther("10000000")}`
   );
-  const stat2 = await mockTok.approve(
-    smT.address,
-    `${ethers.utils.parseEther("10000000")}`
-  );
-  log(JSON.stringify(stat1));
-  log(JSON.stringify(stat2));
+
+  log(JSON.stringify(approveERC20Spender));
   log("Approved done, now depositing");
-  let tx = await smT.deposit(
+  let tx = await smartToken1.deposit(
     `${ethers.utils.parseEther("10000000")}`,
-    "0x786d956DBc070815F9b53a6dd03D38EDf33EE2C7",
+    deployer,
     {
       gasLimit: 7000000,
     }
