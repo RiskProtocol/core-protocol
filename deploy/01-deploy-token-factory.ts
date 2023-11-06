@@ -1,15 +1,8 @@
 import { DeployFunction } from "hardhat-deploy/types";
 import {
-  developmentChains,
-  networkConfig,
   BASE_TOKEN_ADDRESS,
   REBASE_INTERVAL,
-  sanctionsContractAddress,
-  signersAddress,
-  sanctionsContractAddressGoerli,
-  sanctionsContractAddressSepolia,
 } from "../helper-hardhat-config";
-import { verify } from "../utils/verify";
 const { ethers, upgrades } = require("hardhat");
 
 const func: DeployFunction = async ({
@@ -22,13 +15,22 @@ const func: DeployFunction = async ({
 
   let baseTokenAddress: string;
 
-  if (true) {
+  if (['local', 'development'].includes(process.env.ENVIRONMENT!)) {
     const mockERC20TokenWithPermit = await deployments.get(
       "MockERC20TokenWithPermit"
     );
     baseTokenAddress = mockERC20TokenWithPermit.address;
   } else {
     baseTokenAddress = BASE_TOKEN_ADDRESS;
+  }
+
+  let sanctionsContractAddress: string;
+
+  if (process.env.ENVIRONMENT === "local") {
+    const mockSanctionContract = await deployments.get("MockSanctionContract");
+    sanctionsContractAddress = mockSanctionContract.address;
+  } else {
+    sanctionsContractAddress = process.env.SANCTIONS_CONTRACT_ADDRESS!;
   }
 
   // Deploying the contract as a UUPS upgradeable contract.
@@ -38,8 +40,8 @@ const func: DeployFunction = async ({
     [
       baseTokenAddress,
       REBASE_INTERVAL,
-      sanctionsContractAddressSepolia,
-      signersAddress,
+      sanctionsContractAddress,
+      deployer,
     ],
     { initializer: "initialize", kind: "uups" }
   );
@@ -54,13 +56,6 @@ const func: DeployFunction = async ({
 
   log("TokenFactory Deployed!");
   log("----------------------------------");
-
-  // if (
-  //   !developmentChains.includes(network.name) &&
-  //   process.env.ETHERSCAN_API_KEY
-  // ) {
-  //   await verify(TokenFactory.address, []);
-  // }
 };
 export default func;
 func.tags = ["all"];

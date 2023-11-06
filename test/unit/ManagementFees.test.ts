@@ -530,11 +530,12 @@ developmentChains.includes(network.name)
             await tokenFactory.setTreasuryWallet(treasury.address);
 
             // set the management fee to 0.2% and activating fees
-            await tokenFactory.setManagementFeeRate(2e17); //0.2 % per day
+            await tokenFactory.setManagementFeeRate(BigInt(2e17)); //0.2 % per day
+
             await tokenFactory.setManagementFeeState(true);
             const lastRebase = await tokenFactory.getLastTimeStamp();
-            //assume 10000 seconds have passed
-            const newTimeValue = BigInt(lastRebase) + BigInt(10000);
+            //assume 1700 seconds have passed
+            const newTimeValue = BigInt(lastRebase) + BigInt(1700);
 
             await time.setNextBlockTimestamp(newTimeValue);
             //calculate fees for that interval only

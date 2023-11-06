@@ -10,6 +10,7 @@ import "@nomiclabs/hardhat-ethers";
 import "hardhat-contract-sizer";
 import "@openzeppelin/hardhat-upgrades";
 import * as tdly from "@tenderly/hardhat-tenderly";
+
 tdly.setup({ automaticVerifications: false });
 
 const config: HardhatUserConfig = {

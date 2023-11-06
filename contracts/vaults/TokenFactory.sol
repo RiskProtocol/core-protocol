@@ -99,9 +99,12 @@ contract TokenFactory is
         uint256 Uy;
     }
 
-    /// @dev An array to hold all the scheduled rebases.
+    /// @dev A mapping to hold the scheduled rebases.
     /// This helps in storing rebases in the order they are scheduled till they are all executed
-    ScheduledRebase[] private scheduledRebases;
+    mapping(uint256 => ScheduledRebase) private scheduledRebases;
+
+    uint256 private scheduledRebasesLength;
+
     /// @dev A counter to generate a unique sequence number for each rebase.
     /// This ensures that rebases are executed in the order they are scheduled.
     uint256 private nextSequenceNumber;
@@ -596,9 +599,23 @@ contract TokenFactory is
         // Mark the sequence number as applied to prevent future rebases with the same sequence number.
         sequenceNumberApplied[rebaseCall.sequenceNumber] = true;
         // Store the rebase data for later use if we have a gap in the sequence numbers
-        scheduledRebases.push(rebaseCall);
+        scheduledRebases[rebaseCall.sequenceNumber] = rebaseCall;
+        // increment the length of the scheduled rebases
+        scheduledRebasesLength++;
+
         // If the sequence number matches the next expected sequence number, execute the rebase.
         if (rebaseCall.sequenceNumber == nextSequenceNumber) {
+            rebase();
+        }
+    }
+
+    /**
+     * @notice Executes scheduled rebases pending in the queue
+     * @dev This function is called when the scheduled rebase queue had more than 5 entries
+     * only 5 will be executed and the rest will be left in the queue
+     */
+    function executeScheduledRebases() external stopRebase onlyOrchestrator {
+        if (scheduledRebasesLength > 0 && scheduledRebases[nextSequenceNumber].sequenceNumber == nextSequenceNumber) {
             rebase();
         }
     }
@@ -652,13 +669,12 @@ contract TokenFactory is
     //@note This is deprecated and will be replaced in upcoming commits
     function rebase() private {
         uint256 i = 0;
-        while (i < scheduledRebases.length && i < 5) {
+        while (i < 5) {
             // a maximum of 5 rebases per transaction
-            ScheduledRebase memory scheduledRebase = scheduledRebases[i];
+            ScheduledRebase memory scheduledRebase = scheduledRebases[nextSequenceNumber];
             // Skip to the next iteration if the sequence number doesn't match
             if (scheduledRebase.sequenceNumber != nextSequenceNumber) {
-                i++;
-                continue;
+                break;
             }
             //rebase functionalities
             // Update the last timestamp if it's a natural rebase
@@ -742,15 +758,15 @@ contract TokenFactory is
 
             emit Rebase(getRebaseNumber());
 
-            // Increment the sequence number for the next rebase
-            nextSequenceNumber++;
-            // Remove the processed rebase from the queue
-            removeRebase(i);
+            // Remove the processed rebase from the queue using the sequence number
+            removeRebase(nextSequenceNumber);
 
-            // Do not increment i if we just removed an element from the array
-            if (i >= scheduledRebases.length && i > 0) {
-                i--;
-            }
+
+            // Increment the sequence number for the next rebase to be processed
+            // this must be done after removing the previous rebase from the queue to avoid removing the wrong rebase
+            nextSequenceNumber++;
+            // Increment the counter
+            i++;
         }
     }
 
@@ -996,14 +1012,13 @@ contract TokenFactory is
         }
     }
 
-    /// @notice Removes a rebase entry from the `scheduledRebases` array at a specific index.
-    /// @dev It overwrites the rebase entry at the given index with the last entry in the array,
-    /// and then removes the last entry.
+    /// @notice Removes a rebase entry from the `scheduledRebases` mapping at the given sequence number.
+    /// @dev It deletes the entry at the given sequence number and decrements the `scheduledRebasesLength` variable.
     /// It is also guarded by 'nonReentrant' modifier.
-    /// @param index The index in the `scheduledRebases` array of the rebase entry to remove.
-    function removeRebase(uint256 index) private nonReentrant {
-        scheduledRebases[index] = scheduledRebases[scheduledRebases.length - 1];
-        scheduledRebases.pop();
+    /// @param sequenceNumber The sequenceNumber of the `scheduledRebases` mapping to remove.
+    function removeRebase(uint256 sequenceNumber) private nonReentrant {
+        delete scheduledRebases[sequenceNumber];
+        scheduledRebasesLength--;
     }
 
     /// @notice Retrieves the address of the signer
@@ -1013,15 +1028,16 @@ contract TokenFactory is
         return signersAddress;
     }
 
-    /// @notice Retrieves the array of ScheduledRebase
-    /// @dev This function is a getter for the `scheduledRebases` array variable.
-    /// @return The array of the scheduledRebases.
-    function getScheduledRebases()
+    /// @notice Retrieves the `scheduledRebase` struct at the given sequence number.
+    /// @dev This function is a getter for a single `scheduledRebase` struct.
+    /// @param sequenceNumber The sequence number of the `scheduledRebases` mapping to retrieve.
+    /// @return The `scheduledRebase` struct at the given sequence number.
+    function getScheduledRebases(uint256 sequenceNumber)
         public
         view
-        returns (ScheduledRebase[] memory)
+        returns (ScheduledRebase memory)
     {
-        return scheduledRebases;
+        return scheduledRebases[sequenceNumber];
     }
 
     /// @notice Retrieves the nextSequenceNumber

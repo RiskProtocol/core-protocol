@@ -68,6 +68,15 @@ contract Orchestrator is UUPSUpgradeable, OwnableUpgradeable {
     }
 
     /**
+     * @notice Executes scheduled rebases pending in the queue
+     * @dev This function is called when the scheduled rebase queue had more than 5 entries
+     * only 5 will be executed and the rest will be left in the queue
+     */
+    function executeScheduledRebases() external {
+        tokenFactory.executeScheduledRebases();
+    }
+
+    /**
      * @notice Adds a ops that gets called for a downstream receiver of rebases
      * @param index The position at which the new ops should be added
      * @param destination Address of contract destination
