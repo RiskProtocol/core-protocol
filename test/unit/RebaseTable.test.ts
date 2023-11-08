@@ -7,10 +7,9 @@ import {
   TOKEN1_SYMBOL,
   TOKEN2_NAME,
   TOKEN2_SYMBOL,
-  DECIMALS,
-  INITIAL_PRICE,
   signersAddress,
   encodedNaturalRebase1,
+  encodedNaturalRebase3,
   encodedEarlyRebase1,
   encodedEarlyRebase2,
   encodedEarlyRebase3,
@@ -206,6 +205,55 @@ developmentChains.includes(network.name)
               item.afterRebase.y
             );
           });
+        });
+      });
+
+      describe("Natural Rebase", async function () {
+        it("It should revert if a natural rebase is triggered before the interval time on the smart contract", async function () {
+          const {
+            tokenFactory,
+            smartToken1,
+            smartToken2,
+            orchestrator,
+          } = await loadFixture(deployTokenFixture);
+          await tokenFactory.initializeSMART(
+            smartToken1.address,
+            smartToken2.address
+          );
+
+          const now = await tokenFactory.getLastTimeStamp(); //block.timestamp;
+
+          const currentRebaseSequenceNumber = await tokenFactory.getRebaseNumber();
+
+          const nextRebase = BigInt(now) + BigInt(REBASE_INTERVAL);
+          await time.setNextBlockTimestamp(nextRebase);
+          // trigger a rebase
+          await orchestrator.rebase(
+            encodedNaturalRebase1.encodedData,
+            encodedNaturalRebase1.signature
+          );
+
+          const firstRebaseSequenceNumber = currentRebaseSequenceNumber.toNumber() + 1;
+          await expect(
+            await tokenFactory.getRebaseNumber()
+          ).to.equal(firstRebaseSequenceNumber);
+
+          await time.setNextBlockTimestamp(nextRebase);
+
+          // trigger a rebase with the sequence number of 3 instead of 2
+          await expect(
+            orchestrator.rebase(
+              encodedNaturalRebase3.encodedData,
+              encodedNaturalRebase3.signature
+            )
+          ).to.be.revertedWithCustomError(
+            tokenFactory,
+            "TokenFactory__InvalidNaturalRebase"
+          );
+
+          await expect(
+            await tokenFactory.getRebaseNumber()
+          ).to.equal(firstRebaseSequenceNumber);
         });
       });
 
