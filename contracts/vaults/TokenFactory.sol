@@ -591,8 +591,8 @@ contract TokenFactory is
         }
         // Checks if the current block timestamp is valid for a natural rebase.
         if (
-            block.timestamp < (lastTimeStamp + interval) &&
-            rebaseCall.isNaturalRebase
+            rebaseCall.isNaturalRebase &&
+            block.timestamp < (lastTimeStamp + (interval * ((rebaseCall.sequenceNumber - nextSequenceNumber) + 1)))
         ) {
             revert TokenFactory__InvalidNaturalRebase();
         }
