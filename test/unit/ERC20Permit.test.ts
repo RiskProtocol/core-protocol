@@ -7,9 +7,6 @@ import {
   TOKEN1_SYMBOL,
   TOKEN2_NAME,
   TOKEN2_SYMBOL,
-  DECIMALS,
-  INITIAL_PRICE,
-  signersAddress,
 } from "../../helper-hardhat-config";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { getPermitDigest, sign } from "../../utils/signatures";
@@ -45,7 +42,7 @@ developmentChains.includes(network.name)
           underlyingToken.address,
           REBASE_INTERVAL,
           sanctionsContract.address,
-          signersAddress,
+          deployer.address,
         ]);
         await tokenFactory.deployed();
 
@@ -67,7 +64,7 @@ developmentChains.includes(network.name)
           underlyingTokenWithoutPermit.address,
           REBASE_INTERVAL,
           sanctionsContract.address,
-          signersAddress,
+          deployer.address,
         ]);
         await tokenFactory1.deployed();
 

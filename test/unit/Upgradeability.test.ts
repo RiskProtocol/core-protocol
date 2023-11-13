@@ -5,12 +5,8 @@ import {
   REBASE_INTERVAL,
   TOKEN1_NAME,
   TOKEN1_SYMBOL,
-  defaultOperators,
   TOKEN2_NAME,
   TOKEN2_SYMBOL,
-  DECIMALS,
-  INITIAL_PRICE,
-  signersAddress,
 } from "../../helper-hardhat-config";
 import { loadFixture, time } from "@nomicfoundation/hardhat-network-helpers";
 import { token } from "../../typechain-types/@openzeppelin/contracts";
@@ -46,7 +42,7 @@ developmentChains.includes(network.name)
           underlyingToken.address,
           REBASE_INTERVAL,
           sanctionsContract.address,
-          signersAddress,
+          deployer.address,
         ]);
         await tokenFactory.deployed();
 
@@ -90,7 +86,7 @@ developmentChains.includes(network.name)
           "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D",
           REBASE_INTERVAL,
           sanctionsContract.address,
-          signersAddress,
+          deployer.address,
         ]);
         await tokenFactory2.deployed();
 
@@ -112,7 +108,7 @@ developmentChains.includes(network.name)
           underlyingTokenWithoutPermit.address,
           REBASE_INTERVAL,
           sanctionsContract.address,
-          signersAddress,
+          deployer.address,
         ]);
         await tokenFactory3.deployed();
 
