@@ -255,6 +255,46 @@
       "address": "0xFDF934b21264620b08eFf054f5Dc23146958Dd5c",
       "txHash": "0x7c8e99e821fbb511a47fc34dcb0c3a1ef6a42cc923857da977a4163a2c0f5dbc",
       "kind": "uups"
+    },
+    {
+      "address": "0x205d160fA8d7F5C0A752d93B3D5AA46C5E7FdE94",
+      "txHash": "0xab380c62f7a4c4f313cf24933c4e7cde2ae9768e520d24e68753b3673dcfccad",
+      "kind": "uups"
+    },
+    {
+      "address": "0x70689259Cf344A806857AC94679FD545ad860650",
+      "txHash": "0xa4273928cb2673b206838b6f05abdeaec4bbf3c63d2273cca1b71229fdc1f995",
+      "kind": "uups"
+    },
+    {
+      "address": "0xD21E12Ab125115bDC4283a74b9b3a11fd9446827",
+      "txHash": "0x70061cbdbb5857a893c76bc152b233147ec491d9416773daa28db193eb99bd8e",
+      "kind": "uups"
+    },
+    {
+      "address": "0x7F20d46759EBE7C72b890eBa715F25dAF401C24C",
+      "txHash": "0x33749175699d26322a56be9e84ee8b3ba954b23423ade991b7dd013da010b49f",
+      "kind": "uups"
+    },
+    {
+      "address": "0xc75D00f441D21A81526E65b0C2f36090aC997479",
+      "txHash": "0x60d8d773714324ba1fe08e6829372e1bd5738349e3b90ea707170d818a6fd260",
+      "kind": "uups"
+    },
+    {
+      "address": "0x1b8AFD1aDAc190fc302303Cdd097F47e34312A96",
+      "txHash": "0x0971c02dc673b8b9f8fdbfe1884f2cda95f51099144958a8998fed9ac88355a6",
+      "kind": "uups"
+    },
+    {
+      "address": "0xfB712F74F4dCcc68345eBe0281a659508bbDeEa3",
+      "txHash": "0xb0e1ba33a1961c8cc328f9e50250fe35f6f24c4deec3b58366547e9256ef7485",
+      "kind": "uups"
+    },
+    {
+      "address": "0x9bDD3FF73A8fd46AC89375eE31edC74485B910cf",
+      "txHash": "0xca596d81869aaa4de7d0802140566c5cb3d4982624a19dc4a4e33783c37d353a",
+      "kind": "uups"
     }
   ],
   "impls": {
@@ -3966,6 +4006,428 @@
               }
             ],
             "numberOfBytes": "64"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint8": {
+            "label": "uint8",
+            "numberOfBytes": "1"
+          }
+        }
+      }
+    },
+    "f71cfd05476b3ccf2ae9d5ecf403101d1cc1af6425eb331cd8f3ac9cd26897c3": {
+      "address": "0x65b76b2Ec3812Ab02bB976769a9Ab396D39F30Ed",
+      "txHash": "0xd5d4cfa7d4c1c3e668080b7df1f20bf1dbe964b294ec011d3a6271bb8a57a87f",
+      "layout": {
+        "solcVersion": "0.8.17",
+        "storage": [
+          {
+            "label": "_initialized",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_uint8",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:63",
+            "retypedFrom": "bool"
+          },
+          {
+            "label": "_initializing",
+            "offset": 1,
+            "slot": "0",
+            "type": "t_bool",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:68"
+          },
+          {
+            "label": "_status",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_uint256",
+            "contract": "ReentrancyGuardUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol:38"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "2",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "ReentrancyGuardUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol:88"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "51",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ERC1967UpgradeUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/ERC1967/ERC1967UpgradeUpgradeable.sol:169"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "101",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ContextUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:36"
+          },
+          {
+            "label": "_owner",
+            "offset": 0,
+            "slot": "151",
+            "type": "t_address",
+            "contract": "OwnableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:22"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "152",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "OwnableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:94"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "201",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "UUPSUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol:111"
+          },
+          {
+            "label": "sanctionsContract",
+            "offset": 0,
+            "slot": "251",
+            "type": "t_address",
+            "contract": "BaseContract",
+            "src": "contracts/vaults/BaseContract.sol:28"
+          },
+          {
+            "label": "depositCircuitBreaker",
+            "offset": 20,
+            "slot": "251",
+            "type": "t_bool",
+            "contract": "BaseContract",
+            "src": "contracts/vaults/BaseContract.sol:30"
+          },
+          {
+            "label": "withdrawCircuitBreaker",
+            "offset": 21,
+            "slot": "251",
+            "type": "t_bool",
+            "contract": "BaseContract",
+            "src": "contracts/vaults/BaseContract.sol:31"
+          },
+          {
+            "label": "transferCircuitBreaker",
+            "offset": 22,
+            "slot": "251",
+            "type": "t_bool",
+            "contract": "BaseContract",
+            "src": "contracts/vaults/BaseContract.sol:32"
+          },
+          {
+            "label": "rebaseCircuitBreaker",
+            "offset": 23,
+            "slot": "251",
+            "type": "t_bool",
+            "contract": "BaseContract",
+            "src": "contracts/vaults/BaseContract.sol:33"
+          },
+          {
+            "label": "rebaseElements",
+            "offset": 0,
+            "slot": "252",
+            "type": "t_array(t_struct(RebaseElements)7448_storage)dyn_storage",
+            "contract": "TokenFactory",
+            "src": "contracts/vaults/TokenFactory.sol:47"
+          },
+          {
+            "label": "userRebaseElements",
+            "offset": 0,
+            "slot": "253",
+            "type": "t_mapping(t_address,t_struct(UserRebaseElements)7457_storage)",
+            "contract": "TokenFactory",
+            "src": "contracts/vaults/TokenFactory.sol:48"
+          },
+          {
+            "label": "smartTokenArray",
+            "offset": 0,
+            "slot": "254",
+            "type": "t_array(t_contract(SmartToken)7322)dyn_storage",
+            "contract": "TokenFactory",
+            "src": "contracts/vaults/TokenFactory.sol:51"
+          },
+          {
+            "label": "lastRebaseCount",
+            "offset": 0,
+            "slot": "255",
+            "type": "t_mapping(t_address,t_uint256)",
+            "contract": "TokenFactory",
+            "src": "contracts/vaults/TokenFactory.sol:53"
+          },
+          {
+            "label": "baseToken",
+            "offset": 0,
+            "slot": "256",
+            "type": "t_contract(IERC20Update)4780",
+            "contract": "TokenFactory",
+            "src": "contracts/vaults/TokenFactory.sol:55"
+          },
+          {
+            "label": "baseTokenDecimals",
+            "offset": 20,
+            "slot": "256",
+            "type": "t_uint8",
+            "contract": "TokenFactory",
+            "src": "contracts/vaults/TokenFactory.sol:57"
+          },
+          {
+            "label": "interval",
+            "offset": 0,
+            "slot": "257",
+            "type": "t_uint256",
+            "contract": "TokenFactory",
+            "src": "contracts/vaults/TokenFactory.sol:59"
+          },
+          {
+            "label": "lastTimeStamp",
+            "offset": 0,
+            "slot": "258",
+            "type": "t_uint256",
+            "contract": "TokenFactory",
+            "src": "contracts/vaults/TokenFactory.sol:61"
+          },
+          {
+            "label": "smartTokenInitialized",
+            "offset": 0,
+            "slot": "259",
+            "type": "t_bool",
+            "contract": "TokenFactory",
+            "src": "contracts/vaults/TokenFactory.sol:63"
+          },
+          {
+            "label": "signersAddress",
+            "offset": 1,
+            "slot": "259",
+            "type": "t_address",
+            "contract": "TokenFactory",
+            "src": "contracts/vaults/TokenFactory.sol:65"
+          },
+          {
+            "label": "sequenceNumberApplied",
+            "offset": 0,
+            "slot": "260",
+            "type": "t_mapping(t_uint256,t_bool)",
+            "contract": "TokenFactory",
+            "src": "contracts/vaults/TokenFactory.sol:68"
+          },
+          {
+            "label": "managementFeesRate",
+            "offset": 0,
+            "slot": "261",
+            "type": "t_uint256",
+            "contract": "TokenFactory",
+            "src": "contracts/vaults/TokenFactory.sol:70"
+          },
+          {
+            "label": "managementFeeEnabled",
+            "offset": 0,
+            "slot": "262",
+            "type": "t_bool",
+            "contract": "TokenFactory",
+            "src": "contracts/vaults/TokenFactory.sol:71"
+          },
+          {
+            "label": "lastRebaseFees",
+            "offset": 0,
+            "slot": "263",
+            "type": "t_uint256",
+            "contract": "TokenFactory",
+            "src": "contracts/vaults/TokenFactory.sol:72"
+          },
+          {
+            "label": "treasuryWallet",
+            "offset": 0,
+            "slot": "264",
+            "type": "t_address",
+            "contract": "TokenFactory",
+            "src": "contracts/vaults/TokenFactory.sol:73"
+          },
+          {
+            "label": "orchestrator",
+            "offset": 0,
+            "slot": "265",
+            "type": "t_address",
+            "contract": "TokenFactory",
+            "src": "contracts/vaults/TokenFactory.sol:74"
+          },
+          {
+            "label": "scheduledRebases",
+            "offset": 0,
+            "slot": "266",
+            "type": "t_mapping(t_uint256,t_struct(ScheduledRebase)7439_storage)",
+            "contract": "TokenFactory",
+            "src": "contracts/vaults/TokenFactory.sol:104"
+          },
+          {
+            "label": "scheduledRebasesLength",
+            "offset": 0,
+            "slot": "267",
+            "type": "t_uint256",
+            "contract": "TokenFactory",
+            "src": "contracts/vaults/TokenFactory.sol:106"
+          },
+          {
+            "label": "nextSequenceNumber",
+            "offset": 0,
+            "slot": "268",
+            "type": "t_uint256",
+            "contract": "TokenFactory",
+            "src": "contracts/vaults/TokenFactory.sol:110"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_array(t_contract(SmartToken)7322)dyn_storage": {
+            "label": "contract SmartToken[]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_struct(RebaseElements)7448_storage)dyn_storage": {
+            "label": "struct TokenFactory.RebaseElements[]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_uint256)49_storage": {
+            "label": "uint256[49]",
+            "numberOfBytes": "1568"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]",
+            "numberOfBytes": "1600"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_contract(IERC20Update)4780": {
+            "label": "contract IERC20Update",
+            "numberOfBytes": "20"
+          },
+          "t_contract(SmartToken)7322": {
+            "label": "contract SmartToken",
+            "numberOfBytes": "20"
+          },
+          "t_mapping(t_address,t_struct(UserRebaseElements)7457_storage)": {
+            "label": "mapping(address => struct TokenFactory.UserRebaseElements)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_address,t_uint256)": {
+            "label": "mapping(address => uint256)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_uint256,t_bool)": {
+            "label": "mapping(uint256 => bool)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_uint256,t_struct(ScheduledRebase)7439_storage)": {
+            "label": "mapping(uint256 => struct TokenFactory.ScheduledRebase)",
+            "numberOfBytes": "32"
+          },
+          "t_struct(RebaseElements)7448_storage": {
+            "label": "struct TokenFactory.RebaseElements",
+            "members": [
+              {
+                "label": "BalanceFactorXY",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "BalanceFactorUx",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "BalanceFactorUy",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "2"
+              },
+              {
+                "label": "FeeFactor",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "3"
+              }
+            ],
+            "numberOfBytes": "128"
+          },
+          "t_struct(ScheduledRebase)7439_storage": {
+            "label": "struct TokenFactory.ScheduledRebase",
+            "members": [
+              {
+                "label": "sequenceNumber",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "isNaturalRebase",
+                "type": "t_bool",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "price",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "2"
+              },
+              {
+                "label": "smartTokenXprice",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "3"
+              }
+            ],
+            "numberOfBytes": "128"
+          },
+          "t_struct(UserRebaseElements)7457_storage": {
+            "label": "struct TokenFactory.UserRebaseElements",
+            "members": [
+              {
+                "label": "netX",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "netY",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "Ux",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "2"
+              },
+              {
+                "label": "Uy",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "3"
+              }
+            ],
+            "numberOfBytes": "128"
           },
           "t_uint256": {
             "label": "uint256",

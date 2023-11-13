@@ -7,19 +7,14 @@ import {
   TOKEN1_SYMBOL,
   TOKEN2_NAME,
   TOKEN2_SYMBOL,
-  DECIMALS,
-  INITIAL_PRICE,
-  signersAddress,
-  encodedNaturalRebase1,
-  encodedNaturalRebase2,
   RebaseElements,
   UserRebaseElements,
   callculateRolloverAmount,
   MULTIPLIER,
+  signRebase,
+  defaultRebaseData,
 } from "../../helper-hardhat-config";
 import { loadFixture, time } from "@nomicfoundation/hardhat-network-helpers";
-import { token } from "../../typechain-types/@openzeppelin/contracts";
-import { days } from "@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time/duration";
 import { BigNumber, utils } from "ethers";
 
 developmentChains.includes(network.name)
@@ -51,7 +46,7 @@ developmentChains.includes(network.name)
           underlyingToken.address,
           REBASE_INTERVAL,
           sanctionsContract.address,
-          signersAddress,
+          deployer.address,
         ]);
         await tokenFactory.deployed();
 
@@ -110,7 +105,7 @@ developmentChains.includes(network.name)
           "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D",
           REBASE_INTERVAL,
           sanctionsContract.address,
-          signersAddress,
+          deployer.address,
         ]);
         await tokenFactory2.deployed();
 
@@ -132,7 +127,7 @@ developmentChains.includes(network.name)
           underlyingTokenWithoutPermit.address,
           REBASE_INTERVAL,
           sanctionsContract.address,
-          signersAddress,
+          deployer.address,
         ]);
         await tokenFactory3.deployed();
 
@@ -578,6 +573,12 @@ developmentChains.includes(network.name)
 
           const nextRebaseTimeStamp = BigInt(now) + BigInt(REBASE_INTERVAL);
           await time.setNextBlockTimestamp(nextRebaseTimeStamp);
+
+          const encodedNaturalRebase1 = await signRebase(
+            tokenFactory.signer,
+            defaultRebaseData
+          );
+
           // trigger rebase
           await orchestrator.rebase(
             encodedNaturalRebase1.encodedData,
@@ -619,6 +620,12 @@ developmentChains.includes(network.name)
 
           const nextRebaseTimeStamp = BigInt(now) + BigInt(REBASE_INTERVAL);
           await time.setNextBlockTimestamp(nextRebaseTimeStamp);
+
+          const encodedNaturalRebase1 = await signRebase(
+            tokenFactory.signer,
+            defaultRebaseData
+          );
+
           // trigger rebase
           await orchestrator.rebase(
             encodedNaturalRebase1.encodedData,
@@ -984,6 +991,12 @@ developmentChains.includes(network.name)
 
           const nextRebaseTimeStamp = BigInt(now) + BigInt(REBASE_INTERVAL);
           await time.setNextBlockTimestamp(nextRebaseTimeStamp);
+
+          const encodedNaturalRebase1 = await signRebase(
+            tokenFactory.signer,
+            defaultRebaseData
+          );
+
           // trigger rebase
           await orchestrator.rebase(
             encodedNaturalRebase1.encodedData,
@@ -1327,6 +1340,12 @@ developmentChains.includes(network.name)
 
           const nextRebaseTimeStamp = BigInt(now) + BigInt(REBASE_INTERVAL);
           await time.setNextBlockTimestamp(nextRebaseTimeStamp);
+
+          const encodedNaturalRebase1 = await signRebase(
+            tokenFactory.signer,
+            defaultRebaseData
+          );
+
           await expect(
             orchestrator
               .connect(tester)
@@ -1345,6 +1364,10 @@ developmentChains.includes(network.name)
 
           const nextRebaseTimeStamp = BigInt(now) + BigInt(REBASE_INTERVAL);
           await time.setNextBlockTimestamp(nextRebaseTimeStamp);
+          const encodedNaturalRebase1 = await signRebase(
+            tokenFactory.signer,
+            defaultRebaseData
+          );
           await expect(
             orchestrator.rebase(
               encodedNaturalRebase1.encodedData,
@@ -1387,6 +1410,10 @@ developmentChains.includes(network.name)
 
           const nextRebaseTimeStamp = BigInt(now) + BigInt(REBASE_INTERVAL);
           await time.setNextBlockTimestamp(nextRebaseTimeStamp);
+          const encodedNaturalRebase1 = await signRebase(
+            tokenFactory.signer,
+            defaultRebaseData
+          );
           await orchestrator.rebase(
             encodedNaturalRebase1.encodedData,
             encodedNaturalRebase1.signature
@@ -1502,6 +1529,10 @@ developmentChains.includes(network.name)
 
           const nextRebaseTimeStamp = BigInt(now) + BigInt(REBASE_INTERVAL);
           await time.setNextBlockTimestamp(nextRebaseTimeStamp);
+          const encodedNaturalRebase1 = await signRebase(
+            tokenFactory.signer,
+            defaultRebaseData
+          );
           await orchestrator.rebase(
             encodedNaturalRebase1.encodedData,
             encodedNaturalRebase1.signature
@@ -1511,6 +1542,14 @@ developmentChains.includes(network.name)
           const nextNextRebaseTimeStamp =
             BigInt(lastTimeStamp) + BigInt(REBASE_INTERVAL);
           await time.setNextBlockTimestamp(nextNextRebaseTimeStamp);
+          const encodedNaturalRebase2 = await signRebase(
+            tokenFactory.signer,
+            {
+              ...defaultRebaseData,
+              sequenceNumber: 2,
+              smartTokenXValue: priceX2.toString(),
+            }
+          );
           await orchestrator.rebase(
             encodedNaturalRebase2.encodedData,
             encodedNaturalRebase2.signature
@@ -1637,6 +1676,11 @@ developmentChains.includes(network.name)
 
           const nextRebaseTimeStamp = BigInt(now) + BigInt(REBASE_INTERVAL);
           await time.setNextBlockTimestamp(nextRebaseTimeStamp);
+          const encodedNaturalRebase1 = await signRebase(
+            tokenFactory.signer,
+            defaultRebaseData
+          );
+
           await orchestrator.rebase(
             encodedNaturalRebase1.encodedData,
             encodedNaturalRebase1.signature

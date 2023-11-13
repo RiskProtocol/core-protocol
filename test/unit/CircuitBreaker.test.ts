@@ -7,12 +7,11 @@ import {
   TOKEN1_SYMBOL,
   TOKEN2_NAME,
   TOKEN2_SYMBOL,
-  encodedNaturalRebase1,
-  signersAddress,
+  signRebase,
+  defaultRebaseData,
 } from "../../helper-hardhat-config";
 import { getPermitDigest, sign } from "../../utils/signatures";
 import { loadFixture, time } from "@nomicfoundation/hardhat-network-helpers";
-import exp from "constants";
 
 developmentChains.includes(network.name)
   ? describe("Circuit Breaker", async function () {
@@ -46,7 +45,7 @@ developmentChains.includes(network.name)
           underlyingToken.address,
           REBASE_INTERVAL,
           sanctionsContract.address,
-          signersAddress,
+          deployer.address,
         ]);
         await tokenFactory.deployed();
 
@@ -434,10 +433,14 @@ developmentChains.includes(network.name)
 
           await tokenFactory.toggleRebaseCircuitBreaker();
 
+          const { signature, encodedData } = await signRebase(
+            deployer,
+            defaultRebaseData
+          );
           await expect(
             tokenFactory.executeRebase(
-              encodedNaturalRebase1.encodedData,
-              encodedNaturalRebase1.signature
+              encodedData,
+              signature
             )
           ).to.be.revertedWithCustomError(
             tokenFactory,

@@ -7,12 +7,8 @@ import {
   TOKEN1_SYMBOL,
   TOKEN2_NAME,
   TOKEN2_SYMBOL,
-  signersAddress,
-  encodedNaturalRebase1,
-  encodedNaturalRebase3,
-  encodedEarlyRebase1,
-  encodedEarlyRebase2,
-  encodedEarlyRebase3,
+  signRebase,
+  defaultRebaseData,
 } from "../../helper-hardhat-config";
 import { loadFixture, time } from "@nomicfoundation/hardhat-network-helpers";
 
@@ -81,7 +77,7 @@ developmentChains.includes(network.name)
           underlyingToken.address,
           REBASE_INTERVAL,
           sanctionsContract.address,
-          signersAddress,
+          deployer.address,
         ]);
         await tokenFactory.deployed();
 
@@ -125,7 +121,7 @@ developmentChains.includes(network.name)
           "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D",
           REBASE_INTERVAL,
           sanctionsContract.address,
-          signersAddress,
+          deployer.address,
         ]);
         await tokenFactory2.deployed();
 
@@ -188,20 +184,28 @@ developmentChains.includes(network.name)
 
             const nextRebaseTimeStamp = BigInt(now) + BigInt(REBASE_INTERVAL);
             await time.setNextBlockTimestamp(nextRebaseTimeStamp);
+
+            const encodedNaturalRebase1 = await signRebase(
+              tokenFactory.signer,
+              defaultRebaseData
+            );
+
             // trigger a rebase
             await orchestrator.rebase(
               encodedNaturalRebase1.encodedData,
               encodedNaturalRebase1.signature
             );
 
-            // confirm user balances when rebase has taken place
+            const balanceOfX = await smartToken1.balanceOf(deployer.address);
+            const balanceOfY = await smartToken2.balanceOf(deployer.address);
 
+            // confirm user balances when rebase has taken place
             assert.equal(
-              await smartToken1.balanceOf(deployer.address),
+              balanceOfX.toString(),
               item.afterRebase.x
             );
             assert.equal(
-              await smartToken2.balanceOf(deployer.address),
+              balanceOfY.toString(),
               item.afterRebase.y
             );
           });
@@ -227,6 +231,12 @@ developmentChains.includes(network.name)
 
           const nextRebase = BigInt(now) + BigInt(REBASE_INTERVAL);
           await time.setNextBlockTimestamp(nextRebase);
+
+          const encodedNaturalRebase1 = await signRebase(
+            tokenFactory.signer,
+            defaultRebaseData
+          );
+
           // trigger a rebase
           await orchestrator.rebase(
             encodedNaturalRebase1.encodedData,
@@ -239,6 +249,14 @@ developmentChains.includes(network.name)
           ).to.equal(firstRebaseSequenceNumber);
 
           await time.setNextBlockTimestamp(nextRebase);
+
+          const encodedNaturalRebase3 = await signRebase(
+            tokenFactory.signer,
+            {
+              ...defaultRebaseData,
+              sequenceNumber: 3,
+            }
+          );
 
           // trigger a rebase with the sequence number of 3 instead of 2
           await expect(
@@ -266,7 +284,6 @@ developmentChains.includes(network.name)
             underlyingToken,
             smartToken1,
             smartToken2,
-            tester,
             orchestrator,
           } = await loadFixture(deployTokenFixture);
 
@@ -282,6 +299,13 @@ developmentChains.includes(network.name)
           await underlyingToken.approve(tokenFactory.address, depositAmount);
           await smartToken1.deposit(depositAmount, deployer.address);
 
+          const encodedEarlyRebase1 = await signRebase(
+            tokenFactory.signer,
+            {
+              ...defaultRebaseData,
+              isNaturalRebase: false,
+            }
+          );
           // trigger a rebase
           await orchestrator.rebase(
             encodedEarlyRebase1.encodedData,
@@ -289,6 +313,14 @@ developmentChains.includes(network.name)
           );
           expect(await tokenFactory.getNextSequenceNumber()).to.equal(2);
 
+          const encodedEarlyRebase2 = await signRebase(
+            tokenFactory.signer,
+            {
+              ...defaultRebaseData,
+              sequenceNumber: 2,
+              isNaturalRebase: false,
+            }
+          );
           await orchestrator.rebase(
             encodedEarlyRebase2.encodedData,
             encodedEarlyRebase2.signature
@@ -303,7 +335,6 @@ developmentChains.includes(network.name)
             underlyingToken,
             smartToken1,
             smartToken2,
-            tester,
             orchestrator,
           } = await loadFixture(deployTokenFixture);
 
@@ -319,10 +350,26 @@ developmentChains.includes(network.name)
           await underlyingToken.approve(tokenFactory.address, depositAmount);
           await smartToken1.deposit(depositAmount, deployer.address);
 
+          const encodedEarlyRebase1 = await signRebase(
+            tokenFactory.signer,
+            {
+              ...defaultRebaseData,
+              isNaturalRebase: false,
+            }
+          );
           // trigger a rebase
           await orchestrator.rebase(
             encodedEarlyRebase1.encodedData,
             encodedEarlyRebase1.signature
+          );
+
+          const encodedEarlyRebase3 = await signRebase(
+            tokenFactory.signer,
+            {
+              ...defaultRebaseData,
+              sequenceNumber: 3,
+              isNaturalRebase: false,
+            }
           );
 
           await orchestrator.rebase(
@@ -331,6 +378,15 @@ developmentChains.includes(network.name)
           );
 
           expect(await tokenFactory.getNextSequenceNumber()).to.equal(2);
+
+          const encodedEarlyRebase2 = await signRebase(
+            tokenFactory.signer,
+            {
+              ...defaultRebaseData,
+              sequenceNumber: 2,
+              isNaturalRebase: false,
+            }
+          );
           await orchestrator.rebase(
             encodedEarlyRebase2.encodedData,
             encodedEarlyRebase2.signature
@@ -346,7 +402,6 @@ developmentChains.includes(network.name)
             underlyingToken,
             smartToken1,
             smartToken2,
-            tester,
             orchestrator,
           } = await loadFixture(deployTokenFixture);
 
@@ -362,15 +417,41 @@ developmentChains.includes(network.name)
           await underlyingToken.approve(tokenFactory.address, depositAmount);
           await smartToken1.deposit(depositAmount, deployer.address);
 
+          const encodedEarlyRebase1 = await signRebase(
+            tokenFactory.signer,
+            {
+              ...defaultRebaseData,
+              isNaturalRebase: false,
+            }
+          );
           // trigger a rebase
           await orchestrator.rebase(
             encodedEarlyRebase1.encodedData,
             encodedEarlyRebase1.signature
           );
+
+          const encodedEarlyRebase2 = await signRebase(
+            tokenFactory.signer,
+            {
+              ...defaultRebaseData,
+              sequenceNumber: 2,
+              isNaturalRebase: false,
+            }
+          );
           await orchestrator.rebase(
             encodedEarlyRebase2.encodedData,
             encodedEarlyRebase2.signature
           );
+
+          const encodedEarlyRebase3 = await signRebase(
+            tokenFactory.signer,
+            {
+              ...defaultRebaseData,
+              sequenceNumber: 3,
+              isNaturalRebase: false,
+            }
+          );
+
           await orchestrator.rebase(
             encodedEarlyRebase3.encodedData,
             encodedEarlyRebase3.signature
@@ -386,7 +467,6 @@ developmentChains.includes(network.name)
             underlyingToken,
             smartToken1,
             smartToken2,
-            tester,
             orchestrator,
           } = await loadFixture(deployTokenFixture);
 
@@ -402,11 +482,28 @@ developmentChains.includes(network.name)
           await underlyingToken.approve(tokenFactory.address, depositAmount);
           await smartToken1.deposit(depositAmount, deployer.address);
 
+          const encodedEarlyRebase1 = await signRebase(
+            tokenFactory.signer,
+            {
+              ...defaultRebaseData,
+              isNaturalRebase: false,
+            }
+          );
           // trigger a rebase
           await orchestrator.rebase(
             encodedEarlyRebase1.encodedData,
             encodedEarlyRebase1.signature
           );
+
+          const encodedEarlyRebase2 = await signRebase(
+            tokenFactory.signer,
+            {
+              ...defaultRebaseData,
+              sequenceNumber: 2,
+              isNaturalRebase: false,
+            }
+          );
+
           await orchestrator.rebase(
             encodedEarlyRebase2.encodedData,
             encodedEarlyRebase2.signature
@@ -431,7 +528,6 @@ developmentChains.includes(network.name)
           underlyingToken,
           smartToken1,
           smartToken2,
-          tester,
           orchestrator,
         } = await loadFixture(deployTokenFixture);
 
@@ -447,8 +543,22 @@ developmentChains.includes(network.name)
         await underlyingToken.approve(tokenFactory.address, depositAmount);
         await smartToken1.deposit(depositAmount, deployer.address);
 
+        const encodedEarlyRebase1 = await signRebase(
+          tokenFactory.signer,
+          {
+            ...defaultRebaseData,
+            isNaturalRebase: false,
+          }
+        );
+        const encodedEarlyRebase2 = await signRebase(
+          tokenFactory.signer,
+          {
+            ...defaultRebaseData,
+            sequenceNumber: 2,
+            isNaturalRebase: false,
+          }
+        );
         // trigger a rebase
-
         await expect(
           orchestrator.rebase(
             encodedEarlyRebase1.encodedData,
