@@ -370,7 +370,7 @@ developmentChains.includes(network.name)
             )
           ).to.emit(tokenFactory, "Rebase");
 
-          await tokenFactory.getScheduledRebases();
+          await tokenFactory.getScheduledRebases(1);
 
           expect(await tokenFactory.getRebaseNumber()).to.equal(2);
         });

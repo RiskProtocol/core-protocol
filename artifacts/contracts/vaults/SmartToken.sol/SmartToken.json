@@ -10,12 +10,37 @@
     },
     {
       "inputs": [],
+      "name": "BaseContract__DepositCircuitBreaker",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "BaseContract__RebaseCircuitBreaker",
+      "type": "error"
+    },
+    {
+      "inputs": [],
       "name": "BaseContract__SanctionedAddress",
       "type": "error"
     },
     {
       "inputs": [],
+      "name": "BaseContract__TransferCircuitBreaker",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "BaseContract__WithdrawCircuitBreaker",
+      "type": "error"
+    },
+    {
+      "inputs": [],
       "name": "SmartToken__DepositMoreThanMax",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "SmartToken__MethodNotAllowed",
       "type": "error"
     },
     {
@@ -641,11 +666,68 @@
           "internalType": "address",
           "name": "sanctionsContract_",
           "type": "address"
+        },
+        {
+          "internalType": "bool",
+          "name": "isX_",
+          "type": "bool"
         }
       ],
       "name": "initialize",
       "outputs": [],
       "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "isDepositCircuitBreaker",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "isRebaseCircuitBreaker",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "isTransferCircuitBreaker",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "isWithdrawCircuitBreaker",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
       "type": "function"
     },
     {
@@ -980,10 +1062,17 @@
       "type": "function"
     },
     {
+      "inputs": [],
+      "name": "resumeAllCircuitBreakers",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
       "inputs": [
         {
           "internalType": "address",
-          "name": "recipient",
+          "name": "account",
           "type": "address"
         },
         {
@@ -992,7 +1081,32 @@
           "type": "uint256"
         }
       ],
-      "name": "smartTransfer",
+      "name": "smartBalanceAdjust",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "treasuryAddress",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "smartTreasuryTransfer",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "stopAllCircuitBreakers",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -1008,6 +1122,34 @@
         }
       ],
       "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "toggleDepositCircuitBreaker",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "toggleRebaseCircuitBreaker",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "toggleTransferCircuitBreaker",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "toggleWithdrawCircuitBreaker",
+      "outputs": [],
+      "stateMutability": "nonpayable",
       "type": "function"
     },
     {

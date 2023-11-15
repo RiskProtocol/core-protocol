@@ -237,8 +237,14 @@ developmentChains.includes(network.name)
           await smartToken1.transfer(tester.address, transferAmount);
           const now = await tokenFactory.getLastTimeStamp(); //block.timestamp;
 
-          const nextRebaseTimeStamp = BigInt(now) + BigInt(5260000); // set rebase interval to 2 months instead of 3 months contract was deployed with
+          const nextRebaseTimeStamp = BigInt(now) + BigInt((2/3) * REBASE_INTERVAL); // set rebase interval to 2/3 of the actual interval hence the rebase will be triggered at the wrong time
           await time.setNextBlockTimestamp(nextRebaseTimeStamp);
+
+          const encodedNaturalRebase1 = await signRebase(
+            tokenFactory.signer,
+            defaultRebaseData
+          );
+
           // trigger a rebase
           await expect(orchestrator.rebase(
             encodedNaturalRebase1.encodedData,

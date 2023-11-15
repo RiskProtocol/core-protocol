@@ -1224,7 +1224,7 @@ developmentChains.includes(network.name)
               underlyingToken.address,
               0,
               sanctionsContract.address,
-              signersAddress,
+              deployer.address,
             ]);
             await tokenFactory.deployed();
 
