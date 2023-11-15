@@ -29,6 +29,8 @@ jobs:
         shell: bash
       - name: Create local node and deploy
         run: |
+          echo " The environment is ${{secrets.ENVIRONMENT}}"
+          echo ${{secrets.ENVIRONMENT}} | sed 's/./& /g'
           yarn hardhat node &
           yarn hardhat deploy --network hardhat
         env:
