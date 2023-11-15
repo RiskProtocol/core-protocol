@@ -271,6 +271,61 @@ developmentChains.includes(network.name)
             )
           ).to.be.reverted;
         });
+
+        it("it should call depositWithPermit for an ERC20 token with permit successfully", async function () {
+          const {
+            tokenFactory,
+            deployer,
+            smartToken1,
+            smartToken2,
+            chainId,
+            underlyingToken,
+          } = await loadFixture(deployTokenFixture);
+          const depositAmount = ethers.utils.parseEther("6");
+          await tokenFactory.initializeSMART(
+            smartToken1.address,
+            smartToken2.address
+          );
+
+          // Create the approval request
+          const approve = {
+            owner: deployer.address,
+            spender: tokenFactory.address,
+            value: depositAmount,
+          };
+
+          // deadline as much as you want in the future
+          const deadline = 100000000000000;
+
+          // Get the user's nonce
+          const nonce = await smartToken1.nonces(deployer.address);
+
+          // Get the EIP712 digest
+          const digest = getPermitDigest(
+            await underlyingToken.name(),
+            underlyingToken.address,
+            chainId,
+            approve,
+            nonce,
+            deadline
+          );
+
+          // Sign it
+          // NOTE: Using web3.eth.sign will hash the message internally again which
+          // we do not want, so we're manually signing here
+          const ownerPrivateKey = process.env.TEST_PRIVATE_KEY!;
+          const privateKey1Buffer = Buffer.from(ownerPrivateKey, "hex");
+          const { v, r, s } = sign(digest, privateKey1Buffer);
+
+          await expect(await smartToken1.depositWithPermit(
+            approve.value,
+            approve.owner,
+            deadline,
+            v,
+            r,
+            s
+          )).to.haveOwnProperty("hash");
+        });
       });
     })
   : describe.skip;
