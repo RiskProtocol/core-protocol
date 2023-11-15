@@ -26,6 +26,8 @@ const func: DeployFunction = async ({
 
   let sanctionsContractAddress: string;
 
+  console.log("process.env.ENVIRONMENT", process.env.ENVIRONMENT);
+  
   if (process.env.ENVIRONMENT === "local") {
     const mockSanctionContract = await deployments.get("MockSanctionContract");
     sanctionsContractAddress = mockSanctionContract.address;
@@ -33,6 +35,8 @@ const func: DeployFunction = async ({
     sanctionsContractAddress = process.env.SANCTIONS_CONTRACT_ADDRESS!;
   }
 
+  console.log("sanctionsContractAddress", sanctionsContractAddress);
+  
   // Deploying the contract as a UUPS upgradeable contract.
   const TokenFactoryContract = await ethers.getContractFactory("TokenFactory");
   const TokenFactory = await upgrades.deployProxy(

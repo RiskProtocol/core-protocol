@@ -31,14 +31,16 @@ jobs:
         run: |
           yarn hardhat node &
           yarn hardhat deploy --network hardhat
+        env:
+          ENVIRONMENT: ${{secrets.ENVIRONMENT}}
       - name: Run Tests
-        run: yarn hardhat test     
-
+        run: yarn hardhat test
+        env:
+          ENVIRONMENT: ${{secrets.ENVIRONMENT}}
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
           version: nightly
-
       - name: Run tests
         run: forge test --no-match-path "test/foundry/invariants/*.t.sol" -vvv
 
