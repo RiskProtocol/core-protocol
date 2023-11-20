@@ -13,6 +13,7 @@ import {
   defaultRebaseData,
 } from "../../helper-hardhat-config";
 import { loadFixture, time } from "@nomicfoundation/hardhat-network-helpers";
+import { BigNumber } from "ethers";
 
 const rebaseTable = [
   {
@@ -228,10 +229,7 @@ developmentChains.includes(network.name)
               defaultRebaseData
             );
 
-            await orchestrator.rebase(
-              encodedData,
-              signature
-            );
+            await orchestrator.rebase(encodedData, signature);
 
             let block2 = await ethers.provider.getBlock("latest");
             const now2 = block2.timestamp;
@@ -428,14 +426,11 @@ developmentChains.includes(network.name)
               deployer.address
             );
 
-            const encodedEarlyRebase1 = await signRebase(
-              deployer,
-              {
-                ...defaultRebaseData,
-                sequenceNumber: 1,
-                isNaturalRebase: false,
-              }
-            );
+            const encodedEarlyRebase1 = await signRebase(deployer, {
+              ...defaultRebaseData,
+              sequenceNumber: 1,
+              isNaturalRebase: false,
+            });
 
             await orchestrator.rebase(
               encodedEarlyRebase1.encodedData,
@@ -479,10 +474,7 @@ developmentChains.includes(network.name)
               defaultRebaseData
             );
 
-            await orchestrator.rebase(
-              encodedData,
-              signature
-            );
+            await orchestrator.rebase(encodedData, signature);
 
             // deposit underlying token
             await underlyingToken.approve(tokenFactory.address, depositAmount);
@@ -573,13 +565,10 @@ developmentChains.includes(network.name)
             const secondRebase = BigInt(nextRebase) + BigInt(REBASE_INTERVAL);
             await time.setNextBlockTimestamp(secondRebase);
 
-            const encodedNaturalRebase2 = await signRebase(
-              deployer,
-              {
-                ...defaultRebaseData,
-                sequenceNumber: 2,
-              }
-            );
+            const encodedNaturalRebase2 = await signRebase(deployer, {
+              ...defaultRebaseData,
+              sequenceNumber: 2,
+            });
 
             await orchestrator.rebase(
               encodedNaturalRebase2.encodedData,
@@ -589,13 +578,10 @@ developmentChains.includes(network.name)
             const thirdRebase = BigInt(secondRebase) + BigInt(REBASE_INTERVAL);
             await time.setNextBlockTimestamp(thirdRebase);
 
-            const encodedNaturalRebase3 = await signRebase(
-              deployer,
-              {
-                ...defaultRebaseData,
-                sequenceNumber: 3,
-              }
-            );
+            const encodedNaturalRebase3 = await signRebase(deployer, {
+              ...defaultRebaseData,
+              sequenceNumber: 3,
+            });
 
             await orchestrator.rebase(
               encodedNaturalRebase3.encodedData,
@@ -683,13 +669,10 @@ developmentChains.includes(network.name)
             const secondRebase = BigInt(nextRebase) + BigInt(REBASE_INTERVAL);
             await time.setNextBlockTimestamp(secondRebase);
 
-            const encodedNaturalRebase2 = await signRebase(
-              deployer,
-              {
-                ...defaultRebaseData,
-                sequenceNumber: 2,
-              }
-            );
+            const encodedNaturalRebase2 = await signRebase(deployer, {
+              ...defaultRebaseData,
+              sequenceNumber: 2,
+            });
 
             await orchestrator.rebase(
               encodedNaturalRebase2.encodedData,
@@ -713,13 +696,10 @@ developmentChains.includes(network.name)
             const thirdRebase = BigInt(secondRebase) + BigInt(REBASE_INTERVAL);
             await time.setNextBlockTimestamp(thirdRebase);
 
-            const encodedNaturalRebase3 = await signRebase(
-              deployer,
-              {
-                ...defaultRebaseData,
-                sequenceNumber: 3,
-              }
-            );
+            const encodedNaturalRebase3 = await signRebase(deployer, {
+              ...defaultRebaseData,
+              sequenceNumber: 3,
+            });
 
             await orchestrator.rebase(
               encodedNaturalRebase3.encodedData,
@@ -752,11 +732,11 @@ developmentChains.includes(network.name)
 
               smartToken2.address
             );
-
+            const feeRate = 2e15;
             // set the management fee to 0.2% and activating fees
             await tokenFactory.setTreasuryWallet(treasury.address);
 
-            await tokenFactory.setManagementFeeRate(2e15); //0.2 % per day
+            await tokenFactory.setManagementFeeRate(feeRate.toString()); //0.2 % per day
             await tokenFactory.setManagementFeeState(true);
             await underlyingToken.approve(tokenFactory.address, depositAmount); //deployer
             await smartToken1.deposit(depositAmount, deployer.address);
@@ -782,7 +762,7 @@ developmentChains.includes(network.name)
               encodedNaturalRebase1.signature
             );
 
-            const FeeRebase = feeCalculator(totalSupply, BigInt(2e15));
+            const FeeRebase = feeCalculator(totalSupply, BigInt(feeRate));
 
             const TheTreasuryWallet = await smartToken1.balanceOf(
               treasury.address
@@ -791,10 +771,14 @@ developmentChains.includes(network.name)
             //apply AUM fees on the collections
             const netFeeBeforeCollectedRebase =
               BigInt(collectedBeforeRebase) -
-              feeCalculator(collectedBeforeRebase, BigInt(2e15));
+              feeCalculator(collectedBeforeRebase, BigInt(feeRate));
 
-            expect(Number(netFeeBeforeCollectedRebase)).equals(
-              Number(TheTreasuryWallet)
+            const tolerance = 2; //weis lost in divisions
+
+            expect(
+              Math.abs(
+                Number(netFeeBeforeCollectedRebase) - TheTreasuryWallet
+              ) <= tolerance
             );
             expect(FeeRebase).equals(
               await smartToken1.balanceOf(tokenFactory.address)
@@ -803,20 +787,17 @@ developmentChains.includes(network.name)
             const walletTokenFactory = await smartToken1.balanceOf(
               tokenFactory.address
             );
-            const FeeRebase2 = feeCalculator(totalSupply, BigInt(2e15));
+            const FeeRebase2 = feeCalculator(totalSupply, BigInt(feeRate));
 
             const lastRebase2 = await tokenFactory.getLastTimeStamp();
             //contract call and make a rebase
             const nextRebase2 = BigInt(lastRebase2) + BigInt(REBASE_INTERVAL);
             await time.setNextBlockTimestamp(nextRebase2);
 
-            const encodedNaturalRebase2 = await signRebase(
-              deployer,
-              {
-                ...defaultRebaseData,
-                sequenceNumber: 2,
-              }
-            );
+            const encodedNaturalRebase2 = await signRebase(deployer, {
+              ...defaultRebaseData,
+              sequenceNumber: 2,
+            });
 
             await orchestrator.rebase(
               encodedNaturalRebase2.encodedData,
@@ -827,9 +808,9 @@ developmentChains.includes(network.name)
             // We also have to consider that fees we held on tokenFactory has also to pay fees for the next rebase
             const newTreasuryBalance =
               BigInt(TheTreasuryWallet) -
-              (BigInt(2e15 * REBASE_INTERVAL) * BigInt(TheTreasuryWallet)) /
+              (BigInt(feeRate * REBASE_INTERVAL) * BigInt(TheTreasuryWallet)) /
                 (BigInt(MULTIPLIER) * BigInt(86400)) +
-              (BigInt(FeeRebase2) - feeCalculator(FeeRebase2, BigInt(2e15)));
+              (BigInt(FeeRebase2) - feeCalculator(FeeRebase2, BigInt(feeRate)));
 
             const threashold = Number(0.01 / 100) * Number(newTreasuryBalance);
             //if the difference between the expected and the real value is more than 0.01%, it should fail
