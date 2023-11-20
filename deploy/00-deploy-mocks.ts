@@ -25,8 +25,6 @@ const deployMocks: DeployFunction = async ({
     log(`MockERC20Token deployed at ${mockToken.address}`);
     log("----------------------------------");
 
-    console.log("what is the mockToken address", mockToken.address);
-    
     log("Deploying MockERC20TokenUSDC...");
     const usdc = await deploy("MockERC20TokenUSDC", {
       contract: "MockERC20TokenUSDC",
@@ -37,7 +35,6 @@ const deployMocks: DeployFunction = async ({
     log("usdc Deployed!");
     log(`usdc deployed at ${usdc.address}`);
     log("----------------------------------");
-    console.log("what is the usdc address", usdc.address);
   }
 
   if (process.env.ENVIRONMENT === "local") {
@@ -52,8 +49,6 @@ const deployMocks: DeployFunction = async ({
     log("MockSanctionContract Deployed!");
     log(`MockSanctionContract deployed at ${mockSanctionContract.address}`);
     log("----------------------------------");
-    console.log("what is the mockSanctionContract address", mockSanctionContract.address);
-    
   }
 };
 export default deployMocks;
