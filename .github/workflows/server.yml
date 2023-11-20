@@ -13,8 +13,8 @@ env:
   SEPOLIA_RPC_URL: ${{secrets.SEPOLIA_RPC_URL}}
   POLYGON_RPC_URL: ${{secrets.POLYGON_RPC_URL}}
   ARBITRUM_RPC_URL: ${{secrets.ARBITRUM_RPC_URL}}
-  ENVIRONMENT: ${{secrets.ENVIRONMENT}}
-  SANCTIONS_CONTRACT_ADDRESS: ${{secrets.SANCTIONS_CONTRACT_ADDRESS}}
+  ENVIRONMENT: ${{vars.ENVIRONMENT}}
+  SANCTIONS_CONTRACT_ADDRESS: ${{vars.SANCTIONS_CONTRACT_ADDRESS}}
 
 jobs:
   tests:
@@ -29,16 +29,15 @@ jobs:
         shell: bash
       - name: Create local node and deploy
         run: |
-          echo " The environment is ${{secrets.ENVIRONMENT}}"
-          echo ${{secrets.ENVIRONMENT}} | sed 's/./& /g'
           yarn hardhat node &
           yarn hardhat deploy --network hardhat
         env:
-          ENVIRONMENT: ${{secrets.ENVIRONMENT}}
+          ENVIRONMENT: ${{vars.ENVIRONMENT}}
+          SANCTIONS_CONTRACT_ADDRESS: ${{vars.SANCTIONS_CONTRACT_ADDRESS}}
       - name: Run Tests
         run: yarn hardhat test
         env:
-          ENVIRONMENT: ${{secrets.ENVIRONMENT}}
+          ENVIRONMENT: ${{vars.ENVIRONMENT}}
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
