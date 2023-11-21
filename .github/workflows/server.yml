@@ -12,6 +12,9 @@ env:
   TEST_PRIVATE_KEY: ${{secrets.TEST_PRIVATE_KEY}}
   SEPOLIA_RPC_URL: ${{secrets.SEPOLIA_RPC_URL}}
   POLYGON_RPC_URL: ${{secrets.POLYGON_RPC_URL}}
+  ARBITRUM_RPC_URL: ${{secrets.ARBITRUM_RPC_URL}}
+  ENVIRONMENT: ${{vars.ENVIRONMENT}}
+  SANCTIONS_CONTRACT_ADDRESS: ${{vars.SANCTIONS_CONTRACT_ADDRESS}}
 
 jobs:
   tests:
@@ -28,14 +31,17 @@ jobs:
         run: |
           yarn hardhat node &
           yarn hardhat deploy --network hardhat
+        env:
+          ENVIRONMENT: ${{vars.ENVIRONMENT}}
+          SANCTIONS_CONTRACT_ADDRESS: ${{vars.SANCTIONS_CONTRACT_ADDRESS}}
       - name: Run Tests
-        run: yarn hardhat test     
-
+        run: yarn hardhat test
+        env:
+          ENVIRONMENT: ${{vars.ENVIRONMENT}}
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
           version: nightly
-
       - name: Run tests
         run: forge test --no-match-path "test/foundry/invariants/*.t.sol" -vvv
 

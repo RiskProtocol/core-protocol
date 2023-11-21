@@ -8,10 +8,8 @@ typechain-types
 # Hardhat files
 cache
 artifacts
-deployments/localhost
 forge-cache
 out
-
-
+deployments/
 
 remix-compiler.config.js

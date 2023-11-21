@@ -1,9 +1,4 @@
 import { DeployFunction } from "hardhat-deploy/types";
-import {
-  DECIMALS,
-  developmentChains,
-  INITIAL_PRICE,
-} from "../helper-hardhat-config";
 
 const deployMocks: DeployFunction = async ({
   getNamedAccounts,
@@ -16,8 +11,8 @@ const deployMocks: DeployFunction = async ({
   /* We deploy this only for local development, remember if you are deploying to a localhost,
      you'll need a local network running to interact eg yarn hardhat node
     */
-  if (developmentChains.includes(network.name)) {
-    log("Local network detected! Deploying mocks...");
+  if (['local', 'development'].includes(process.env.ENVIRONMENT!)) {
+    log("Local or development network detected! Deploying mocks with address", deployer);
 
     log("Deploying MockERC20TokenWithPermit...");
     const mockToken = await deploy("MockERC20TokenWithPermit", {
@@ -27,6 +22,32 @@ const deployMocks: DeployFunction = async ({
       log: true,
     });
     log("MockERC20Token Deployed!");
+    log(`MockERC20Token deployed at ${mockToken.address}`);
+    log("----------------------------------");
+
+    log("Deploying MockERC20TokenUSDC...");
+    const usdc = await deploy("MockERC20TokenUSDC", {
+      contract: "MockERC20TokenUSDC",
+      from: deployer,
+      args: [], // from github MockV3Aggragator has 2 argument for the contructors
+      log: true,
+    });
+    log("usdc Deployed!");
+    log(`usdc deployed at ${usdc.address}`);
+    log("----------------------------------");
+  }
+
+  if (process.env.ENVIRONMENT === "local") {
+    log("Local network detected! Deploying mocks sanctions contract with address", deployer);
+    log("Deploying MockSanctionContract...");
+    const mockSanctionContract = await deploy("MockSanctionContract", {
+      contract: "MockSanctionContract",
+      from: deployer,
+      args: [], // from github MockV3Aggragator has 2 argument for the contructors
+      log: true,
+    });
+    log("MockSanctionContract Deployed!");
+    log(`MockSanctionContract deployed at ${mockSanctionContract.address}`);
     log("----------------------------------");
   }
 };

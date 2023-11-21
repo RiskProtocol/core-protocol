@@ -1,4 +1,4 @@
-import { assert, expect } from "chai";
+import { expect } from "chai";
 import { ethers, network, upgrades } from "hardhat";
 import {
   developmentChains,
@@ -7,12 +7,10 @@ import {
   TOKEN1_SYMBOL,
   TOKEN2_NAME,
   TOKEN2_SYMBOL,
-  signersAddress,
-  encodedEarlyRebase1,
-  encodedEarlyRebase2,
-  encodedEarlyRebase3,
+  signRebase,
+  defaultRebaseData,
 } from "../../helper-hardhat-config";
-import { loadFixture, time } from "@nomicfoundation/hardhat-network-helpers";
+import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 
 developmentChains.includes(network.name)
   ? describe("TokenFactory", async function () {
@@ -43,7 +41,7 @@ developmentChains.includes(network.name)
           underlyingToken.address,
           REBASE_INTERVAL,
           sanctionsContract.address,
-          signersAddress,
+          deployer.address,
         ]);
         await tokenFactory.deployed();
 
@@ -236,10 +234,16 @@ developmentChains.includes(network.name)
             SmartToken1.address,
             SmartToken2.address
           );
+
+          const { signature, encodedData } = await signRebase(
+            tokenFactory.signer,
+            defaultRebaseData
+          );
+
           await expect(
             tokenFactory.executeRebase(
-              encodedEarlyRebase1.encodedData,
-              encodedEarlyRebase1.signature
+              encodedData,
+              signature
             )
           ).to.be.revertedWithCustomError(
             tokenFactory,
@@ -296,11 +300,19 @@ developmentChains.includes(network.name)
             SmartToken2.address
           );
 
+          const { signature, encodedData } = await signRebase(
+            tokenFactory.signer,
+            {
+              ...defaultRebaseData,
+              isNaturalRebase: false,
+            }
+          );
+
           //rebase
           await expect(
             Orchestrator.rebase(
-              encodedEarlyRebase1.encodedData,
-              encodedEarlyRebase1.signature
+              encodedData,
+              signature
             )
           ).to.emit(tokenFactory, "Rebase");
         });
@@ -324,6 +336,15 @@ developmentChains.includes(network.name)
           );
           //await SmartToken1.deposit(ethers.utils.parseEther('1'), tokenFactory.address);
 
+          const encodedEarlyRebase2 = await signRebase(
+            tokenFactory.signer,
+            {
+              ...defaultRebaseData,
+              sequenceNumber: 2,
+              isNaturalRebase: false,
+            }
+          );
+
           const data = tokenFactory.interface.encodeFunctionData(
             "executeRebase",
             [encodedEarlyRebase2.encodedData, encodedEarlyRebase2.signature]
@@ -333,6 +354,14 @@ developmentChains.includes(network.name)
             .withArgs(true, tokenFactory.address, data);
           expect(await Orchestrator.operationsSize()).to.equal(1);
 
+          const encodedEarlyRebase1 = await signRebase(
+            tokenFactory.signer,
+            {
+              ...defaultRebaseData,
+              isNaturalRebase: false,
+            }
+          );
+
           //rebase
           await expect(
             Orchestrator.rebase(
@@ -341,7 +370,7 @@ developmentChains.includes(network.name)
             )
           ).to.emit(tokenFactory, "Rebase");
 
-          await tokenFactory.getScheduledRebases();
+          await tokenFactory.getScheduledRebases(1);
 
           expect(await tokenFactory.getRebaseNumber()).to.equal(2);
         });
@@ -364,6 +393,23 @@ developmentChains.includes(network.name)
             ethers.utils.parseEther("1")
           );
           //await SmartToken1.deposit(ethers.utils.parseEther('1'), tokenFactory.address);
+
+          const encodedEarlyRebase2 = await signRebase(
+            tokenFactory.signer,
+            {
+              ...defaultRebaseData,
+              sequenceNumber: 2,
+              isNaturalRebase: false,
+            }
+          );
+
+          const encodedEarlyRebase1 = await signRebase(
+            tokenFactory.signer,
+            {
+              ...defaultRebaseData,
+              isNaturalRebase: false,
+            }
+          );
 
           const data = tokenFactory.interface.encodeFunctionData(
             "executeRebase",
@@ -389,6 +435,14 @@ developmentChains.includes(network.name)
         it(`should be access controlled`, async function () {
           let { tokenFactory, tester, Orchestrator } = await loadFixture(
             deployTokenFixture
+          );
+
+          const encodedEarlyRebase1 = await signRebase(
+            tokenFactory.signer,
+            {
+              ...defaultRebaseData,
+              isNaturalRebase: false,
+            }
           );
 
           const data = tokenFactory.interface.encodeFunctionData(
@@ -421,9 +475,18 @@ developmentChains.includes(network.name)
         });
 
         it("should add a operations to list", async function () {
-          let { tokenFactory, tester, Orchestrator } = await loadFixture(
+          let { tokenFactory, Orchestrator } = await loadFixture(
             deployTokenFixture
           );
+
+          const encodedEarlyRebase1 = await signRebase(
+            tokenFactory.signer,
+            {
+              ...defaultRebaseData,
+              isNaturalRebase: false,
+            }
+          );
+
 
           const data = tokenFactory.interface.encodeFunctionData(
             "executeRebase",
@@ -438,6 +501,16 @@ developmentChains.includes(network.name)
           expect(operation.destination).to.equal(destination);
           expect(operation.data).to.equal(data);
 
+
+          const encodedEarlyRebase2 = await signRebase(
+            tokenFactory.signer,
+            {
+              ...defaultRebaseData,
+              sequenceNumber: 2,
+              isNaturalRebase: false,
+            }
+          );
+
           const data2 = tokenFactory.interface.encodeFunctionData(
             "executeRebase",
             [encodedEarlyRebase2.encodedData, encodedEarlyRebase2.signature]
@@ -450,6 +523,15 @@ developmentChains.includes(network.name)
           expect(operation2.enabled).to.be.true;
           expect(operation2.destination).to.equal(destination2);
           expect(operation2.data).to.equal(data2);
+
+          const encodedEarlyRebase3 = await signRebase(
+            tokenFactory.signer,
+            {
+              ...defaultRebaseData,
+              sequenceNumber: 2,
+              isNaturalRebase: false,
+            }
+          );
 
           const data3 = tokenFactory.interface.encodeFunctionData(
             "executeRebase",
@@ -466,8 +548,16 @@ developmentChains.includes(network.name)
         });
 
         it("should add a new operation at index 1", async function () {
-          let { tokenFactory, tester, Orchestrator } = await loadFixture(
+          let { tokenFactory, Orchestrator } = await loadFixture(
             deployTokenFixture
+          );
+
+          const encodedEarlyRebase1 = await signRebase(
+            tokenFactory.signer,
+            {
+              ...defaultRebaseData,
+              isNaturalRebase: false,
+            }
           );
 
           const data = tokenFactory.interface.encodeFunctionData(
@@ -477,12 +567,30 @@ developmentChains.includes(network.name)
           const destination = ethers.constants.AddressZero;
           await Orchestrator.addOperation(0, destination, data);
 
+          const encodedEarlyRebase2 = await signRebase(
+            tokenFactory.signer,
+            {
+              ...defaultRebaseData,
+              sequenceNumber: 2,
+              isNaturalRebase: false,
+            }
+          );
+
           const data2 = tokenFactory.interface.encodeFunctionData(
             "executeRebase",
             [encodedEarlyRebase2.encodedData, encodedEarlyRebase2.signature]
           );
           const destination2 = ethers.constants.AddressZero;
           await Orchestrator.addOperation(1, destination2, data2);
+
+          const encodedEarlyRebase3 = await signRebase(
+            tokenFactory.signer,
+            {
+              ...defaultRebaseData,
+              sequenceNumber: 2,
+              isNaturalRebase: false,
+            }
+          );
 
           const data3 = tokenFactory.interface.encodeFunctionData(
             "executeRebase",
@@ -517,8 +625,16 @@ developmentChains.includes(network.name)
           expect(operation3.data).to.equal(data3);
         });
         it("should  remove an operation(s) from the middle", async function () {
-          let { tokenFactory, tester, Orchestrator } = await loadFixture(
+          let { tokenFactory, Orchestrator } = await loadFixture(
             deployTokenFixture
+          );
+
+          const encodedEarlyRebase1 = await signRebase(
+            tokenFactory.signer,
+            {
+              ...defaultRebaseData,
+              isNaturalRebase: false,
+            }
           );
 
           const data = tokenFactory.interface.encodeFunctionData(
@@ -528,12 +644,30 @@ developmentChains.includes(network.name)
           const destination = ethers.constants.AddressZero;
           await Orchestrator.addOperation(0, destination, data);
 
+          const encodedEarlyRebase2 = await signRebase(
+            tokenFactory.signer,
+            {
+              ...defaultRebaseData,
+              sequenceNumber: 2,
+              isNaturalRebase: false,
+            }
+          );
+
           const data2 = tokenFactory.interface.encodeFunctionData(
             "executeRebase",
             [encodedEarlyRebase2.encodedData, encodedEarlyRebase2.signature]
           );
           const destination2 = ethers.constants.AddressZero;
           await Orchestrator.addOperation(1, destination2, data2);
+
+          const encodedEarlyRebase3 = await signRebase(
+            tokenFactory.signer,
+            {
+              ...defaultRebaseData,
+              sequenceNumber: 2,
+              isNaturalRebase: false,
+            }
+          );
 
           const data3 = tokenFactory.interface.encodeFunctionData(
             "executeRebase",
@@ -559,6 +693,79 @@ developmentChains.includes(network.name)
           expect(Operation.destination).to.equal(destination);
           expect(Operation.data).to.equal(data);
         });
+
+        it("It should call executeScheduledRebases to execute all the rebases left in the queue", async function () {
+          const {
+            tokenFactory,
+            deployer,
+            underlyingToken,
+            SmartToken1,
+            SmartToken2,
+            Orchestrator,
+          } = await loadFixture(deployTokenFixture);
+
+          const depositAmount = ethers.utils.parseEther("1");
+
+          await tokenFactory.initializeSMART(
+            SmartToken1.address,
+
+            SmartToken2.address
+          );
+
+          // deposit underlying token
+          await underlyingToken.approve(tokenFactory.address, depositAmount);
+          await SmartToken1.deposit(depositAmount, deployer.address);
+
+          // Queue up to 10 rebases missing rebase with sequence number 1
+          for (let i = 1; i < 10; i++) {
+            const encodedEarlyRebase = await signRebase(tokenFactory.signer, {
+              ...defaultRebaseData,
+              sequenceNumber: i + 1,
+              isNaturalRebase: false,
+            });
+            await Orchestrator.rebase(
+              encodedEarlyRebase.encodedData,
+              encodedEarlyRebase.signature
+            );
+          }
+
+          expect(await tokenFactory.getNextSequenceNumber()).to.equal(1);
+
+          const emptyRebase1 = await tokenFactory.getScheduledRebases(1);
+          const rebase2 = await tokenFactory.getScheduledRebases(2);
+          const rebase9 = await tokenFactory.getScheduledRebases(9);
+
+          expect(emptyRebase1.sequenceNumber).to.equal(0);
+          expect(rebase2.sequenceNumber).to.equal(2);
+          expect(rebase9.sequenceNumber).to.equal(9);
+
+          // trigger rebase with sequence number 1
+
+          const encodedEarlyRebase = await signRebase(tokenFactory.signer, {
+            ...defaultRebaseData,
+            isNaturalRebase: false,
+          });
+          await Orchestrator.rebase(
+            encodedEarlyRebase.encodedData,
+            encodedEarlyRebase.signature
+          );
+
+          // adding sequence number 1 rebase executes 5 rebases
+          expect(await tokenFactory.getNextSequenceNumber()).to.equal(6);
+
+          const rebase7 = await tokenFactory.getScheduledRebases(7);
+
+          // check that rebase 7 is still in the queue
+          expect(rebase7.sequenceNumber).to.equal(7);
+
+          // call executeScheduledRebases to execute all the rebases left in the queue
+
+          await Orchestrator.executeScheduledRebases();
+
+          // executeScheduledRebases should execute the remaining 5 rebases as part of a batch of 5
+          expect(await tokenFactory.getNextSequenceNumber()).to.equal(11);
+        });
+
       });
     })
   : describe.skip;

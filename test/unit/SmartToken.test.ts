@@ -7,10 +7,8 @@ import {
   TOKEN1_SYMBOL,
   TOKEN2_NAME,
   TOKEN2_SYMBOL,
-  DECIMALS,
-  INITIAL_PRICE,
-  signersAddress,
-  encodedEarlyRebase1,
+  signRebase,
+  defaultRebaseData,
   RebaseElements,
   UserRebaseElements,
   callculateRolloverAmount,
@@ -45,7 +43,7 @@ developmentChains.includes(network.name)
           underlyingToken.address,
           REBASE_INTERVAL,
           sanctionsContract.address,
-          signersAddress,
+          deployer.address,
         ]);
         await tokenFactory.deployed();
 
@@ -265,6 +263,15 @@ developmentChains.includes(network.name)
             rebase1,
             lastUserRebase,
             lastUserRebaseElementsDeployer
+          );
+
+          const encodedEarlyRebase1 = await signRebase(
+            tokenFactory.signer,
+            {
+              ...defaultRebaseData,
+              isNaturalRebase: false,
+              smartTokenXValue: priceX.toString(),
+            }
           );
 
           //apply rebase

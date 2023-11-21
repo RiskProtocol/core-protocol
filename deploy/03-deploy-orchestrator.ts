@@ -1,6 +1,4 @@
 import { DeployFunction } from "hardhat-deploy/types";
-import { developmentChains } from "../helper-hardhat-config";
-import { verify } from "../utils/verify";
 import { ethers, upgrades } from "hardhat";
 
 const func: DeployFunction = async ({
@@ -37,12 +35,6 @@ const func: DeployFunction = async ({
     )}`
   );
   log("SmartToken 1 Deployed");
-  if (
-    !developmentChains.includes(network.name) &&
-    process.env.ETHERSCAN_API_KEY
-  ) {
-    await verify(Orchestrator.address, [tokenFactory.address]);
-  }
   log("----------------------------------");
 
   log("Intializing Orchestrator in Token Factory...");

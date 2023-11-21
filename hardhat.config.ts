@@ -9,6 +9,9 @@ import "hardhat-deploy";
 import "@nomiclabs/hardhat-ethers";
 import "hardhat-contract-sizer";
 import "@openzeppelin/hardhat-upgrades";
+import * as tdly from "@tenderly/hardhat-tenderly";
+
+tdly.setup({ automaticVerifications: false });
 
 const config: HardhatUserConfig = {
   solidity: {
@@ -55,6 +58,18 @@ const config: HardhatUserConfig = {
       url: process.env.POLYGON_RPC_URL,
       accounts: [process.env.PRIVATE_KEY!],
       chainId: 137,
+      allowUnlimitedContractSize: true,
+    },
+    arbitrum: {
+      url: process.env.ARBITRUM_RPC_URL,
+      accounts: [process.env.PRIVATE_KEY!],
+      chainId: 42161,
+      allowUnlimitedContractSize: true,
+    },
+    devnet: {
+      url: "https://rpc.vnet.tenderly.co/devnet/goerli/85802d3c-03ae-4364-b363-69e32cf22a69",
+      accounts: [process.env.PRIVATE_KEY!],
+      chainId: 5,
       allowUnlimitedContractSize: true,
     },
     localhost: {
