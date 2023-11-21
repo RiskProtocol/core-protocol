@@ -14,6 +14,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./SmartToken.sol";
 import "./BaseContract.sol";
 import "./../interfaces/IERC20Update.sol";
+import "./../lib/Shared.sol";
 
 /// @title The Vault or TokenFactory contract.
 /// @notice The main purposes of this contract is to act as a vault as well as it contains the shared logic
@@ -73,18 +74,6 @@ contract TokenFactory is
     address private treasuryWallet;
     address private orchestrator;
 
-    /// @notice Struct to store information regarding a scheduled rebase.
-    /// @dev This struct holds the data for rebases that are scheduled to be executed.
-    struct ScheduledRebase {
-        // A unique number assigned to each rebase, used to manage execution order and guard againts duplicates
-        uint256 sequenceNumber;
-        //Indicates whether this is a natural rebase (occurs at regular planned intervals) or an early rebase.
-        bool isNaturalRebase;
-        // The price of the underlying asset at the rebase time
-        uint256 price;
-        // The price of the smart token X at the rebase time
-        uint256 smartTokenXprice;
-    }
     //Factors to be calculated at rebase
     struct RebaseElements {
         uint256 BalanceFactorXY;
@@ -101,7 +90,7 @@ contract TokenFactory is
 
     /// @dev A mapping to hold the scheduled rebases.
     /// This helps in storing rebases in the order they are scheduled till they are all executed
-    mapping(uint256 => ScheduledRebase) private scheduledRebases;
+    mapping(uint256 => Shared.ScheduledRebase) private scheduledRebases;
 
     uint256 private scheduledRebasesLength;
 
@@ -577,7 +566,7 @@ contract TokenFactory is
         bytes memory signature
     ) external stopRebase onlyOrchestrator {
         // Decodes and verifies the rebase params data against the provided signature.
-        ScheduledRebase memory rebaseCall = verifyAndDecode(
+        Shared.ScheduledRebase memory rebaseCall = verifyAndDecode(
             signature,
             encodedData
         );
@@ -592,7 +581,10 @@ contract TokenFactory is
         // Checks if the current block timestamp is valid for a natural rebase.
         if (
             rebaseCall.isNaturalRebase &&
-            block.timestamp < (lastTimeStamp + (interval * ((rebaseCall.sequenceNumber - nextSequenceNumber) + 1)))
+            block.timestamp <
+            (lastTimeStamp +
+                (interval *
+                    ((rebaseCall.sequenceNumber - nextSequenceNumber) + 1)))
         ) {
             revert TokenFactory__InvalidNaturalRebase();
         }
@@ -615,7 +607,11 @@ contract TokenFactory is
      * only 5 will be executed and the rest will be left in the queue
      */
     function executeScheduledRebases() external stopRebase onlyOrchestrator {
-        if (scheduledRebasesLength > 0 && scheduledRebases[nextSequenceNumber].sequenceNumber == nextSequenceNumber) {
+        if (
+            scheduledRebasesLength > 0 &&
+            scheduledRebases[nextSequenceNumber].sequenceNumber ==
+            nextSequenceNumber
+        ) {
             rebase();
         }
     }
@@ -671,7 +667,9 @@ contract TokenFactory is
         uint256 i = 0;
         while (i < 5) {
             // a maximum of 5 rebases per transaction
-            ScheduledRebase memory scheduledRebase = scheduledRebases[nextSequenceNumber];
+            Shared.ScheduledRebase memory scheduledRebase = scheduledRebases[
+                nextSequenceNumber
+            ];
             // Skip to the next iteration if the sequence number doesn't match
             if (scheduledRebase.sequenceNumber != nextSequenceNumber) {
                 break;
@@ -760,7 +758,6 @@ contract TokenFactory is
 
             // Remove the processed rebase from the queue using the sequence number
             removeRebase(nextSequenceNumber);
-
 
             // Increment the sequence number for the next rebase to be processed
             // this must be done after removing the previous rebase from the queue to avoid removing the wrong rebase
@@ -861,7 +858,7 @@ contract TokenFactory is
     function verifyAndDecode(
         bytes memory signature,
         bytes memory encodedData
-    ) private view returns (ScheduledRebase memory) {
+    ) public view returns (Shared.ScheduledRebase memory) {
         // Hash the encoded data
         bytes32 hash = keccak256(encodedData);
         // Convert the hash to an Ethereum signed message hash
@@ -886,7 +883,7 @@ contract TokenFactory is
             uint256 underlyingValue,
             uint256 smartTokenXValue
         ) = abi.decode(encodedData, (uint256, bool, uint256, uint256));
-        ScheduledRebase memory data = ScheduledRebase(
+        Shared.ScheduledRebase memory data = Shared.ScheduledRebase(
             sequenceNumber,
             isNaturalRebase,
             underlyingValue,
@@ -1032,11 +1029,9 @@ contract TokenFactory is
     /// @dev This function is a getter for a single `scheduledRebase` struct.
     /// @param sequenceNumber The sequence number of the `scheduledRebases` mapping to retrieve.
     /// @return The `scheduledRebase` struct at the given sequence number.
-    function getScheduledRebases(uint256 sequenceNumber)
-        public
-        view
-        returns (ScheduledRebase memory)
-    {
+    function getScheduledRebases(
+        uint256 sequenceNumber
+    ) public view returns (Shared.ScheduledRebase memory) {
         return scheduledRebases[sequenceNumber];
     }
 

@@ -6,6 +6,8 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "../interfaces/ITokenFactory.sol";
+import "../interfaces/IElasticPoolSupply.sol";
+import "../lib/Shared.sol";
 
 contract Orchestrator is UUPSUpgradeable, OwnableUpgradeable {
     struct Operation {
@@ -16,19 +18,22 @@ contract Orchestrator is UUPSUpgradeable, OwnableUpgradeable {
 
     Operation[] public operations;
     ITokenFactory private tokenFactory;
+    address[] public balancerPools;
+    mapping(address => bool) private poolExists;
 
     event OperationAdded(bool enabled, address destination, bytes data);
     event OperationRemoved(uint256 index);
     event OperationStatusChanged(uint256 index, bool enabled);
     event RebaseExecuted(bytes data);
+    event BalancerResynced(address data);
     event OperationExecuted(bytes data, address destination);
 
     error Orchestrator_FailedOperation();
     error Orchestrator_Index_Out_Bounds();
     error Orchestrator_Wrong_Dest_Addr();
 
-    modifier lessThanLength(uint256 index) {
-        if (!(index < operations.length)) {
+    modifier lessThanLength(uint256 index, uint256 arrayLength) {
+        if (!(index < arrayLength)) {
             revert Orchestrator_Index_Out_Bounds();
         }
         _;
@@ -51,6 +56,18 @@ contract Orchestrator is UUPSUpgradeable, OwnableUpgradeable {
 
     function rebase(bytes memory encodedData, bytes memory signature) external {
         tokenFactory.executeRebase(encodedData, signature);
+        if (balancerPools.length != 0) {
+            //get price
+            Shared.ScheduledRebase memory rebaseCall = tokenFactory
+                .verifyAndDecode(signature, encodedData);
+            //resync
+            for (uint256 i = 0; i < balancerPools.length; i++) {
+                IElasticPoolSupply(balancerPools[i]).resyncWeight(
+                    uint256(rebaseCall.smartTokenXprice)
+                );
+                emit BalancerResynced(balancerPools[i]);
+            }
+        }
         emit RebaseExecuted(encodedData);
         if (operations.length > 0) {
             for (uint256 i = 0; i < operations.length; i++) {
@@ -116,7 +133,7 @@ contract Orchestrator is UUPSUpgradeable, OwnableUpgradeable {
      */
     function removeOperation(
         uint256 index
-    ) external onlyOwner lessThanLength(index) {
+    ) external onlyOwner lessThanLength(index, operations.length) {
         for (uint256 i = index; i < operations.length - 1; i++) {
             operations[i] = operations[i + 1];
         }
@@ -133,7 +150,7 @@ contract Orchestrator is UUPSUpgradeable, OwnableUpgradeable {
         uint256 index,
         address destinationAddress,
         bool enabled
-    ) external onlyOwner lessThanLength(index) {
+    ) external onlyOwner lessThanLength(index, operations.length) {
         if (operations[index].destination != destinationAddress) {
             revert Orchestrator_Wrong_Dest_Addr();
         }
@@ -151,5 +168,25 @@ contract Orchestrator is UUPSUpgradeable, OwnableUpgradeable {
 
     function getTokenFactory() external view returns (address) {
         return address(tokenFactory);
+    }
+
+    /// Add a new balancer pool to Orchestrator
+    /// @param _pool : the address of the new balancer pool
+    function addBalancerPool(address _pool) external onlyOwner {
+        require(!poolExists[_pool], "Pool already added");
+        balancerPools.push(_pool);
+        poolExists[_pool] = true;
+    }
+
+    // Remove a Balancer pool address
+    /// @param index : the address of the new balancer pool
+    function removeBalancerPool(
+        uint index
+    ) external onlyOwner lessThanLength(index, balancerPools.length) {
+        require(poolExists[balancerPools[index]], "Pool does not exist");
+        poolExists[balancerPools[index]] = false;
+
+        balancerPools[index] = balancerPools[balancerPools.length - 1];
+        balancerPools.pop();
     }
 }
