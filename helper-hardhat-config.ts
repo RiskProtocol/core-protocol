@@ -11,20 +11,20 @@ export const TOKEN1_NAME = "RistP One";
 export const TOKEN1_SYMBOL = "R1";
 export const TOKEN2_NAME = "RistP Two";
 export const TOKEN2_SYMBOL = "R2";
-export const REBASE_INTERVAL = 1800; // 30 minutes
+export const REBALANCE_INTERVAL = 1800; // 30 minutes
 export const defaultOperators: string[] = [];
-export const defaultRebaseData = {
+export const defaultRebalanceData = {
   sequenceNumber: 1,
-  isNaturalRebase: true,
+  isNaturalRebalance: true,
   underlyingValue: INITIAL_PRICE,
   smartTokenXValue: SmartTokenXValue,
 }
-export const signRebase = async (signer: Signer, data: { sequenceNumber: number; isNaturalRebase: boolean; underlyingValue: string; smartTokenXValue: string;}) => {
+export const signRebalance = async (signer: Signer, data: { sequenceNumber: number; isNaturalRebalance: boolean; underlyingValue: string; smartTokenXValue: string;}) => {
   const types = ["uint256", "bool", "uint256", "uint256"];
   // Encode the data
   const encodedData = utils.defaultAbiCoder.encode(types, [
     data.sequenceNumber,
-    data.isNaturalRebase,
+    data.isNaturalRebalance,
     data.underlyingValue,
     data.smartTokenXValue,
   ]);
@@ -36,25 +36,25 @@ export const signRebase = async (signer: Signer, data: { sequenceNumber: number;
 }
 
 export const feeCalculator = (assetBal1: bigint, mgmtFee: bigint) => {
-  const depositCycle = REBASE_INTERVAL;
+  const depositCycle = REBALANCE_INTERVAL;
   const oneDay: bigint = BigInt(86400);
   const mgmtFeePerInterval: bigint =
-    (BigInt(mgmtFee) * BigInt(REBASE_INTERVAL)) / oneDay;
+    (BigInt(mgmtFee) * BigInt(REBALANCE_INTERVAL)) / oneDay;
   const scallingFactorMgmtFee = MULTIPLIER;
   return (
     (BigInt(depositCycle) * BigInt(mgmtFeePerInterval) * BigInt(assetBal1)) /
-    BigInt(REBASE_INTERVAL) /
+    BigInt(REBALANCE_INTERVAL) /
     BigInt(scallingFactorMgmtFee)
   );
 };
 
-export type RebaseElements = {
+export type RebalanceElements = {
   BalanceFactorXY: BigInt;
   BalanceFactorUx: BigInt;
   BalanceFactorUy: BigInt;
 };
 
-export type UserRebaseElements = {
+export type UserRebalanceElements = {
   netX: BigInt;
   netY: BigInt;
   Ux: BigInt;
@@ -62,38 +62,38 @@ export type UserRebaseElements = {
 };
 
 export const callculateRolloverAmount = (
-  lastRebase: any,
-  lastUserRebase: any,
-  userLastRebaseInfo: any
+  lastRebalance: any,
+  lastUserRebalance: any,
+  userLastRebalanceInfo: any
 ) => {
   const netX =
-    (BigInt(userLastRebaseInfo.netX) * BigInt(lastRebase.BalanceFactorXY)) /
-    BigInt(lastUserRebase.BalanceFactorXY);
+    (BigInt(userLastRebalanceInfo.netX) * BigInt(lastRebalance.BalanceFactorXY)) /
+    BigInt(lastUserRebalance.BalanceFactorXY);
   const netY =
-    (BigInt(userLastRebaseInfo.netY) * BigInt(lastRebase.BalanceFactorXY)) /
-    BigInt(lastUserRebase.BalanceFactorXY);
+    (BigInt(userLastRebalanceInfo.netY) * BigInt(lastRebalance.BalanceFactorXY)) /
+    BigInt(lastUserRebalance.BalanceFactorXY);
 
   const uX =
     BigInt(
-      BigInt(lastRebase.BalanceFactorUx - lastUserRebase.BalanceFactorUx) *
-        BigInt(userLastRebaseInfo.netX)
+      BigInt(lastRebalance.BalanceFactorUx - lastUserRebalance.BalanceFactorUx) *
+        BigInt(userLastRebalanceInfo.netX)
     ) /
-      BigInt(lastUserRebase.BalanceFactorXY) +
-    BigInt(userLastRebaseInfo.Ux);
+      BigInt(lastUserRebalance.BalanceFactorXY) +
+    BigInt(userLastRebalanceInfo.Ux);
   const uY =
     BigInt(
-      BigInt(lastRebase.BalanceFactorUy - lastUserRebase.BalanceFactorUy) *
-        BigInt(userLastRebaseInfo.netY)
+      BigInt(lastRebalance.BalanceFactorUy - lastUserRebalance.BalanceFactorUy) *
+        BigInt(userLastRebalanceInfo.netY)
     ) /
-      BigInt(lastUserRebase.BalanceFactorXY) +
-    BigInt(userLastRebaseInfo.Uy);
+      BigInt(lastUserRebalance.BalanceFactorXY) +
+    BigInt(userLastRebalanceInfo.Uy);
 
-  const newUserRebaseElements = {
+  const newUserRebalanceElements = {
     netX: netX,
     netY: netY,
     Ux: uX,
     Uy: uY,
   };
 
-  return [netX + uX + uY, netY + uY + uX, newUserRebaseElements];
+  return [netX + uX + uY, netY + uY + uX, newUserRebalanceElements];
 };

@@ -19,7 +19,7 @@ abstract contract TestHelper {
 
     uint8 public constant DECIMALS = 18;
     int256 public constant INITIAL_PRICE = 2000000000000000000000;
-    uint256 public constant REBASE_INTERVAL = 7890000;
+    uint256 public constant REBALANCE_INTERVAL = 7890000;
     string public TOKEN1_NAME = "RistP One";
     string public TOKEN1_SYMBOL = "R1";
     string public TOKEN2_NAME = "RistP Two";

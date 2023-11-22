@@ -567,7 +567,7 @@ function App() {
     }
   }
 
-  async function rebase() {
+  async function rebalance() {
     if (typeof window.ethereum !== "undefined") {
       const provider = new ethers.providers.Web3Provider(window.ethereum);
       const signer = provider.getSigner();
@@ -577,16 +577,16 @@ function App() {
         signer
       );
       try {
-        await contract.rebase();
-        console.log("Rebasing...");
-        // console.log(`Rebase Count is ${contract1.getScallingFactorLength()}`)
+        await contract.rebalance();
+        console.log("Rebalancing...");
+        // console.log(`Rebalance Count is ${contract1.getScallingFactorLength()}`)
       } catch (err) {
         console.log("Error: ", err);
       }
     }
   }
 
-  async function rebaseCount() {
+  async function rebalanceCount() {
     if (typeof window.ethereum !== "undefined") {
       const provider = new ethers.providers.Web3Provider(window.ethereum);
       const contract = new ethers.Contract(
@@ -597,14 +597,14 @@ function App() {
 
       try {
         const data = await contract.getScallingFactorLength();
-        console.log(`Current system rebase count is ${data}`);
+        console.log(`Current system rebalance count is ${data}`);
       } catch (err) {
         console.log("Error: ", err);
       }
     }
   }
 
-  async function userLastRebase() {
+  async function userLastRebalance() {
     if (typeof window.ethereum !== "undefined") {
       const provider = new ethers.providers.Web3Provider(window.ethereum);
       const accounts = await requestAccounts();
@@ -615,8 +615,8 @@ function App() {
       );
 
       try {
-        const data = await contract.getUserLastRebaseCount(accounts[0]);
-        console.log(`User last rebase count is ${data}`);
+        const data = await contract.getUserLastRebalanceCount(accounts[0]);
+        console.log(`User last rebalance count is ${data}`);
       } catch (err) {
         console.log("Error: ", err);
       }
@@ -946,14 +946,14 @@ function App() {
         <button style={buttonStyle} onClick={transfer}>
           Trade 1 of Token X to abv address
         </button>
-        <button style={buttonStyle} onClick={rebaseCount}>
-          Current System Rebase Count
+        <button style={buttonStyle} onClick={rebalanceCount}>
+          Current System Rebalance Count
         </button>
-        <button style={buttonStyle} onClick={rebase}>
-          Trigger Rebase
+        <button style={buttonStyle} onClick={rebalance}>
+          Trigger Rebalance
         </button>
-        <button style={buttonStyle} onClick={userLastRebase}>
-          Last User Rebase Participation
+        <button style={buttonStyle} onClick={userLastRebalance}>
+          Last User Rebalance Participation
         </button>
         <button style={buttonStyle} onClick={tokenSupply.bind(this, "x")}>
           Total Supply of Token X

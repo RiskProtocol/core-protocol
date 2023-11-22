@@ -2,15 +2,15 @@ import { assert, expect } from "chai";
 import { ethers, network, upgrades } from "hardhat";
 import {
   developmentChains,
-  REBASE_INTERVAL,
+  REBALANCE_INTERVAL,
   TOKEN1_NAME,
   TOKEN1_SYMBOL,
   TOKEN2_NAME,
   TOKEN2_SYMBOL,
-  signRebase,
-  defaultRebaseData,
-  RebaseElements,
-  UserRebaseElements,
+  signRebalance,
+  defaultRebalanceData,
+  RebalanceElements,
+  UserRebalanceElements,
   callculateRolloverAmount,
 } from "../../helper-hardhat-config";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
@@ -41,7 +41,7 @@ developmentChains.includes(network.name)
         );
         const tokenFactory = await upgrades.deployProxy(TokenFactory, [
           underlyingToken.address,
-          REBASE_INTERVAL,
+          REBALANCE_INTERVAL,
           sanctionsContract.address,
           deployer.address,
         ]);
@@ -225,13 +225,13 @@ developmentChains.includes(network.name)
           const priceU = BigInt(2000000000000000000000);
           const priceY = priceU - priceX;
 
-          const lastUserRebase: RebaseElements = {
+          const lastUserRebalance: RebalanceElements = {
             BalanceFactorXY: BigInt(1e18),
             BalanceFactorUx: BigInt(0),
             BalanceFactorUy: BigInt(0),
           };
 
-          const rebase1: RebaseElements = {
+          const rebalance1: RebalanceElements = {
             BalanceFactorXY: BigInt(
               (BigInt(1e18) * BigInt(2) * priceX) / BigInt(priceU)
             ),
@@ -241,56 +241,56 @@ developmentChains.includes(network.name)
             ),
           };
 
-          const lastUserRebaseElementsTester: UserRebaseElements = {
+          const lastUserRebalanceElementsTester: UserRebalanceElements = {
             netX: BigInt(ethers.utils.parseEther("10").toString()),
             netY: BigInt(0),
             Ux: BigInt(0),
             Uy: BigInt(0),
           };
-          const lastUserRebaseElementsDeployer: UserRebaseElements = {
+          const lastUserRebalanceElementsDeployer: UserRebalanceElements = {
             netX: BigInt(ethers.utils.parseEther("40").toString()),
             netY: BigInt(ethers.utils.parseEther("50").toString()),
             Ux: BigInt(0),
             Uy: BigInt(0),
           };
 
-          const postRebaseTester: any[] = callculateRolloverAmount(
-            rebase1,
-            lastUserRebase,
-            lastUserRebaseElementsTester
+          const postRebalanceTester: any[] = callculateRolloverAmount(
+            rebalance1,
+            lastUserRebalance,
+            lastUserRebalanceElementsTester
           );
-          const postRebaseDeplyer: any[] = callculateRolloverAmount(
-            rebase1,
-            lastUserRebase,
-            lastUserRebaseElementsDeployer
+          const postRebalanceDeplyer: any[] = callculateRolloverAmount(
+            rebalance1,
+            lastUserRebalance,
+            lastUserRebalanceElementsDeployer
           );
 
-          const encodedEarlyRebase1 = await signRebase(
+          const encodedEarlyRebalance1 = await signRebalance(
             tokenFactory.signer,
             {
-              ...defaultRebaseData,
-              isNaturalRebase: false,
+              ...defaultRebalanceData,
+              isNaturalRebalance: false,
               smartTokenXValue: priceX.toString(),
             }
           );
 
-          //apply rebase
-          await orchestrator.rebase(
-            encodedEarlyRebase1.encodedData,
-            encodedEarlyRebase1.signature
+          //apply rebalance
+          await orchestrator.rebalance(
+            encodedEarlyRebalance1.encodedData,
+            encodedEarlyRebalance1.signature
           );
 
           assert.equal(
             Number(BigInt(await smartToken2.balanceOf(tester.address))),
-            Number(postRebaseTester[1])
+            Number(postRebalanceTester[1])
           );
           assert.equal(
             Number(BigInt(await smartToken1.balanceOf(deployer.address))),
-            Number(postRebaseDeplyer[0])
+            Number(postRebalanceDeplyer[0])
           );
           assert.equal(
             Number(BigInt(await smartToken2.balanceOf(deployer.address))),
-            Number(postRebaseDeplyer[1])
+            Number(postRebalanceDeplyer[1])
           );
 
           const testerBalPrev = await smartToken2.balanceOf(tester.address);

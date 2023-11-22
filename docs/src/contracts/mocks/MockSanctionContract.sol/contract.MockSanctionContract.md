@@ -1,5 +1,5 @@
 # MockSanctionContract
-[Git Source](https://github.com/RiskProtocol/core-protocol/blob/ee827bcbd5b33da1299e0daca263c7bf65a112b7/contracts/mocks/MockSanctionContract.sol)
+[Git Source](https://github.com/RiskProtocol/core-protocol/blob/d528418042db61177ce53f6ee7a0a539f1f5bd77/contracts/mocks/MockSanctionContract.sol)
 
 
 ## State Variables

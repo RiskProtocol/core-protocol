@@ -1,5 +1,5 @@
 # BaseContract
-[Git Source](https://github.com/RiskProtocol/core-protocol/blob/ee827bcbd5b33da1299e0daca263c7bf65a112b7/contracts/vaults/BaseContract.sol)
+[Git Source](https://github.com/RiskProtocol/core-protocol/blob/d528418042db61177ce53f6ee7a0a539f1f5bd77/contracts/vaults/BaseContract.sol)
 
 **Inherits:**
 Initializable, OwnableUpgradeable
@@ -41,10 +41,10 @@ bool private transferCircuitBreaker;
 ```
 
 
-### rebaseCircuitBreaker
+### rebalanceCircuitBreaker
 
 ```solidity
-bool private rebaseCircuitBreaker;
+bool private rebalanceCircuitBreaker;
 ```
 
 
@@ -94,14 +94,14 @@ This modifier is used to halt smart token transfers in emergency situations.*
 modifier stopTransfer();
 ```
 
-### stopRebase
+### stopRebalance
 
-*Reverts if the rebase circuit breaker is active.
-This modifier is used to halt rebase operations in emergency situations.*
+*Reverts if the rebalance circuit breaker is active.
+This modifier is used to halt rebalance operations in emergency situations.*
 
 
 ```solidity
-modifier stopRebase();
+modifier stopRebalance();
 ```
 
 ### __BaseContract_init
@@ -162,21 +162,21 @@ Only the owner can call this function.*
 function toggleTransferCircuitBreaker() external onlyOwner;
 ```
 
-### toggleRebaseCircuitBreaker
+### toggleRebalanceCircuitBreaker
 
-Toggles the rebase circuit breaker on or off.
+Toggles the rebalance circuit breaker on or off.
 
-*This function allows the contract owner to halt or resume rebase operations in case of emergency.
+*This function allows the contract owner to halt or resume rebalance operations in case of emergency.
 Only the owner can call this function.*
 
 
 ```solidity
-function toggleRebaseCircuitBreaker() external onlyOwner;
+function toggleRebalanceCircuitBreaker() external onlyOwner;
 ```
 
 ### stopAllCircuitBreakers
 
-Activates all circuit breakers, halting deposit, withdraw, transfer, and rebase operations.
+Activates all circuit breakers, halting deposit, withdraw, transfer, and rebalance operations.
 
 *This function allows the contract owner to halt critical operations in case of emergency.
 Only the owner can call this function.*
@@ -188,7 +188,7 @@ function stopAllCircuitBreakers() external onlyOwner;
 
 ### resumeAllCircuitBreakers
 
-Deactivates all circuit breakers, resuming deposit, withdraw, transfer, and rebase operations.
+Deactivates all circuit breakers, resuming deposit, withdraw, transfer, and rebalance operations.
 
 *This function allows the contract owner to resume critical operations after an emergency halt.
 Only the owner can call this function.*
@@ -210,7 +210,7 @@ function isDepositCircuitBreaker() external view returns (bool);
 
 |Name|Type|Description|
 |----|----|-----------|
-|`<none>`|`bool`|A boolean value indicating whether the deposit circuit breaker is active pr not|
+|`<none>`|`bool`|A boolean value indicating whether the deposit circuit breaker is active or not|
 
 
 ### isWithdrawCircuitBreaker
@@ -243,19 +243,19 @@ function isTransferCircuitBreaker() external view returns (bool);
 |`<none>`|`bool`|A boolean value indicating whether the transfer circuit breaker is active or not.|
 
 
-### isRebaseCircuitBreaker
+### isRebalanceCircuitBreaker
 
-Checks if the rebase circuit breaker is active.
+Checks if the rebalance circuit breaker is active.
 
 
 ```solidity
-function isRebaseCircuitBreaker() external view returns (bool);
+function isRebalanceCircuitBreaker() external view returns (bool);
 ```
 **Returns**
 
 |Name|Type|Description|
 |----|----|-----------|
-|`<none>`|`bool`|A boolean value indicating whether the rebase circuit breaker is active or not.|
+|`<none>`|`bool`|A boolean value indicating whether the rebalance circuit breaker is active or not.|
 
 
 ## Errors
@@ -283,9 +283,9 @@ error BaseContract__WithdrawCircuitBreaker();
 error BaseContract__TransferCircuitBreaker();
 ```
 
-### BaseContract__RebaseCircuitBreaker
+### BaseContract__RebalanceCircuitBreaker
 
 ```solidity
-error BaseContract__RebaseCircuitBreaker();
+error BaseContract__RebalanceCircuitBreaker();
 ```
 

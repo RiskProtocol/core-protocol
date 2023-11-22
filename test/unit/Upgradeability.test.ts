@@ -2,7 +2,7 @@ import { assert, expect } from "chai";
 import { ethers, network, upgrades } from "hardhat";
 import {
   developmentChains,
-  REBASE_INTERVAL,
+  REBALANCE_INTERVAL,
   TOKEN1_NAME,
   TOKEN1_SYMBOL,
   TOKEN2_NAME,
@@ -40,7 +40,7 @@ developmentChains.includes(network.name)
 
         let tokenFactory = await upgrades.deployProxy(TokenFactory, [
           underlyingToken.address,
-          REBASE_INTERVAL,
+          REBALANCE_INTERVAL,
           sanctionsContract.address,
           deployer.address,
         ]);
@@ -84,7 +84,7 @@ developmentChains.includes(network.name)
 
         const tokenFactory2 = await upgrades.deployProxy(TokenFactory2, [
           "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D",
-          REBASE_INTERVAL,
+          REBALANCE_INTERVAL,
           sanctionsContract.address,
           deployer.address,
         ]);
@@ -106,7 +106,7 @@ developmentChains.includes(network.name)
 
         const tokenFactory3 = await upgrades.deployProxy(TokenFactory3Factory, [
           underlyingTokenWithoutPermit.address,
-          REBASE_INTERVAL,
+          REBALANCE_INTERVAL,
           sanctionsContract.address,
           deployer.address,
         ]);
@@ -181,7 +181,7 @@ developmentChains.includes(network.name)
             tokenFactory.address,
             newTokenFactory
           );
-          expect(await tokenFactory.getInterval()).to.equal(REBASE_INTERVAL);
+          expect(await tokenFactory.getInterval()).to.equal(REBALANCE_INTERVAL);
           expect(await tokenFactory.getSmartTokenAddress(0)).to.equal(
             SmartToken1.address
           );

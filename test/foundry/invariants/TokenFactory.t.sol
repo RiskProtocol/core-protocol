@@ -18,7 +18,7 @@ contract TokenFactoryTest is Test, TestHelper {
         factoryWrapper = TokenFactory(address(factoryProxy));
         factoryWrapper.initialize(
             mockERC20Token,
-            REBASE_INTERVAL,
+            REBALANCE_INTERVAL,
             sanctionsContract,
             signersAddress
         );
@@ -51,14 +51,14 @@ contract TokenFactoryTest is Test, TestHelper {
         factoryWrapper.initializeSMART(smartTokenXWrapper, smartTokenYWrapper);
     }
 
-    function invariant_RebaseInterval() public {
-        assertEq(factoryWrapper.getInterval(), REBASE_INTERVAL);
+    function invariant_RebalanceInterval() public {
+        assertEq(factoryWrapper.getInterval(), REBALANCE_INTERVAL);
     }
 
-    function invariant_RebaseCount() public {
+    function invariant_RebalanceCount() public {
         assertLe(
-            factoryWrapper.getUserLastRebaseCount(deployer),
-            factoryWrapper.getRebaseNumber()
+            factoryWrapper.getUserLastRebalanceCount(deployer),
+            factoryWrapper.getRebalanceNumber()
         );
     }
 }

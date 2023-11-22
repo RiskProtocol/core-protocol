@@ -1,15 +1,15 @@
 # SmartToken
-[Git Source](https://github.com/RiskProtocol/core-protocol/blob/ee827bcbd5b33da1299e0daca263c7bf65a112b7/contracts/vaults/SmartToken.sol)
+[Git Source](https://github.com/RiskProtocol/core-protocol/blob/d528418042db61177ce53f6ee7a0a539f1f5bd77/contracts/vaults/SmartToken.sol)
 
 **Inherits:**
-Initializable, UUPSUpgradeable, OwnableUpgradeable, ERC20Upgradeable, ERC20PermitUpgradeable, [BaseContract](/contracts/vaults/BaseContract.sol/contract.BaseContract.md), IERC4626Upgradeable, ReentrancyGuardUpgradeable
+Initializable, UUPSUpgradeable, OwnableUpgradeable, [ERC20Upgradeable](/contracts/lib/ERC20/ERC20Upgradeable.sol/contract.ERC20Upgradeable.md), [ERC20PermitUpgradeable](/contracts/lib/ERC20/extensions/ERC20PermitUpgradeable.sol/abstract.ERC20PermitUpgradeable.md), [BaseContract](/contracts/vaults/BaseContract.sol/contract.BaseContract.md), IERC4626Upgradeable, ReentrancyGuardUpgradeable
 
-*This is a rebasing token, part of Risk Protocol's system
+*This is a rebalancing token, part of Risk Protocol's system
 The same contract is used by both RiskON and RiskOFF
 Whenever a user deposit a unit of underlying in the Vault(TokenFactory), the user
 is expected to recieve a unit of both RiskON and RiskOFF.
-At every rebase operation, the user RiskOn/OFF balances will be aligned with respect to
-the rebase math.*
+At every rebalance operation, the user RiskOn/OFF balances will be aligned with respect to
+the rebalance math.*
 
 
 ## State Variables
@@ -28,6 +28,13 @@ The underlyingToken instance
 
 ```solidity
 IERC20Update private underlyingToken;
+```
+
+
+### isX
+
+```solidity
+bool private isX;
 ```
 
 
@@ -95,7 +102,8 @@ function initialize(
     string memory tokenName,
     string memory tokenSymbol,
     address factoryAddress,
-    address sanctionsContract_
+    address sanctionsContract_,
+    bool isX_
 ) public initializer;
 ```
 **Parameters**
@@ -106,6 +114,7 @@ function initialize(
 |`tokenSymbol`|`string`|The symbol of the token.|
 |`factoryAddress`|`address`|The address of the TokenFactory contract.|
 |`sanctionsContract_`|`address`|The address of the SanctionsList contract.|
+|`isX_`|`bool`||
 
 
 ### _authorizeUpgrade
@@ -162,7 +171,7 @@ function burn(address account, uint256 amount) external onlyTokenFactory;
 Transfers the specified amount of tokens to the specified recipient.
 
 *Overrides the `transfer` function from `ERC20Upgradeable` and `IERC20Upgradeable` contracts.
-If the sender or receiver has a pending rebase, it is handled before the transfer.
+If the sender or receiver has a pending rebalance, it is handled before the transfer.
 This function can only be called when transfers are not stopped,
 and neither the sender nor the recipient are on the sanctions list.*
 
@@ -190,11 +199,18 @@ function transfer(address recipient, uint256 amount)
 |`<none>`|`bool`|Always return true unless reverted|
 
 
-### smartTransfer
+### smartTreasuryTransfer
 
 
 ```solidity
-function smartTransfer(address recipient, uint256 amount) external onlyTokenFactory;
+function smartTreasuryTransfer(address treasuryAddress, uint256 amount) external onlyTokenFactory;
+```
+
+### smartBalanceAdjust
+
+
+```solidity
+function smartBalanceAdjust(address account, uint256 amount) external onlyTokenFactory;
 ```
 
 ### balanceOf
@@ -202,8 +218,8 @@ function smartTransfer(address recipient, uint256 amount) external onlyTokenFact
 Returns the balance of the specified account
 
 *Overrides the `balanceOf` function from the inherited `ERC20Upgradeable` and `IERC20Upgradeable` contracts.
-If the account has a pending rebase, the function calculates the calculated balance
-post rebase using the 'calculateRollOverValue' method.
+If the account has a pending rebalance, the function calculates the calculated balance
+post rebalance using the 'calculateRollOverValue' method.
 Otherwise, it returns the erc20 balance using `unScaledbalanceOf` method.*
 
 
@@ -225,9 +241,9 @@ function balanceOf(address account) public view override(ERC20Upgradeable, IERC2
 
 ### unScaledbalanceOf
 
-Returns the unscaled(unaffected by pending rebases) balance of the specified account.
+Returns the unscaled(unaffected by pending rebalances) balance of the specified account.
 
-*This function returns the ERC20 balance(unaffected by pending rebases) of the account.*
+*This function returns the ERC20 balance(unaffected by pending rebalances) of the account.*
 
 
 ```solidity
@@ -243,19 +259,19 @@ function unScaledbalanceOf(address account) public view returns (uint256);
 
 |Name|Type|Description|
 |----|----|-----------|
-|`<none>`|`uint256`|The unscaled(unaffected by pending rebases) balance of the specified account.|
+|`<none>`|`uint256`|The unscaled(unaffected by pending rebalances) balance of the specified account.|
 
 
-### hasPendingRebase
+### hasPendingRebalance
 
-Checks if the specified account has a pending rebase.
+Checks if the specified account has a pending rebalance.
 
-*Compares the account's last rebase count with the current scalingfactor length
-to determine if a rebase is pending.*
+*Compares the account's last rebalance count with the current scalingfactor length
+to determine if a rebalance is pending.*
 
 
 ```solidity
-function hasPendingRebase(address account) public view returns (bool);
+function hasPendingRebalance(address account) public view returns (bool);
 ```
 **Parameters**
 
@@ -267,7 +283,7 @@ function hasPendingRebase(address account) public view returns (bool);
 
 |Name|Type|Description|
 |----|----|-----------|
-|`<none>`|`bool`|A boolean value indicating whether the specified account has a pending rebase.|
+|`<none>`|`bool`|A boolean value indicating whether the specified account has a pending rebalance.|
 
 
 ### getTokenFactory
@@ -293,7 +309,7 @@ Transfers the specified amount of tokens from the sender to the recipient.
 
 *Overrides the `transferFrom` function from the inherited `ERC20Upgradeable` and
 `IERC20Upgradeable` contracts.
-If the sender or recipient has a pending rebase, it is handled before the transfer.
+If the sender or recipient has a pending rebalance, it is handled before the transfer.
 This function can only be called when transfers are not stopped, and neither the sender
 nor the recipient are on the sanctions list.*
 
@@ -322,15 +338,15 @@ function transferFrom(address sender, address recipient, uint256 amount)
 |`<none>`|`bool`|A boolean value indicating whether the operation succeeded.|
 
 
-### handlePendingRebase
+### handlePendingRebalance
 
-Handles pending rebases for the sender and receiver addresses.
+Handles pending rebalances for the sender and receiver addresses.
 
-*This function checks if the sender or receiver has a pending rebase and applies the rebase if neede.*
+*This function checks if the sender or receiver has a pending rebalance and applies the rebalance if needed.*
 
 
 ```solidity
-function handlePendingRebase(address sender, address receiver) public;
+function handlePendingRebalance(address sender, address receiver) public;
 ```
 **Parameters**
 

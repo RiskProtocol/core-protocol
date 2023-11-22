@@ -18,7 +18,7 @@ contract TokenFactoryTest is Test, TestHelper {
         factoryWrapper = TokenFactory(address(factoryProxy));
         factoryWrapper.initialize(
             mockERC20Token,
-            REBASE_INTERVAL,
+            REBALANCE_INTERVAL,
             sanctionsContract,
             signersAddress
         );
