@@ -23,6 +23,8 @@ contract Orchestrator is UUPSUpgradeable, OwnableUpgradeable {
 
     event OperationAdded(bool enabled, address destination, bytes data);
     event OperationRemoved(uint256 index);
+    event BalancerPoolAdded(uint256 index, address addr);
+    event BalancerPoolRemoved(uint256 index);
     event OperationStatusChanged(uint256 index, bool enabled);
     event RebaseExecuted(bytes data);
     event BalancerResynced(address data);
@@ -172,10 +174,21 @@ contract Orchestrator is UUPSUpgradeable, OwnableUpgradeable {
 
     /// Add a new balancer pool to Orchestrator
     /// @param _pool : the address of the new balancer pool
-    function addBalancerPool(address _pool) external onlyOwner {
+    /// @param index : the index of pool which we want to remove
+    function addBalancerPool(uint256 index, address _pool) external onlyOwner {
         require(!poolExists[_pool], "Pool already added");
-        balancerPools.push(_pool);
+        //expand the array
+        balancerPools.push(address(0));
+
+        //shift every element after i by 1
+        for (uint256 i = balancerPools.length - 1; i > index; i--) {
+            balancerPools[i] = balancerPools[i - 1];
+        }
+
+        balancerPools[index] = _pool;
+
         poolExists[_pool] = true;
+        emit BalancerPoolAdded(index, _pool);
     }
 
     // Remove a Balancer pool address
@@ -188,5 +201,6 @@ contract Orchestrator is UUPSUpgradeable, OwnableUpgradeable {
 
         balancerPools[index] = balancerPools[balancerPools.length - 1];
         balancerPools.pop();
+        emit BalancerPoolRemoved(index);
     }
 }

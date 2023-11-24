@@ -736,21 +736,39 @@ developmentChains.includes(network.name)
         it("should add a new balancer pool", async function () {
           const { Orchestrator } = await loadFixture(deployTokenFixture);
           const poolAddress = ethers.Wallet.createRandom().address;
-          await Orchestrator.addBalancerPool(poolAddress);
+          await Orchestrator.addBalancerPool(0, poolAddress);
           expect(await Orchestrator.balancerPools(0)).to.equal(poolAddress);
         });
         it("should not add a duplicate Balancer pool", async function () {
           const { Orchestrator } = await loadFixture(deployTokenFixture);
           const poolAddress = ethers.Wallet.createRandom().address;
-          await Orchestrator.addBalancerPool(poolAddress);
+          await Orchestrator.addBalancerPool(0, poolAddress);
           await expect(
-            Orchestrator.addBalancerPool(poolAddress)
+            Orchestrator.addBalancerPool(1, poolAddress)
           ).to.be.revertedWith("Pool already added");
+        });
+        it("should add a new balancer pool according to their indexes", async function () {
+          const { Orchestrator } = await loadFixture(deployTokenFixture);
+          const poolAddress = ethers.Wallet.createRandom().address;
+          await Orchestrator.addBalancerPool(0, poolAddress);
+          expect(await Orchestrator.balancerPools(0)).to.equal(poolAddress);
+
+          await Orchestrator.addBalancerPool(1, ethers.constants.AddressZero);
+          expect(await Orchestrator.balancerPools(1)).to.equal(
+            ethers.constants.AddressZero
+          );
+
+          const thirdAdd = ethers.Wallet.createRandom(["15661"]);
+          await Orchestrator.addBalancerPool(0, thirdAdd.address);
+          expect(await Orchestrator.balancerPools(0)).to.equal(
+            thirdAdd.address
+          );
+          expect(await Orchestrator.balancerPools(1)).to.equal(poolAddress);
         });
         it("should remove a Balancer pool", async function () {
           const { Orchestrator } = await loadFixture(deployTokenFixture);
           const poolAddress = ethers.Wallet.createRandom().address;
-          await Orchestrator.addBalancerPool(poolAddress);
+          await Orchestrator.addBalancerPool(0, poolAddress);
           await Orchestrator.removeBalancerPool(0);
           expect(await Orchestrator.balancerPools.length).equals(0);
         });
@@ -767,7 +785,7 @@ developmentChains.includes(network.name)
         it("should resync weight in a balancer pool (Mock)", async function () {
           const { Orchestrator, balancerPool1, tokenFactory } =
             await loadFixture(deployTokenFixture);
-          await Orchestrator.addBalancerPool(balancerPool1.address);
+          await Orchestrator.addBalancerPool(0, balancerPool1.address);
 
           //rebase and resync
           const encodedEarlyRebase1 = await signRebase(tokenFactory.signer, {
@@ -796,9 +814,9 @@ developmentChains.includes(network.name)
             balancerPool3,
             tokenFactory,
           } = await loadFixture(deployTokenFixture);
-          await Orchestrator.addBalancerPool(balancerPool1.address);
-          await Orchestrator.addBalancerPool(balancerPool2.address);
-          await Orchestrator.addBalancerPool(balancerPool3.address);
+          await Orchestrator.addBalancerPool(0, balancerPool1.address);
+          await Orchestrator.addBalancerPool(1, balancerPool2.address);
+          await Orchestrator.addBalancerPool(2, balancerPool3.address);
           const mockPools = [
             balancerPool1.address,
             balancerPool2.address,
