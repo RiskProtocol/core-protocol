@@ -199,7 +199,11 @@ contract Orchestrator is UUPSUpgradeable, OwnableUpgradeable {
         require(poolExists[balancerPools[index]], "Pool does not exist");
         poolExists[balancerPools[index]] = false;
 
-        balancerPools[index] = balancerPools[balancerPools.length - 1];
+        // Shift all elements after index one position to the left
+        for (uint i = index; i < balancerPools.length - 1; i++) {
+            balancerPools[i] = balancerPools[i + 1];
+        }
+        //remove the last duplicated pool now
         balancerPools.pop();
         emit BalancerPoolRemoved(index);
     }
