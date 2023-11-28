@@ -2,7 +2,7 @@ import { assert, expect } from "chai";
 import { ethers, network, upgrades } from "hardhat";
 import {
   developmentChains,
-  REBASE_INTERVAL,
+  REBALANCE_INTERVAL,
   TOKEN1_NAME,
   TOKEN1_SYMBOL,
   TOKEN2_NAME,
@@ -40,7 +40,7 @@ developmentChains.includes(network.name)
 
         const tokenFactory = await upgrades.deployProxy(TokenFactory, [
           underlyingToken.address,
-          REBASE_INTERVAL,
+          REBALANCE_INTERVAL,
           sanctionsContract.address,
           deployer.address,
         ]);
@@ -62,7 +62,7 @@ developmentChains.includes(network.name)
 
         const tokenFactory1 = await upgrades.deployProxy(TokenFactory1Factory, [
           underlyingTokenWithoutPermit.address,
-          REBASE_INTERVAL,
+          REBALANCE_INTERVAL,
           sanctionsContract.address,
           deployer.address,
         ]);

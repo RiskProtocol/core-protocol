@@ -23,14 +23,14 @@ contract BaseContract is Initializable, OwnableUpgradeable {
     error BaseContract__DepositCircuitBreaker();
     error BaseContract__WithdrawCircuitBreaker();
     error BaseContract__TransferCircuitBreaker();
-    error BaseContract__RebaseCircuitBreaker();
+    error BaseContract__RebalanceCircuitBreaker();
 
     address private sanctionsContract;
 
     bool private depositCircuitBreaker;
     bool private withdrawCircuitBreaker;
     bool private transferCircuitBreaker;
-    bool private rebaseCircuitBreaker;
+    bool private rebalanceCircuitBreaker;
 
     /// @dev Checks if the address is sanctioned.
     /// @param addressToCheck The address to be checked.
@@ -62,10 +62,10 @@ contract BaseContract is Initializable, OwnableUpgradeable {
             revert BaseContract__TransferCircuitBreaker();
         _;
     }
-    /// @dev Reverts if the rebase circuit breaker is active.
-    /// This modifier is used to halt rebase operations in emergency situations.
-    modifier stopRebase() {
-        if (rebaseCircuitBreaker) revert BaseContract__RebaseCircuitBreaker();
+    /// @dev Reverts if the rebalance circuit breaker is active.
+    /// This modifier is used to halt rebalance operations in emergency situations.
+    modifier stopRebalance() {
+        if (rebalanceCircuitBreaker) revert BaseContract__RebalanceCircuitBreaker();
         _;
     }
 
@@ -104,31 +104,31 @@ contract BaseContract is Initializable, OwnableUpgradeable {
         transferCircuitBreaker = !transferCircuitBreaker;
     }
 
-    /// @notice Toggles the rebase circuit breaker on or off.
-    /// @dev This function allows the contract owner to halt or resume rebase operations in case of emergency.
+    /// @notice Toggles the rebalance circuit breaker on or off.
+    /// @dev This function allows the contract owner to halt or resume rebalance operations in case of emergency.
     /// Only the owner can call this function.
-    function toggleRebaseCircuitBreaker() external onlyOwner {
-        rebaseCircuitBreaker = !rebaseCircuitBreaker;
+    function toggleRebalanceCircuitBreaker() external onlyOwner {
+        rebalanceCircuitBreaker = !rebalanceCircuitBreaker;
     }
 
-    /// @notice Activates all circuit breakers, halting deposit, withdraw, transfer, and rebase operations.
+    /// @notice Activates all circuit breakers, halting deposit, withdraw, transfer, and rebalance operations.
     /// @dev This function allows the contract owner to halt critical operations in case of emergency.
     /// Only the owner can call this function.
     function stopAllCircuitBreakers() external onlyOwner {
         depositCircuitBreaker = true;
         withdrawCircuitBreaker = true;
         transferCircuitBreaker = true;
-        rebaseCircuitBreaker = true;
+        rebalanceCircuitBreaker = true;
     }
 
-    /// @notice Deactivates all circuit breakers, resuming deposit, withdraw, transfer, and rebase operations.
+    /// @notice Deactivates all circuit breakers, resuming deposit, withdraw, transfer, and rebalance operations.
     /// @dev This function allows the contract owner to resume critical operations after an emergency halt.
     /// Only the owner can call this function.
     function resumeAllCircuitBreakers() external onlyOwner {
         depositCircuitBreaker = false;
         withdrawCircuitBreaker = false;
         transferCircuitBreaker = false;
-        rebaseCircuitBreaker = false;
+        rebalanceCircuitBreaker = false;
     }
 
     /// @notice Checks if the deposit circuit breaker is active.
@@ -149,9 +149,9 @@ contract BaseContract is Initializable, OwnableUpgradeable {
         return transferCircuitBreaker;
     }
 
-    /// @notice Checks if the rebase circuit breaker is active.
-    /// @return A boolean value indicating whether the rebase circuit breaker is active or not.
-    function isRebaseCircuitBreaker() external view returns (bool) {
-        return rebaseCircuitBreaker;
+    /// @notice Checks if the rebalance circuit breaker is active.
+    /// @return A boolean value indicating whether the rebalance circuit breaker is active or not.
+    function isRebalanceCircuitBreaker() external view returns (bool) {
+        return rebalanceCircuitBreaker;
     }
 }

@@ -1,7 +1,7 @@
 import { DeployFunction } from "hardhat-deploy/types";
 import {
   BASE_TOKEN_ADDRESS,
-  REBASE_INTERVAL,
+  REBALANCE_INTERVAL,
 } from "../helper-hardhat-config";
 const { ethers, upgrades } = require("hardhat");
 
@@ -40,7 +40,7 @@ const func: DeployFunction = async ({
     TokenFactoryContract,
     [
       baseTokenAddress,
-      REBASE_INTERVAL,
+      REBALANCE_INTERVAL,
       sanctionsContractAddress,
       deployer,
     ],

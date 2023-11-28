@@ -1,5 +1,5 @@
 # TokenFactory
-[Git Source](https://github.com/RiskProtocol/core-protocol/blob/ee827bcbd5b33da1299e0daca263c7bf65a112b7/contracts/vaults/TokenFactory.sol)
+[Git Source](https://github.com/RiskProtocol/core-protocol/blob/d528418042db61177ce53f6ee7a0a539f1f5bd77/contracts/vaults/TokenFactory.sol)
 
 **Inherits:**
 ReentrancyGuardUpgradeable, OwnableUpgradeable, UUPSUpgradeable, [BaseContract](/contracts/vaults/BaseContract.sol/contract.BaseContract.md)
@@ -11,28 +11,40 @@ used by riskON/OFF tokens.
 
 
 ## State Variables
-### scallingFactorX
+### rebalanceElements
 
 ```solidity
-uint256[] private scallingFactorX;
+RebalanceElements[] private rebalanceElements;
+```
+
+
+### userRebalanceElements
+
+```solidity
+mapping(address => UserRebalanceElements) private userRebalanceElements;
+```
+
+
+### REBALANCE_INT_MULTIPLIER
+
+```solidity
+uint256 private constant REBALANCE_INT_MULTIPLIER = 10 ** 18;
 ```
 
 
 ### smartTokenArray
-This is the array of the smart tokens(RiskON/OFF)
-
 
 ```solidity
 SmartToken[] private smartTokenArray;
 ```
 
 
-### lastRebaseCount
-This mapping keeps track of the last rebase applied to a user/address
+### lastRebalanceCount
+This mapping keeps track of the last rebalance applied to a user/address
 
 
 ```solidity
-mapping(address => uint256) private lastRebaseCount;
+mapping(address => uint256) private lastRebalanceCount;
 ```
 
 
@@ -55,7 +67,7 @@ uint8 private baseTokenDecimals;
 
 
 ### interval
-The rebase interval in seconds
+The rebalance interval in seconds
 
 
 ```solidity
@@ -64,7 +76,7 @@ uint256 private interval;
 
 
 ### lastTimeStamp
-The timestamp of the last rebase
+The timestamp of the last rebalance
 
 
 ```solidity
@@ -82,7 +94,7 @@ bool private smartTokenInitialized;
 
 
 ### signersAddress
-This is the signers address of RP api's that generate encoded params for rebase
+This is the signers address of RP api's that generate encoded params for rebalance
 
 
 ```solidity
@@ -91,7 +103,7 @@ address private signersAddress;
 
 
 ### sequenceNumberApplied
-This keeps track of the 'sequenceNumber' of a rebase which helps guarding against the same rebase being
+This keeps track of the 'sequenceNumber' of a rebalance which helps
 
 
 ```solidity
@@ -99,65 +111,61 @@ mapping(uint256 => bool) private sequenceNumberApplied;
 ```
 
 
-### MGMT_FEE_SCALING_FACTOR
-
-```solidity
-uint32 private constant MGMT_FEE_SCALING_FACTOR = 100000;
-```
-
-
 ### managementFeesRate
-This keeps track of the management fee rate, which is in terms of point per day. example 0.02% per day
-
 
 ```solidity
-uint32 private managementFeesRate;
-```
-
-
-### mgmtFeesHistory
-
-```solidity
-uint32[] private mgmtFeesHistory;
-```
-
-
-### userMgmtFeeHistory
-
-```solidity
-mapping(address => uint256) private userMgmtFeeHistory;
+uint256 private managementFeesRate;
 ```
 
 
 ### managementFeeEnabled
-This keeps track if the management fee is enabled or disabled in the system
-
 
 ```solidity
 bool private managementFeeEnabled;
 ```
 
 
-### mgmtFeeSum
+### lastRebalanceFees
 
 ```solidity
-uint256[] private mgmtFeeSum;
+uint256 private lastRebalanceFees;
 ```
 
 
-### scheduledRebases
-*An array to hold all the scheduled rebases.
-This helps in storing rebases in the order they are scheduled till they are all executed*
+### treasuryWallet
+
+```solidity
+address private treasuryWallet;
+```
+
+
+### orchestrator
+
+```solidity
+address private orchestrator;
+```
+
+
+### scheduledRebalances
+*A mapping to hold the scheduled rebalances.
+This helps in storing rebalances in the order they are scheduled till they are all executed*
 
 
 ```solidity
-ScheduledRebase[] private scheduledRebases;
+mapping(uint256 => ScheduledRebalance) private scheduledRebalances;
+```
+
+
+### scheduledRebalancesLength
+
+```solidity
+uint256 private scheduledRebalancesLength;
 ```
 
 
 ### nextSequenceNumber
-*A counter to generate a unique sequence number for each rebase.
-This ensures that rebases are executed in the order they are scheduled.*
+*A counter to generate a unique sequence number for each rebalance.
+This ensures that rebalances are executed in the order they are scheduled.*
 
 
 ```solidity
@@ -176,6 +184,13 @@ If not, it reverts with a custom error message.*
 
 ```solidity
 modifier onlySmartTokens();
+```
+
+### onlyOrchestrator
+
+
+```solidity
+modifier onlyOrchestrator();
 ```
 
 ### onlyIntializedOnce
@@ -202,7 +217,7 @@ Initializes(replacement for the constructor) the Vault (TokenFactory) contract w
 ```solidity
 function initialize(
     IERC20Update baseTokenAddress,
-    uint256 rebaseInterval,
+    uint256 rebalanceInterval,
     address sanctionsContract_,
     address signersAddress_
 ) public initializer;
@@ -212,14 +227,12 @@ function initialize(
 |Name|Type|Description|
 |----|----|-----------|
 |`baseTokenAddress`|`IERC20Update`|The address of the underlying token/asset|
-|`rebaseInterval`|`uint256`|The interval (in seconds) at which natural rebases are scheduled.|
+|`rebalanceInterval`|`uint256`|The interval (in seconds) at which natural rebalances are scheduled.|
 |`sanctionsContract_`|`address`|The address of the sanctions contract(chainalysis contract) to verify blacklisted addresses|
-|`signersAddress_`|`address`|The address of the signer ( RP Api's) which signed the rebase data|
+|`signersAddress_`|`address`|The address of the signer ( RP Api's) which signed the rebalance data|
 
 
 ### _authorizeUpgrade
-
-nextSequence starts at 1
 
 Authorizes an upgrade to a new contract implementation.
 
@@ -250,6 +263,13 @@ function initializeSMART(SmartToken token1, SmartToken token2) external onlyOwne
 |`token1`|`SmartToken`|The first smart token|
 |`token2`|`SmartToken`|The second smart token|
 
+
+### initializeOrchestrator
+
+
+```solidity
+function initializeOrchestrator(address orchestrator_) external onlyOwner;
+```
 
 ### _tryGetAssetDecimals
 
@@ -415,6 +435,43 @@ function _withdraw(address caller, address receiver, address owner, uint256 asse
 |`shares`|`uint256`|The amount of shares(RiskON/OFF) to burn from the caller.|
 
 
+### getUserRecords
+
+
+```solidity
+function getUserRecords(address sender, address recipient) external view onlySmartTokens returns (uint256[4] memory);
+```
+
+### transferRecords
+
+
+```solidity
+function transferRecords(
+    address sender,
+    address recipient,
+    bool tokenType,
+    uint256 amount,
+    uint256 prevBalXsender,
+    uint256 prevBalYsender,
+    uint256 prevBalXrecipient,
+    uint256 prevBalYrecipient
+) external onlySmartTokens;
+```
+
+### updateRecord
+
+
+```solidity
+function updateRecord(bool tokenType, address account, uint256 amount) external onlySmartTokens;
+```
+
+### updateRecord
+
+
+```solidity
+function updateRecord(bool tokenType, uint256 amount) external onlySmartTokens;
+```
+
 ### factoryMint
 
 Mints the specified amount of Shares(RiskON/OFF) to the receiver
@@ -454,84 +511,108 @@ function factoryBurn(uint256 smartTokenIndex, address owner_, uint256 amount) pr
 |`amount`|`uint256`|The amount of Shares(either of RiskON/OFF)  to burn.|
 
 
-### factoryTransfer
+### factoryTreasuryTransfer
 
 
 ```solidity
-function factoryTransfer(uint256 smartTokenIndex, address receiver, uint256 amount) private;
+function factoryTreasuryTransfer(uint256 amount) private;
 ```
 
-### subUnchecked
+### factoryBalanceAdjust
 
 
 ```solidity
-function subUnchecked(uint256 scallingFactorX_) public view returns (uint256);
+function factoryBalanceAdjust(address account, uint256 amountX, uint256 amountY) private;
 ```
 
-### executeRebase
+### executeRebalance
 
-Executes a rebase based on the provided encoded data and signature.
+Executes a rebalance based on the provided encoded data and signature.
 
-*This function validates the rebase call, schedules it, and possibly triggers
-a rebase if the sequence is in order. It first verifies the signature of the rebase params with
+*This function validates the rebalance call, schedules it, and possibly triggers
+a rebalance if the sequence is in order. It first verifies the signature of the rebalance params with
 the signer's public key. Then we verify if the sequence number is aligned and not already used.
-Then we push the rebase params into an array of scheduled rebases. Finally, if there is no gaps between the
-previous rebase'sequence number, we execute this rebase
-This function can only be called when rebase is not stopped  with the `stopRebase` modifier.*
+Then we push the rebalance params into an array of scheduled rebalances.
+Finally, if there is no gaps between the previous rebalance'sequence number, we execute this rebalance
+This function can only be called when rebalance is not stopped  with the `stopRebalance` modifier.*
 
 
 ```solidity
-function executeRebase(bytes memory encodedData, bytes memory signature) external stopRebase;
+function executeRebalance(bytes memory encodedData, bytes memory signature) external stopRebalance onlyOrchestrator;
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
-|`encodedData`|`bytes`|The encoded data containing the sequence number, the boolean value for natural rebase and the price of underlying and smartTokenX|
+|`encodedData`|`bytes`|The encoded data containing the sequence number, the boolean value for natural rebalance and the price of underlying and smartTokenX|
 |`signature`|`bytes`|The signature of the encoded data to verify its authenticity.|
 
 
-### rebase
+### executeScheduledRebalances
 
-Handles the actual rebasing mechanism.
+Executes scheduled rebalances pending in the queue
 
-*This function processes up to 5 scheduled rebases per call.
-Different factors that will help calculating user balances are calculated here
-using the rebase params.*
+*This function is called when the scheduled rebalance queue had more than 5 entries
+only 5 will be executed and the rest will be left in the queue*
 
 
 ```solidity
-function rebase() private;
+function executeScheduledRebalances() external stopRebalance onlyOrchestrator;
 ```
 
-### applyRebase
+### chargeFees
 
-Applies rebase to an account
+Charges the management fees
 
-*This function adjusts the balance of smart tokens(RiskON/RiskOFF) according to the rollOverValue.
-This function can only be called when rebase is stopped. It also calculates and applies management fees.*
+*This function is responsible for charging the fees of the whole universe
+and related functionalities.*
 
 
 ```solidity
-function applyRebase(address owner_) public stopRebase;
+function chargeFees() private;
+```
+
+### rebalance
+
+Handles the actual rebalancing mechanism.
+
+*This function processes up to 5 scheduled rebalances per call.
+Different factors that will help calculating user balances are calculated here
+using the rebalance params.*
+
+
+```solidity
+function rebalance() private;
+```
+
+### applyRebalance
+
+Applies rebalance to an account
+
+*This function adjusts the balance of smart tokens(RiskON/RiskOFF) according to the rollOverValue.
+This function can only be called when rebalance is stopped. It also calculates and applies management fees.*
+
+
+```solidity
+function applyRebalance(address owner_) public stopRebalance;
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
-|`owner_`|`address`|The address of the account to which the rebase will be applied.|
+|`owner_`|`address`|The address of the account to which the rebalance will be applied.|
 
 
 ### calculateRollOverValue
 
 Calculates the rollover value(Units of RiskON/OFF) for an account
 
-*This function calculates the net balance(Units of RiskON/OFF) of a user after rebase and
+*This function calculates the net balance(Units of RiskON/OFF) of a user after rebalance and
 management fees are applied.*
 
 
 ```solidity
-function calculateRollOverValue(address owner_) public view returns (uint256);
+function calculateRollOverValue(address owner_) public view returns (uint256, uint256);
 ```
 **Parameters**
 
@@ -544,19 +625,20 @@ function calculateRollOverValue(address owner_) public view returns (uint256);
 |Name|Type|Description|
 |----|----|-----------|
 |`<none>`|`uint256`|The calculated roll over value.|
+|`<none>`|`uint256`||
 
 
-### updateUserLastRebaseCount
+### updateUserLastRebalanceCount
 
-Updates the last rebase count of a user.
+Updates the last rebalance count of a user.
 
-*This function sets the last rebase count for a user if their unscaled balances for
+*This function sets the last rebalance count for a user if their unscaled balances for
 both smart tokens(RiskON/RiskOFF) are zero. We may use this in cases where a receiever is new to the
 system*
 
 
 ```solidity
-function updateUserLastRebaseCount(address owner_) public;
+function updateUserLastRebalanceCount(address owner_) public;
 ```
 **Parameters**
 
@@ -567,36 +649,36 @@ function updateUserLastRebaseCount(address owner_) public;
 
 ### verifyAndDecode
 
-Verifies the provided signature and decodes the encoded data into  `ScheduledRebase` struct.
+Verifies the provided signature and decodes the encoded data into  `ScheduledRebalance` struct.
 
 *It recovers the address from the Ethereum signed message hash and the provided `signature`.
 If the recovered address doesn't match the `signersAddress`, it reverts the transaction.
-If the signature is valid, it decodes the `encodedData` into a `ScheduledRebase` struct and returns it.*
+If the signature is valid, it decodes the `encodedData` into a `ScheduledRebalance` struct and returns it.*
 
 
 ```solidity
 function verifyAndDecode(bytes memory signature, bytes memory encodedData)
     private
     view
-    returns (ScheduledRebase memory);
+    returns (ScheduledRebalance memory);
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
 |`signature`|`bytes`|The signature to be verified.|
-|`encodedData`|`bytes`|The data to be decoded into a `ScheduledRebase` struct.|
+|`encodedData`|`bytes`|The data to be decoded into a `ScheduledRebalance` struct.|
 
 **Returns**
 
 |Name|Type|Description|
 |----|----|-----------|
-|`<none>`|`ScheduledRebase`|data A `ScheduledRebase` struct containing the decoded data.|
+|`<none>`|`ScheduledRebalance`|data A `ScheduledRebalance` struct containing the decoded data.|
 
 
 ### setSignersAddress
 
-Update the address authorized to sign rebase transactions.
+Update the address authorized to sign rebalance transactions.
 
 *This function can only be called by the owner of the contract.
 It updates the `signersAddress` address with the provided `addr` address.*
@@ -624,13 +706,13 @@ Example 5% per day = 5000*
 
 
 ```solidity
-function setManagementFeeRate(uint32 rate) external onlyOwner returns (bool);
+function setManagementFeeRate(uint256 rate) external onlyOwner returns (bool);
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
-|`rate`|`uint32`|The new rate of management fees.|
+|`rate`|`uint256`|The new rate of management fees.|
 
 **Returns**
 
@@ -663,16 +745,11 @@ function setManagementFeeState(bool state) external onlyOwner returns (bool);
 |`<none>`|`bool`|A boolean value|
 
 
-### updateManagementFeeSum
-
-Updates the cumulative sum of management fees over rebase cycles.
-
-*This function is called internally to maintain a commulative sum of management fees,
-which can be used for calculating fees owed over time.*
+### setTreasuryWallet
 
 
 ```solidity
-function updateManagementFeeSum() private;
+function setTreasuryWallet(address wallet) external onlyOwner returns (bool);
 ```
 
 ### calculateManagementFee
@@ -701,46 +778,16 @@ function calculateManagementFee(uint256 amount, bool isDefault, uint256 mgmtFee)
 |`<none>`|`uint256`|userFees The calculated management fee|
 
 
-### calculateMgmtFeeForRebase
+### rebalanceCheck
 
-Calculates the outstanding management fee for a token holder over past rebases.
+Checks if a user is an existing user and applies user rebalance when needed.
 
-*It calculates any missed management fees from previous rebases, computes the fees and
-adjusts the RiskON/OFF values accordingly.*
-
-
-```solidity
-function calculateMgmtFeeForRebase(address tokensHolder, uint256 asset1ValueEth, uint256 asset2ValueEth)
-    private
-    view
-    returns (uint256, uint256);
-```
-**Parameters**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`tokensHolder`|`address`|The address of the owner|
-|`asset1ValueEth`|`uint256`|The value of the first SmartTokenX(RiskON) held by the token holder.|
-|`asset2ValueEth`|`uint256`|The value of the second SmartTokenY(RiskOFF) held by the token holder.|
-
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`<none>`|`uint256`|The adjusted values of RiskON/OFF after deduction of any management fees.|
-|`<none>`|`uint256`||
-
-
-### rebaseCheck
-
-Checks if a user is an existing user and applies user rebase when needed.
-
-*This function is triggered to ensure a user's balances are updated with any rebases
+*This function is triggered to ensure a user's balances are updated with any rebalances
 that have occurred since their last interaction with the contract.*
 
 
 ```solidity
-function rebaseCheck(address user) private;
+function rebalanceCheck(address user) private;
 ```
 **Parameters**
 
@@ -749,23 +796,22 @@ function rebaseCheck(address user) private;
 |`user`|`address`|The address of the user|
 
 
-### removeRebase
+### removeRebalance
 
-Removes a rebase entry from the `scheduledRebases` array at a specific index.
+Removes a rebalance entry from the `scheduledRebalances` mapping at the given sequence number.
 
-*It overwrites the rebase entry at the given index with the last entry in the array,
-and then removes the last entry.
+*It deletes the entry at the given sequence number and decrements the `scheduledRebalancesLength` variable.
 It is also guarded by 'nonReentrant' modifier.*
 
 
 ```solidity
-function removeRebase(uint256 index) private nonReentrant;
+function removeRebalance(uint256 sequenceNumber) private nonReentrant;
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
-|`index`|`uint256`|The index in the `scheduledRebases` array of the rebase entry to remove.|
+|`sequenceNumber`|`uint256`|The sequenceNumber of the `scheduledRebalances` mapping to remove.|
 
 
 ### getSignersAddress
@@ -785,21 +831,27 @@ function getSignersAddress() public view returns (address);
 |`<none>`|`address`|The address of the authorized signer.|
 
 
-### getScheduledRebases
+### getScheduledRebalances
 
-Retrieves the array of ScheduledRebase
+Retrieves the `scheduledRebalance` struct at the given sequence number.
 
-*This function is a getter for the `scheduledRebases` array variable.*
+*This function is a getter for a single `scheduledRebalance` struct.*
 
 
 ```solidity
-function getScheduledRebases() public view returns (ScheduledRebase[] memory);
+function getScheduledRebalances(uint256 sequenceNumber) public view returns (ScheduledRebalance memory);
 ```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`sequenceNumber`|`uint256`|The sequence number of the `scheduledRebalances` mapping to retrieve.|
+
 **Returns**
 
 |Name|Type|Description|
 |----|----|-----------|
-|`<none>`|`ScheduledRebase[]`|The array of the scheduledRebases.|
+|`<none>`|`ScheduledRebalance`|The `scheduledRebalance` struct at the given sequence number.|
 
 
 ### getNextSequenceNumber
@@ -838,20 +890,10 @@ function getLastTimeStamp() external view onlyOwner returns (uint256);
 
 ### getManagementFeeRate
 
-Retrieves the managementFeesRate
-
-*This function is a getter for the `managementFeesRate` variable.*
-
 
 ```solidity
-function getManagementFeeRate() public view returns (uint32);
+function getManagementFeeRate() public view returns (uint256);
 ```
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`<none>`|`uint32`|The managementFeesRate|
-
 
 ### getManagementFeeState
 
@@ -870,62 +912,19 @@ function getManagementFeeState() public view returns (bool);
 |`<none>`|`bool`|The managementFeeEnabled|
 
 
-### getScallingFactorLength
-
-Retrieves the length of scallingFactorX
-
-*This function is a getter for the length of `scallingFactorX` array.*
+### getRebalanceNumber
 
 
 ```solidity
-function getScallingFactorLength() public view returns (uint256);
+function getRebalanceNumber() public view returns (uint256);
 ```
-**Returns**
 
-|Name|Type|Description|
-|----|----|-----------|
-|`<none>`|`uint256`|The length of scallingFactorX|
-
-
-### getMgmtFeeFactorLength
-
-Retrieves the length of mgmtFeesHistory
-
-*This function is a getter for the length of `mgmtFeesHistory` array.*
+### getUserLastRebalanceCount
 
 
 ```solidity
-function getMgmtFeeFactorLength() public view returns (uint256);
+function getUserLastRebalanceCount(address userAddress) public view returns (uint256);
 ```
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`<none>`|`uint256`|The length of mgmtFeesHistory|
-
-
-### getUserLastRebaseCount
-
-Retrieves the UserLastRebaseCount
-
-*This function is a getter for the UserLastRebaseCount*
-
-
-```solidity
-function getUserLastRebaseCount(address userAddress) public view returns (uint256);
-```
-**Parameters**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`userAddress`|`address`|The address of the user whose rebase count is being queried.|
-
-**Returns**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`<none>`|`uint256`|The UserLastRebaseCount|
-
 
 ### getSmartTokenAddress
 
@@ -950,6 +949,13 @@ function getSmartTokenAddress(uint8 index) public view returns (SmartToken);
 |`<none>`|`SmartToken`|The interval|
 
 
+### getTreasuryAddress
+
+
+```solidity
+function getTreasuryAddress() public view returns (address);
+```
+
 ### getInterval
 
 Retrieves the interval
@@ -968,16 +974,16 @@ function getInterval() public view returns (uint256);
 
 
 ## Events
-### RebaseApplied
+### RebalanceApplied
 
 ```solidity
-event RebaseApplied(address userAddress, uint256 rebaseCount);
+event RebalanceApplied(address userAddress, uint256 rebalanceCount);
 ```
 
-### Rebase
+### Rebalance
 
 ```solidity
-event Rebase(uint256 rebaseCount);
+event Rebalance(uint256 rebalanceCount);
 ```
 
 ### Deposit
@@ -1011,10 +1017,10 @@ error TokenFactory__InvalidDivision();
 error TokenFactory__InvalidSequenceNumber();
 ```
 
-### TokenFactory__InvalidNaturalRebase
+### TokenFactory__InvalidNaturalRebalance
 
 ```solidity
-error TokenFactory__InvalidNaturalRebase();
+error TokenFactory__InvalidNaturalRebalance();
 ```
 
 ### TokenFactory__AlreadyInitialized
@@ -1042,18 +1048,40 @@ error TokenFactory__InvalidManagementFees();
 ```
 
 ## Structs
-### ScheduledRebase
-Struct to store information regarding a scheduled rebase.
+### ScheduledRebalance
+Struct to store information regarding a scheduled rebalance.
 
-*This struct holds the data for rebases that are scheduled to be executed.*
+*This struct holds the data for rebalances that are scheduled to be executed.*
 
 
 ```solidity
-struct ScheduledRebase {
+struct ScheduledRebalance {
     uint256 sequenceNumber;
-    bool isNaturalRebase;
+    bool isNaturalRebalance;
     uint256 price;
     uint256 smartTokenXprice;
+}
+```
+
+### RebalanceElements
+
+```solidity
+struct RebalanceElements {
+    uint256 BalanceFactorXY;
+    uint256 BalanceFactorUx;
+    uint256 BalanceFactorUy;
+    uint256 FeeFactor;
+}
+```
+
+### UserRebalanceElements
+
+```solidity
+struct UserRebalanceElements {
+    uint256 netX;
+    uint256 netY;
+    uint256 Ux;
+    uint256 Uy;
 }
 ```
 

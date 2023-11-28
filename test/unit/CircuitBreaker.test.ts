@@ -2,13 +2,13 @@ import { assert, expect } from "chai";
 import { ethers, network, upgrades } from "hardhat";
 import {
   developmentChains,
-  REBASE_INTERVAL,
+  REBALANCE_INTERVAL,
   TOKEN1_NAME,
   TOKEN1_SYMBOL,
   TOKEN2_NAME,
   TOKEN2_SYMBOL,
-  signRebase,
-  defaultRebaseData,
+  signRebalance,
+  defaultRebalanceData,
 } from "../../helper-hardhat-config";
 import { getPermitDigest, sign } from "../../utils/signatures";
 import { loadFixture, time } from "@nomicfoundation/hardhat-network-helpers";
@@ -43,7 +43,7 @@ developmentChains.includes(network.name)
 
         const tokenFactory = await upgrades.deployProxy(TokenFactory, [
           underlyingToken.address,
-          REBASE_INTERVAL,
+          REBALANCE_INTERVAL,
           sanctionsContract.address,
           deployer.address,
         ]);
@@ -403,8 +403,8 @@ developmentChains.includes(network.name)
         });
       });
 
-      describe("Rebase, test circuit breakers to stop rebase", async function () {
-        it("should not rebase tokens when circuit breaker is on", async function () {
+      describe("Rebalance, test circuit breakers to stop rebalance", async function () {
+        it("should not rebalance tokens when circuit breaker is on", async function () {
           const {
             tokenFactory,
             deployer,
@@ -428,23 +428,23 @@ developmentChains.includes(network.name)
 
           const now = await tokenFactory.getLastTimeStamp();
 
-          const nextRebaseTimeStamp = BigInt(now) + BigInt(REBASE_INTERVAL);
-          await time.setNextBlockTimestamp(nextRebaseTimeStamp);
+          const nextRebalanceTimeStamp = BigInt(now) + BigInt(REBALANCE_INTERVAL);
+          await time.setNextBlockTimestamp(nextRebalanceTimeStamp);
 
-          await tokenFactory.toggleRebaseCircuitBreaker();
+          await tokenFactory.toggleRebalanceCircuitBreaker();
 
-          const { signature, encodedData } = await signRebase(
+          const { signature, encodedData } = await signRebalance(
             deployer,
-            defaultRebaseData
+            defaultRebalanceData
           );
           await expect(
-            tokenFactory.executeRebase(
+            tokenFactory.executeRebalance(
               encodedData,
               signature
             )
           ).to.be.revertedWithCustomError(
             tokenFactory,
-            "BaseContract__RebaseCircuitBreaker"
+            "BaseContract__RebalanceCircuitBreaker"
           );
 
           let block2 = await ethers.provider.getBlock("latest");
@@ -452,17 +452,17 @@ developmentChains.includes(network.name)
 
           await time.setNextBlockTimestamp(now2);
 
-          //assume that user made tx, apply rebase
+          //assume that user made tx, apply rebalance
           await time.setNextBlockTimestamp(now2);
 
           await expect(
-            tokenFactory.applyRebase(deployer.address)
+            tokenFactory.applyRebalance(deployer.address)
           ).to.be.revertedWithCustomError(
             tokenFactory,
-            "BaseContract__RebaseCircuitBreaker"
+            "BaseContract__RebalanceCircuitBreaker"
           );
 
-          await tokenFactory.toggleRebaseCircuitBreaker();
+          await tokenFactory.toggleRebalanceCircuitBreaker();
         });
       });
 
@@ -477,7 +477,7 @@ developmentChains.includes(network.name)
 
           expect(await smartToken1.isTransferCircuitBreaker()).to.be.true;
 
-          expect(await smartToken1.isRebaseCircuitBreaker()).to.be.true;
+          expect(await smartToken1.isRebalanceCircuitBreaker()).to.be.true;
 
           await smartToken1.resumeAllCircuitBreakers();
 
@@ -487,7 +487,7 @@ developmentChains.includes(network.name)
 
           expect(await smartToken1.isTransferCircuitBreaker()).to.be.false;
 
-          expect(await smartToken1.isRebaseCircuitBreaker()).to.be.false;
+          expect(await smartToken1.isRebalanceCircuitBreaker()).to.be.false;
         });
       });
     })

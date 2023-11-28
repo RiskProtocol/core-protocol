@@ -25,7 +25,7 @@ contract ERC4626Test is Test, TestHelper {
         factoryWrapper = TokenFactory(address(factoryProxy));
         factoryWrapper.initialize(
             underlying,
-            REBASE_INTERVAL,
+            REBALANCE_INTERVAL,
             sanctionsContract,
             signersAddress
         );

@@ -26,7 +26,7 @@ contract Orchestrator is UUPSUpgradeable, OwnableUpgradeable {
     event BalancerPoolAdded(uint256 index, address addr);
     event BalancerPoolRemoved(uint256 index);
     event OperationStatusChanged(uint256 index, bool enabled);
-    event RebaseExecuted(bytes data);
+    event RebalanceExecuted(bytes data);
     event BalancerResynced(address data);
     event OperationExecuted(bytes data, address destination);
 
@@ -56,21 +56,21 @@ contract Orchestrator is UUPSUpgradeable, OwnableUpgradeable {
         address
     ) internal override(UUPSUpgradeable) onlyOwner {}
 
-    function rebase(bytes memory encodedData, bytes memory signature) external {
-        tokenFactory.executeRebase(encodedData, signature);
+    function rebalance(bytes memory encodedData, bytes memory signature) external {
+        tokenFactory.executeRebalance(encodedData, signature);
         if (balancerPools.length != 0) {
             //get price
-            Shared.ScheduledRebase memory rebaseCall = tokenFactory
+            Shared.ScheduledRebalance memory rebalanceCall = tokenFactory
                 .verifyAndDecode(signature, encodedData);
             //resync
             for (uint256 i = 0; i < balancerPools.length; i++) {
                 IElasticPoolSupply(balancerPools[i]).resyncWeight(
-                    uint256(rebaseCall.smartTokenXprice)
+                    uint256(rebalanceCall.smartTokenXprice)
                 );
                 emit BalancerResynced(balancerPools[i]);
             }
         }
-        emit RebaseExecuted(encodedData);
+        emit RebalanceExecuted(encodedData);
         if (operations.length > 0) {
             for (uint256 i = 0; i < operations.length; i++) {
                 Operation storage t = operations[i];
@@ -87,16 +87,16 @@ contract Orchestrator is UUPSUpgradeable, OwnableUpgradeable {
     }
 
     /**
-     * @notice Executes scheduled rebases pending in the queue
-     * @dev This function is called when the scheduled rebase queue had more than 5 entries
+     * @notice Executes scheduled rebalances pending in the queue
+     * @dev This function is called when the scheduled rebalance queue had more than 5 entries
      * only 5 will be executed and the rest will be left in the queue
      */
-    function executeScheduledRebases() external {
-        tokenFactory.executeScheduledRebases();
+    function executeScheduledRebalances() external {
+        tokenFactory.executeScheduledRebalances();
     }
 
     /**
-     * @notice Adds a ops that gets called for a downstream receiver of rebases
+     * @notice Adds a ops that gets called for a downstream receiver of rebalances
      * @param index The position at which the new ops should be added
      * @param destination Address of contract destination
      * @param data ops data payload

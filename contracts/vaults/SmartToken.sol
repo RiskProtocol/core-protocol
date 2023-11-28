@@ -15,12 +15,12 @@ import "./TokenFactory.sol";
 import "./BaseContract.sol";
 
 /// @title SmartToken Contract ERC20/4626  compatible Tokens (RiskON/RiskOFF)
-/// @dev This is a rebasing token, part of Risk Protocol's system
+/// @dev This is a rebalancing token, part of Risk Protocol's system
 /// The same contract is used by both RiskON and RiskOFF
 /// Whenever a user deposit a unit of underlying in the Vault(TokenFactory), the user
 /// is expected to recieve a unit of both RiskON and RiskOFF.
-/// At every rebase operation, the user RiskOn/OFF balances will be aligned with respect to
-/// the rebase math.
+/// At every rebalance operation, the user RiskOn/OFF balances will be aligned with respect to
+/// the rebalance math.
 contract SmartToken is
     Initializable,
     UUPSUpgradeable,
@@ -129,7 +129,7 @@ contract SmartToken is
 
     /// @notice Transfers the specified amount of tokens to the specified recipient.
     /// @dev Overrides the `transfer` function from `ERC20Upgradeable` and `IERC20Upgradeable` contracts.
-    /// If the sender or receiver has a pending rebase, it is handled before the transfer.
+    /// If the sender or receiver has a pending rebalance, it is handled before the transfer.
     /// This function can only be called when transfers are not stopped,
     /// and neither the sender nor the recipient are on the sanctions list.
     /// @param recipient The address to which tokens will be transferred.
@@ -146,7 +146,7 @@ contract SmartToken is
         onlyNotSanctioned(_msgSender())
         returns (bool)
     {
-        handlePendingRebase(_msgSender(), recipient);
+        handlePendingRebalance(_msgSender(), recipient);
 
         uint256[4] memory bals = tokenFactory.getUserRecords(
             _msgSender(),
@@ -190,8 +190,8 @@ contract SmartToken is
 
     /// @notice Returns the balance of the specified account
     /// @dev Overrides the `balanceOf` function from the inherited `ERC20Upgradeable` and `IERC20Upgradeable` contracts.
-    /// If the account has a pending rebase, the function calculates the calculated balance
-    /// post rebase using the 'calculateRollOverValue' method.
+    /// If the account has a pending rebalance, the function calculates the calculated balance
+    /// post rebalance using the 'calculateRollOverValue' method.
     /// Otherwise, it returns the erc20 balance using `unScaledbalanceOf` method.
     /// @param account The address of the account whose balance will be retrieved.
     /// @return The balance of the specified account.
@@ -203,7 +203,7 @@ contract SmartToken is
         override(ERC20Upgradeable, IERC20Upgradeable)
         returns (uint256)
     {
-        if (hasPendingRebase(account)) {
+        if (hasPendingRebalance(account)) {
             (uint256 asset1Units, uint256 asset2Units) = tokenFactory
                 .calculateRollOverValue(account);
 
@@ -216,24 +216,24 @@ contract SmartToken is
         }
     }
 
-    /// @notice Returns the unscaled(unaffected by pending rebases) balance of the specified account.
-    /// @dev This function returns the ERC20 balance(unaffected by pending rebases) of the account.
+    /// @notice Returns the unscaled(unaffected by pending rebalances) balance of the specified account.
+    /// @dev This function returns the ERC20 balance(unaffected by pending rebalances) of the account.
     /// @param account The address of the account.
-    /// @return The unscaled(unaffected by pending rebases) balance of the specified account.
+    /// @return The unscaled(unaffected by pending rebalances) balance of the specified account.
     function unScaledbalanceOf(address account) public view returns (uint256) {
         return super.balanceOf(account);
     }
 
-    /// @notice Checks if the specified account has a pending rebase.
-    /// @dev Compares the account's last rebase count with the current scalingfactor length
-    /// to determine if a rebase is pending.
+    /// @notice Checks if the specified account has a pending rebalance.
+    /// @dev Compares the account's last rebalance count with the current scalingfactor length
+    /// to determine if a rebalance is pending.
     /// @param account The address of the account
-    /// @return A boolean value indicating whether the specified account has a pending rebase.
-    function hasPendingRebase(address account) public view returns (bool) {
+    /// @return A boolean value indicating whether the specified account has a pending rebalance.
+    function hasPendingRebalance(address account) public view returns (bool) {
         return
-            //'getUserLastRebaseCount' returns the amount of rebase applied to account
-            tokenFactory.getUserLastRebaseCount(account) !=
-            tokenFactory.getRebaseNumber();
+            //'getUserLastRebalanceCount' returns the amount of rebalance applied to account
+            tokenFactory.getUserLastRebalanceCount(account) !=
+            tokenFactory.getRebalanceNumber();
     }
 
     /// @notice Retrieves the address of the Vault (TokenFactory) contract.
@@ -246,7 +246,7 @@ contract SmartToken is
     /// @notice Transfers the specified amount of tokens from the sender to the recipient.
     /// @dev Overrides the `transferFrom` function from the inherited `ERC20Upgradeable` and
     /// `IERC20Upgradeable` contracts.
-    /// If the sender or recipient has a pending rebase, it is handled before the transfer.
+    /// If the sender or recipient has a pending rebalance, it is handled before the transfer.
     /// This function can only be called when transfers are not stopped, and neither the sender
     /// nor the recipient are on the sanctions list.
     /// @param sender The address from which tokens will be transferred.
@@ -265,7 +265,7 @@ contract SmartToken is
         onlyNotSanctioned(sender)
         returns (bool)
     {
-        handlePendingRebase(sender, recipient);
+        handlePendingRebalance(sender, recipient);
         uint256[4] memory bals = tokenFactory.getUserRecords(sender, recipient);
         bool result = super.transferFrom(sender, recipient, amount);
         tokenFactory.transferRecords(
@@ -282,21 +282,21 @@ contract SmartToken is
         return result;
     }
 
-    /// @notice Handles pending rebases for the sender and receiver addresses.
-    /// @dev This function checks if the sender or receiver has a pending rebase and applies the rebase if needed.
+    /// @notice Handles pending rebalances for the sender and receiver addresses.
+    /// @dev This function checks if the sender or receiver has a pending rebalance and applies the rebalance if needed.
     /// @param sender The address of the sender involved in a transfer operation.
     /// @param receiver The address of the receiver involved in a transfer operation.
-    function handlePendingRebase(address sender, address receiver) public {
-        if (hasPendingRebase(sender)) {
-            //The 'applyRebase' method on the Vault(TokenFactory) is called
-            tokenFactory.applyRebase(sender);
+    function handlePendingRebalance(address sender, address receiver) public {
+        if (hasPendingRebalance(sender)) {
+            //The 'applyRebalance' method on the Vault(TokenFactory) is called
+            tokenFactory.applyRebalance(sender);
         }
-        //if the receiver is a new user to the system, we update his rebase count
+        //if the receiver is a new user to the system, we update his rebalance count
         //before proceeding
-        tokenFactory.updateUserLastRebaseCount(receiver);
-        if (hasPendingRebase(receiver)) {
-            //The 'applyRebase' method on the Vault(TokenFactory) is called
-            tokenFactory.applyRebase(receiver);
+        tokenFactory.updateUserLastRebalanceCount(receiver);
+        if (hasPendingRebalance(receiver)) {
+            //The 'applyRebalance' method on the Vault(TokenFactory) is called
+            tokenFactory.applyRebalance(receiver);
         }
     }
 
@@ -514,13 +514,13 @@ contract SmartToken is
         nonReentrant
         returns (uint256)
     {
-        // checks for any pending rebases for the receiver and applies them if necessary
+        // checks for any pending rebalances for the receiver and applies them if necessary
         //@note This is deprecated and will be replaced in upcoming commits
         if (
-            tokenFactory.getUserLastRebaseCount(receiver) !=
-            tokenFactory.getRebaseNumber()
+            tokenFactory.getUserLastRebalanceCount(receiver) !=
+            tokenFactory.getRebalanceNumber()
         ) {
-            tokenFactory.applyRebase(receiver);
+            tokenFactory.applyRebalance(receiver);
         }
         //checks that the specified amount of underlying assets is within the maximum allowed for withdrawal
 
@@ -577,13 +577,13 @@ contract SmartToken is
         nonReentrant
         returns (uint256)
     {
-        // checks for any pending rebases for the receiver and applies them if necessary
+        // checks for any pending rebalances for the receiver and applies them if necessary
         //@note This is deprecated and will be replaced in upcoming commits
         if (
-            tokenFactory.getUserLastRebaseCount(receiver) !=
-            tokenFactory.getRebaseNumber()
+            tokenFactory.getUserLastRebalanceCount(receiver) !=
+            tokenFactory.getRebalanceNumber()
         ) {
-            tokenFactory.applyRebase(receiver);
+            tokenFactory.applyRebalance(receiver);
         }
         //checks that the specified amount of underlying assets is within the maximum allowed for withdrawal
         if (shares > maxRedeem(owner_)) revert SmartToken__RedeemMoreThanMax();

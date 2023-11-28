@@ -1,7 +1,7 @@
-title The Rebase Operation
-Engine->DB: Updates Db with proper Early/Normal rebase info
+title The Rebalance Operation
+Engine->DB: Updates Db with proper Early/Normal rebalance info
 Engine->Defender:Calls defender's webhook
-Defender->API:Fetches next rebase parameters
-API->DB: Fetches next rebase info
+Defender->API:Fetches next rebalance parameters
+API->DB: Fetches next rebalance info
 API-->Defender: Returns encoded parameters with signature
-Defender->Smart Contract: Executes rebase operation
+Defender->Smart Contract: Executes rebalance operation
