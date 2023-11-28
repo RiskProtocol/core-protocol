@@ -65,7 +65,8 @@ contract Orchestrator is UUPSUpgradeable, OwnableUpgradeable {
             //resync
             for (uint256 i = 0; i < balancerPools.length; i++) {
                 IElasticPoolSupply(balancerPools[i]).resyncWeight(
-                    uint256(rebaseCall.smartTokenXprice)
+                    uint256(rebaseCall.price / 2) //Since this is executed after rebase,
+                    //the price of X is now underlying/2 rather than previously priceX
                 );
                 emit BalancerResynced(balancerPools[i]);
             }
