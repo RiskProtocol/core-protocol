@@ -2,13 +2,13 @@ import { expect } from "chai";
 import { ethers, network, upgrades } from "hardhat";
 import {
   developmentChains,
-  REBASE_INTERVAL,
+  REBALANCE_INTERVAL,
   TOKEN1_NAME,
   TOKEN1_SYMBOL,
   TOKEN2_NAME,
   TOKEN2_SYMBOL,
-  signRebase,
-  defaultRebaseData,
+  signRebalance,
+  defaultRebalanceData,
   SmartTokenXValue,
 } from "../../helper-hardhat-config";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
@@ -40,7 +40,7 @@ developmentChains.includes(network.name)
 
         let tokenFactory = await upgrades.deployProxy(TokenFactory, [
           underlyingToken.address,
-          REBASE_INTERVAL,
+          REBALANCE_INTERVAL,
           sanctionsContract.address,
           deployer.address,
         ]);
@@ -243,7 +243,7 @@ developmentChains.includes(network.name)
             "Orchestrator_Index_Out_Bounds"
           );
         });
-        it(`should revert if rebase is executed on token factory directly`, async function () {
+        it(`should revert if rebalance is executed on token factory directly`, async function () {
           let { tokenFactory, SmartToken1, SmartToken2 } = await loadFixture(
             deployTokenFixture
           );
@@ -252,13 +252,13 @@ developmentChains.includes(network.name)
             SmartToken2.address
           );
 
-          const { signature, encodedData } = await signRebase(
+          const { signature, encodedData } = await signRebalance(
             tokenFactory.signer,
-            defaultRebaseData
+            defaultRebalanceData
           );
 
           await expect(
-            tokenFactory.executeRebase(encodedData, signature)
+            tokenFactory.executeRebalance(encodedData, signature)
           ).to.be.revertedWithCustomError(
             tokenFactory,
             "TokenFactory__MethodNotAllowed"
@@ -306,7 +306,7 @@ developmentChains.includes(network.name)
             "Orchestrator_Index_Out_Bounds"
           );
         });
-        it(`it should rebase properly`, async function () {
+        it(`it should rebalance properly`, async function () {
           let { tokenFactory, SmartToken1, SmartToken2, Orchestrator } =
             await loadFixture(deployTokenFixture);
           await tokenFactory.initializeSMART(
@@ -314,21 +314,21 @@ developmentChains.includes(network.name)
             SmartToken2.address
           );
 
-          const { signature, encodedData } = await signRebase(
+          const { signature, encodedData } = await signRebalance(
             tokenFactory.signer,
             {
-              ...defaultRebaseData,
-              isNaturalRebase: false,
+              ...defaultRebalanceData,
+              isNaturalRebalance: false,
             }
           );
 
-          //rebase
-          await expect(Orchestrator.rebase(encodedData, signature)).to.emit(
+          //rebalance
+          await expect(Orchestrator.rebalance(encodedData, signature)).to.emit(
             tokenFactory,
-            "Rebase"
+            "Rebalance"
           );
         });
-        it(`it should rebase + execute the added Operation(another rebase)`, async function () {
+        it(`it should rebalance + execute the added Operation(another rebalance)`, async function () {
           let {
             tokenFactory,
             underlyingToken,
@@ -348,37 +348,37 @@ developmentChains.includes(network.name)
           );
           //await SmartToken1.deposit(ethers.utils.parseEther('1'), tokenFactory.address);
 
-          const encodedEarlyRebase2 = await signRebase(tokenFactory.signer, {
-            ...defaultRebaseData,
+          const encodedEarlyRebalance2 = await signRebalance(tokenFactory.signer, {
+            ...defaultRebalanceData,
             sequenceNumber: 2,
-            isNaturalRebase: false,
+            isNaturalRebalance: false,
           });
 
           const data = tokenFactory.interface.encodeFunctionData(
-            "executeRebase",
-            [encodedEarlyRebase2.encodedData, encodedEarlyRebase2.signature]
+            "executeRebalance",
+            [encodedEarlyRebalance2.encodedData, encodedEarlyRebalance2.signature]
           );
           await expect(Orchestrator.addOperation(0, tokenFactory.address, data))
             .to.emit(Orchestrator, "OperationAdded")
             .withArgs(true, tokenFactory.address, data);
           expect(await Orchestrator.operationsSize()).to.equal(1);
 
-          const encodedEarlyRebase1 = await signRebase(tokenFactory.signer, {
-            ...defaultRebaseData,
-            isNaturalRebase: false,
+          const encodedEarlyRebalance1 = await signRebalance(tokenFactory.signer, {
+            ...defaultRebalanceData,
+            isNaturalRebalance: false,
           });
 
-          //rebase
+          //rebalance
           await expect(
-            Orchestrator.rebase(
-              encodedEarlyRebase1.encodedData,
-              encodedEarlyRebase1.signature
+            Orchestrator.rebalance(
+              encodedEarlyRebalance1.encodedData,
+              encodedEarlyRebalance1.signature
             )
-          ).to.emit(tokenFactory, "Rebase");
+          ).to.emit(tokenFactory, "Rebalance");
 
-          await tokenFactory.getScheduledRebases(1);
+          await tokenFactory.getScheduledRebalances(1);
 
-          expect(await tokenFactory.getRebaseNumber()).to.equal(2);
+          expect(await tokenFactory.getRebalanceNumber()).to.equal(2);
         });
         it(`it should revert everything if added tx fails`, async function () {
           let {
@@ -400,51 +400,51 @@ developmentChains.includes(network.name)
           );
           //await SmartToken1.deposit(ethers.utils.parseEther('1'), tokenFactory.address);
 
-          const encodedEarlyRebase2 = await signRebase(tokenFactory.signer, {
-            ...defaultRebaseData,
+          const encodedEarlyRebalance2 = await signRebalance(tokenFactory.signer, {
+            ...defaultRebalanceData,
             sequenceNumber: 2,
-            isNaturalRebase: false,
+            isNaturalRebalance: false,
           });
 
-          const encodedEarlyRebase1 = await signRebase(tokenFactory.signer, {
-            ...defaultRebaseData,
-            isNaturalRebase: false,
+          const encodedEarlyRebalance1 = await signRebalance(tokenFactory.signer, {
+            ...defaultRebalanceData,
+            isNaturalRebalance: false,
           });
 
           const data = tokenFactory.interface.encodeFunctionData(
-            "executeRebase",
-            [encodedEarlyRebase2.encodedData, encodedEarlyRebase1.signature]
+            "executeRebalance",
+            [encodedEarlyRebalance2.encodedData, encodedEarlyRebalance1.signature]
           );
           await expect(Orchestrator.addOperation(0, tokenFactory.address, data))
             .to.emit(Orchestrator, "OperationAdded")
             .withArgs(true, tokenFactory.address, data);
           expect(await Orchestrator.operationsSize()).to.equal(1);
 
-          //rebase
+          //rebalance
           await expect(
-            Orchestrator.rebase(
-              encodedEarlyRebase1.encodedData,
-              encodedEarlyRebase1.signature
+            Orchestrator.rebalance(
+              encodedEarlyRebalance1.encodedData,
+              encodedEarlyRebalance1.signature
             )
           ).to.revertedWithCustomError(
             Orchestrator,
             "Orchestrator_FailedOperation"
           );
-          expect(await tokenFactory.getRebaseNumber()).to.equal(0);
+          expect(await tokenFactory.getRebalanceNumber()).to.equal(0);
         });
         it(`should be access controlled`, async function () {
           let { tokenFactory, tester, Orchestrator } = await loadFixture(
             deployTokenFixture
           );
 
-          const encodedEarlyRebase1 = await signRebase(tokenFactory.signer, {
-            ...defaultRebaseData,
-            isNaturalRebase: false,
+          const encodedEarlyRebalance1 = await signRebalance(tokenFactory.signer, {
+            ...defaultRebalanceData,
+            isNaturalRebalance: false,
           });
 
           const data = tokenFactory.interface.encodeFunctionData(
-            "executeRebase",
-            [encodedEarlyRebase1.encodedData, encodedEarlyRebase1.signature]
+            "executeRebalance",
+            [encodedEarlyRebalance1.encodedData, encodedEarlyRebalance1.signature]
           );
           await expect(
             Orchestrator.connect(tester).addOperation(
@@ -476,14 +476,14 @@ developmentChains.includes(network.name)
             deployTokenFixture
           );
 
-          const encodedEarlyRebase1 = await signRebase(tokenFactory.signer, {
-            ...defaultRebaseData,
-            isNaturalRebase: false,
+          const encodedEarlyRebalance1 = await signRebalance(tokenFactory.signer, {
+            ...defaultRebalanceData,
+            isNaturalRebalance: false,
           });
 
           const data = tokenFactory.interface.encodeFunctionData(
-            "executeRebase",
-            [encodedEarlyRebase1.encodedData, encodedEarlyRebase1.signature]
+            "executeRebalance",
+            [encodedEarlyRebalance1.encodedData, encodedEarlyRebalance1.signature]
           );
           const destination = ethers.constants.AddressZero;
 
@@ -494,15 +494,15 @@ developmentChains.includes(network.name)
           expect(operation.destination).to.equal(destination);
           expect(operation.data).to.equal(data);
 
-          const encodedEarlyRebase2 = await signRebase(tokenFactory.signer, {
-            ...defaultRebaseData,
+          const encodedEarlyRebalance2 = await signRebalance(tokenFactory.signer, {
+            ...defaultRebalanceData,
             sequenceNumber: 2,
-            isNaturalRebase: false,
+            isNaturalRebalance: false,
           });
 
           const data2 = tokenFactory.interface.encodeFunctionData(
-            "executeRebase",
-            [encodedEarlyRebase2.encodedData, encodedEarlyRebase2.signature]
+            "executeRebalance",
+            [encodedEarlyRebalance2.encodedData, encodedEarlyRebalance2.signature]
           );
           const destination2 = ethers.constants.AddressZero;
 
@@ -513,15 +513,15 @@ developmentChains.includes(network.name)
           expect(operation2.destination).to.equal(destination2);
           expect(operation2.data).to.equal(data2);
 
-          const encodedEarlyRebase3 = await signRebase(tokenFactory.signer, {
-            ...defaultRebaseData,
+          const encodedEarlyRebalance3 = await signRebalance(tokenFactory.signer, {
+            ...defaultRebalanceData,
             sequenceNumber: 2,
-            isNaturalRebase: false,
+            isNaturalRebalance: false,
           });
 
           const data3 = tokenFactory.interface.encodeFunctionData(
-            "executeRebase",
-            [encodedEarlyRebase3.encodedData, encodedEarlyRebase3.signature]
+            "executeRebalance",
+            [encodedEarlyRebalance3.encodedData, encodedEarlyRebalance3.signature]
           );
           const destination3 = tokenFactory.address;
 
@@ -538,48 +538,48 @@ developmentChains.includes(network.name)
             deployTokenFixture
           );
 
-          const encodedEarlyRebase1 = await signRebase(tokenFactory.signer, {
-            ...defaultRebaseData,
-            isNaturalRebase: false,
+          const encodedEarlyRebalance1 = await signRebalance(tokenFactory.signer, {
+            ...defaultRebalanceData,
+            isNaturalRebalance: false,
           });
 
           const data = tokenFactory.interface.encodeFunctionData(
-            "executeRebase",
-            [encodedEarlyRebase1.encodedData, encodedEarlyRebase1.signature]
+            "executeRebalance",
+            [encodedEarlyRebalance1.encodedData, encodedEarlyRebalance1.signature]
           );
           const destination = ethers.constants.AddressZero;
           await Orchestrator.addOperation(0, destination, data);
 
-          const encodedEarlyRebase2 = await signRebase(tokenFactory.signer, {
-            ...defaultRebaseData,
+          const encodedEarlyRebalance2 = await signRebalance(tokenFactory.signer, {
+            ...defaultRebalanceData,
             sequenceNumber: 2,
-            isNaturalRebase: false,
+            isNaturalRebalance: false,
           });
 
           const data2 = tokenFactory.interface.encodeFunctionData(
-            "executeRebase",
-            [encodedEarlyRebase2.encodedData, encodedEarlyRebase2.signature]
+            "executeRebalance",
+            [encodedEarlyRebalance2.encodedData, encodedEarlyRebalance2.signature]
           );
           const destination2 = ethers.constants.AddressZero;
           await Orchestrator.addOperation(1, destination2, data2);
 
-          const encodedEarlyRebase3 = await signRebase(tokenFactory.signer, {
-            ...defaultRebaseData,
+          const encodedEarlyRebalance3 = await signRebalance(tokenFactory.signer, {
+            ...defaultRebalanceData,
             sequenceNumber: 2,
-            isNaturalRebase: false,
+            isNaturalRebalance: false,
           });
 
           const data3 = tokenFactory.interface.encodeFunctionData(
-            "executeRebase",
-            [encodedEarlyRebase3.encodedData, encodedEarlyRebase3.signature]
+            "executeRebalance",
+            [encodedEarlyRebalance3.encodedData, encodedEarlyRebalance3.signature]
           );
           const destination3 = tokenFactory.address;
           await Orchestrator.addOperation(2, destination3, data3);
 
           // add new operation at index 1
           const dataNewOPs = tokenFactory.interface.encodeFunctionData(
-            "executeRebase",
-            [encodedEarlyRebase3.encodedData, encodedEarlyRebase3.signature]
+            "executeRebalance",
+            [encodedEarlyRebalance3.encodedData, encodedEarlyRebalance3.signature]
           );
           const destinationNewOPs = ethers.constants.AddressZero;
           await Orchestrator.addOperation(1, destinationNewOPs, dataNewOPs);
@@ -606,40 +606,40 @@ developmentChains.includes(network.name)
             deployTokenFixture
           );
 
-          const encodedEarlyRebase1 = await signRebase(tokenFactory.signer, {
-            ...defaultRebaseData,
-            isNaturalRebase: false,
+          const encodedEarlyRebalance1 = await signRebalance(tokenFactory.signer, {
+            ...defaultRebalanceData,
+            isNaturalRebalance: false,
           });
 
           const data = tokenFactory.interface.encodeFunctionData(
-            "executeRebase",
-            [encodedEarlyRebase1.encodedData, encodedEarlyRebase1.signature]
+            "executeRebalance",
+            [encodedEarlyRebalance1.encodedData, encodedEarlyRebalance1.signature]
           );
           const destination = ethers.constants.AddressZero;
           await Orchestrator.addOperation(0, destination, data);
 
-          const encodedEarlyRebase2 = await signRebase(tokenFactory.signer, {
-            ...defaultRebaseData,
+          const encodedEarlyRebalance2 = await signRebalance(tokenFactory.signer, {
+            ...defaultRebalanceData,
             sequenceNumber: 2,
-            isNaturalRebase: false,
+            isNaturalRebalance: false,
           });
 
           const data2 = tokenFactory.interface.encodeFunctionData(
-            "executeRebase",
-            [encodedEarlyRebase2.encodedData, encodedEarlyRebase2.signature]
+            "executeRebalance",
+            [encodedEarlyRebalance2.encodedData, encodedEarlyRebalance2.signature]
           );
           const destination2 = ethers.constants.AddressZero;
           await Orchestrator.addOperation(1, destination2, data2);
 
-          const encodedEarlyRebase3 = await signRebase(tokenFactory.signer, {
-            ...defaultRebaseData,
+          const encodedEarlyRebalance3 = await signRebalance(tokenFactory.signer, {
+            ...defaultRebalanceData,
             sequenceNumber: 2,
-            isNaturalRebase: false,
+            isNaturalRebalance: false,
           });
 
           const data3 = tokenFactory.interface.encodeFunctionData(
-            "executeRebase",
-            [encodedEarlyRebase3.encodedData, encodedEarlyRebase3.signature]
+            "executeRebalance",
+            [encodedEarlyRebalance3.encodedData, encodedEarlyRebalance3.signature]
           );
           const destination3 = tokenFactory.address;
           await Orchestrator.addOperation(2, destination3, data3);
@@ -662,7 +662,7 @@ developmentChains.includes(network.name)
           expect(Operation.data).to.equal(data);
         });
 
-        it("It should call executeScheduledRebases to execute all the rebases left in the queue", async function () {
+        it("It should call executeScheduledRebalances to execute all the rebalances left in the queue", async function () {
           const {
             tokenFactory,
             deployer,
@@ -684,53 +684,53 @@ developmentChains.includes(network.name)
           await underlyingToken.approve(tokenFactory.address, depositAmount);
           await SmartToken1.deposit(depositAmount, deployer.address);
 
-          // Queue up to 10 rebases missing rebase with sequence number 1
+          // Queue up to 10 rebalances missing rebalance with sequence number 1
           for (let i = 1; i < 10; i++) {
-            const encodedEarlyRebase = await signRebase(tokenFactory.signer, {
-              ...defaultRebaseData,
+            const encodedEarlyRebalance = await signRebalance(tokenFactory.signer, {
+              ...defaultRebalanceData,
               sequenceNumber: i + 1,
-              isNaturalRebase: false,
+              isNaturalRebalance: false,
             });
-            await Orchestrator.rebase(
-              encodedEarlyRebase.encodedData,
-              encodedEarlyRebase.signature
+            await Orchestrator.rebalance(
+              encodedEarlyRebalance.encodedData,
+              encodedEarlyRebalance.signature
             );
           }
 
           expect(await tokenFactory.getNextSequenceNumber()).to.equal(1);
 
-          const emptyRebase1 = await tokenFactory.getScheduledRebases(1);
-          const rebase2 = await tokenFactory.getScheduledRebases(2);
-          const rebase9 = await tokenFactory.getScheduledRebases(9);
+          const emptyRebalance1 = await tokenFactory.getScheduledRebalances(1);
+          const rebalance2 = await tokenFactory.getScheduledRebalances(2);
+          const rebalance9 = await tokenFactory.getScheduledRebalances(9);
 
-          expect(emptyRebase1.sequenceNumber).to.equal(0);
-          expect(rebase2.sequenceNumber).to.equal(2);
-          expect(rebase9.sequenceNumber).to.equal(9);
+          expect(emptyRebalance1.sequenceNumber).to.equal(0);
+          expect(rebalance2.sequenceNumber).to.equal(2);
+          expect(rebalance9.sequenceNumber).to.equal(9);
 
-          // trigger rebase with sequence number 1
+          // trigger rebalance with sequence number 1
 
-          const encodedEarlyRebase = await signRebase(tokenFactory.signer, {
-            ...defaultRebaseData,
-            isNaturalRebase: false,
+          const encodedEarlyRebalance = await signRebalance(tokenFactory.signer, {
+            ...defaultRebalanceData,
+            isNaturalRebalance: false,
           });
-          await Orchestrator.rebase(
-            encodedEarlyRebase.encodedData,
-            encodedEarlyRebase.signature
+          await Orchestrator.rebalance(
+            encodedEarlyRebalance.encodedData,
+            encodedEarlyRebalance.signature
           );
 
-          // adding sequence number 1 rebase executes 5 rebases
+          // adding sequence number 1 rebalance executes 5 rebalances
           expect(await tokenFactory.getNextSequenceNumber()).to.equal(6);
 
-          const rebase7 = await tokenFactory.getScheduledRebases(7);
+          const rebalance7 = await tokenFactory.getScheduledRebalances(7);
 
-          // check that rebase 7 is still in the queue
-          expect(rebase7.sequenceNumber).to.equal(7);
+          // check that rebalance 7 is still in the queue
+          expect(rebalance7.sequenceNumber).to.equal(7);
 
-          // call executeScheduledRebases to execute all the rebases left in the queue
+          // call executeScheduledRebalances to execute all the rebalances left in the queue
 
-          await Orchestrator.executeScheduledRebases();
+          await Orchestrator.executeScheduledRebalances();
 
-          // executeScheduledRebases should execute the remaining 5 rebases as part of a batch of 5
+          // executeScheduledRebalances should execute the remaining 5 rebalances as part of a batch of 5
           expect(await tokenFactory.getNextSequenceNumber()).to.equal(11);
         });
         it("should add a new balancer pool", async function () {
@@ -787,16 +787,16 @@ developmentChains.includes(network.name)
             await loadFixture(deployTokenFixture);
           await Orchestrator.addBalancerPool(0, balancerPool1.address);
 
-          //rebase and resync
-          const encodedEarlyRebase1 = await signRebase(tokenFactory.signer, {
-            ...defaultRebaseData,
+          //rebalance and resync
+          const encodedEarlyRebalance1 = await signRebalance(tokenFactory.signer, {
+            ...defaultRebalanceData,
             sequenceNumber: 1,
-            isNaturalRebase: false,
+            isNaturalRebalance: false,
           });
 
-          const tx = await Orchestrator.rebase(
-            encodedEarlyRebase1.encodedData,
-            encodedEarlyRebase1.signature
+          const tx = await Orchestrator.rebalance(
+            encodedEarlyRebalance1.encodedData,
+            encodedEarlyRebalance1.signature
           );
 
           const receipt = await tx.wait();
@@ -822,16 +822,16 @@ developmentChains.includes(network.name)
             balancerPool2.address,
             balancerPool3.address,
           ];
-          //rebase and resync
-          const encodedEarlyRebase1 = await signRebase(tokenFactory.signer, {
-            ...defaultRebaseData,
+          //rebalance and resync
+          const encodedEarlyRebalance1 = await signRebalance(tokenFactory.signer, {
+            ...defaultRebalanceData,
             sequenceNumber: 1,
-            isNaturalRebase: false,
+            isNaturalRebalance: false,
           });
 
-          const tx = await Orchestrator.rebase(
-            encodedEarlyRebase1.encodedData,
-            encodedEarlyRebase1.signature
+          const tx = await Orchestrator.rebalance(
+            encodedEarlyRebalance1.encodedData,
+            encodedEarlyRebalance1.signature
           );
 
           const receipt = await tx.wait();

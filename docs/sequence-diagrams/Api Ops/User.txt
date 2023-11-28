@@ -1,4 +1,4 @@
 title The API Operation
-User->API:Calls the getNextRebase controller with encoded params OFF
-API->DB: Fetches the next rebase info from the database
-API-->User: Returns human readable next rebase info
+User->API:Calls the getNextRebalance controller with encoded params OFF
+API->DB: Fetches the next rebalance info from the database
+API-->User: Returns human readable next rebalance info

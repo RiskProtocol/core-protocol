@@ -2,46 +2,46 @@ import { assert, expect } from "chai";
 import { ethers, network, upgrades } from "hardhat";
 import {
   developmentChains,
-  REBASE_INTERVAL,
+  REBALANCE_INTERVAL,
   TOKEN1_NAME,
   TOKEN1_SYMBOL,
   TOKEN2_NAME,
   TOKEN2_SYMBOL,
-  signRebase,
-  defaultRebaseData,
+  signRebalance,
+  defaultRebalanceData,
 } from "../../helper-hardhat-config";
 import { loadFixture, time } from "@nomicfoundation/hardhat-network-helpers";
 
-const rebaseTable = [
+const rebalanceTable = [
   {
     depositValue: "10000000000000000000",
-    beforeRebase: {
-      x: "9000000000000000000", // we simiulate that one of token X has been traded before rebase
+    beforeRebalance: {
+      x: "9000000000000000000", // we simiulate that one of token X has been traded before rebalance
       y: "10000000000000000000",
     },
-    afterRebase: {
+    afterRebalance: {
       x: "9333000000000000000",
       y: "10000000000000000000",
     },
   },
   {
     depositValue: "5000000000000000000",
-    beforeRebase: {
-      x: "4000000000000000000", // we simiulate that one of token X has been traded before rebase
+    beforeRebalance: {
+      x: "4000000000000000000", // we simiulate that one of token X has been traded before rebalance
       y: "5000000000000000000",
     },
-    afterRebase: {
+    afterRebalance: {
       x: "4333000000000000000",
       y: "5000000000000000000",
     },
   },
   {
     depositValue: "4335000000000000000",
-    beforeRebase: {
-      x: "3335000000000000000", // we simiulate that one of token X has been traded before rebase
+    beforeRebalance: {
+      x: "3335000000000000000", // we simiulate that one of token X has been traded before rebalance
       y: "4335000000000000000",
     },
-    afterRebase: {
+    afterRebalance: {
       x: "3668000000000000000",
       y: "4335000000000000000",
     },
@@ -49,7 +49,7 @@ const rebaseTable = [
 ];
 
 developmentChains.includes(network.name)
-  ? describe("RebaseTable", async function () {
+  ? describe("RebalanceTable", async function () {
       async function deployTokenFixture() {
         const [deployer, tester] = await ethers.getSigners();
 
@@ -75,7 +75,7 @@ developmentChains.includes(network.name)
 
         const tokenFactory = await upgrades.deployProxy(TokenFactory, [
           underlyingToken.address,
-          REBASE_INTERVAL,
+          REBALANCE_INTERVAL,
           sanctionsContract.address,
           deployer.address,
         ]);
@@ -119,7 +119,7 @@ developmentChains.includes(network.name)
 
         const tokenFactory2 = await upgrades.deployProxy(TokenFactory2, [
           "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D",
-          REBASE_INTERVAL,
+          REBALANCE_INTERVAL,
           sanctionsContract.address,
           deployer.address,
         ]);
@@ -153,9 +153,9 @@ developmentChains.includes(network.name)
         };
       }
 
-      describe("Rebase", async function () {
-        rebaseTable.forEach((item) => {
-          it(`it should have correct balances for X and Y tokens after rebase with initial token balance of X:${item.beforeRebase.x}, Y:${item.beforeRebase.y}`, async function () {
+      describe("Rebalance", async function () {
+        rebalanceTable.forEach((item) => {
+          it(`it should have correct balances for X and Y tokens after rebalance with initial token balance of X:${item.beforeRebalance.x}, Y:${item.beforeRebalance.y}`, async function () {
             const {
               tokenFactory,
               deployer,
@@ -182,35 +182,35 @@ developmentChains.includes(network.name)
             await smartToken1.transfer(tester.address, transferAmount);
             const now = await tokenFactory.getLastTimeStamp(); //block.timestamp;
 
-            const nextRebaseTimeStamp = BigInt(now) + BigInt(REBASE_INTERVAL);
-            await time.setNextBlockTimestamp(nextRebaseTimeStamp);
+            const nextRebalanceTimeStamp = BigInt(now) + BigInt(REBALANCE_INTERVAL);
+            await time.setNextBlockTimestamp(nextRebalanceTimeStamp);
 
-            const encodedNaturalRebase1 = await signRebase(
+            const encodedNaturalRebalance1 = await signRebalance(
               tokenFactory.signer,
-              defaultRebaseData
+              defaultRebalanceData
             );
 
-            // trigger a rebase
-            await orchestrator.rebase(
-              encodedNaturalRebase1.encodedData,
-              encodedNaturalRebase1.signature
+            // trigger a rebalance
+            await orchestrator.rebalance(
+              encodedNaturalRebalance1.encodedData,
+              encodedNaturalRebalance1.signature
             );
 
             const balanceOfX = await smartToken1.balanceOf(deployer.address);
             const balanceOfY = await smartToken2.balanceOf(deployer.address);
 
-            // confirm user balances when rebase has taken place
+            // confirm user balances when rebalance has taken place
             assert.equal(
               balanceOfX.toString(),
-              item.afterRebase.x
+              item.afterRebalance.x
             );
             assert.equal(
               balanceOfY.toString(),
-              item.afterRebase.y
+              item.afterRebalance.y
             );
           });
         });
-        it("Should throw an error if natural rebase is triggered at the wrong time", async function () {
+        it("Should throw an error if natural rebalance is triggered at the wrong time", async function () {
           const {
             tokenFactory,
             deployer,
@@ -237,28 +237,28 @@ developmentChains.includes(network.name)
           await smartToken1.transfer(tester.address, transferAmount);
           const now = await tokenFactory.getLastTimeStamp(); //block.timestamp;
 
-          const nextRebaseTimeStamp = BigInt(now) + BigInt((2/3) * REBASE_INTERVAL); // set rebase interval to 2/3 of the actual interval hence the rebase will be triggered at the wrong time
-          await time.setNextBlockTimestamp(nextRebaseTimeStamp);
+          const nextRebalanceTimeStamp = BigInt(now) + BigInt((2/3) * REBALANCE_INTERVAL); // set rebalance interval to 2/3 of the actual interval hence the rebalance will be triggered at the wrong time
+          await time.setNextBlockTimestamp(nextRebalanceTimeStamp);
 
-          const encodedNaturalRebase1 = await signRebase(
+          const encodedNaturalRebalance1 = await signRebalance(
             tokenFactory.signer,
-            defaultRebaseData
+            defaultRebalanceData
           );
 
-          // trigger a rebase
-          await expect(orchestrator.rebase(
-            encodedNaturalRebase1.encodedData,
-            encodedNaturalRebase1.signature
+          // trigger a rebalance
+          await expect(orchestrator.rebalance(
+            encodedNaturalRebalance1.encodedData,
+            encodedNaturalRebalance1.signature
           )).to.be.revertedWithCustomError(
             tokenFactory,
-            "TokenFactory__InvalidNaturalRebase"
+            "TokenFactory__InvalidNaturalRebalance"
           );
 
         });
       });
 
-      describe("Natural Rebase", async function () {
-        it("It should revert if a natural rebase is triggered before the interval time on the smart contract", async function () {
+      describe("Natural Rebalance", async function () {
+        it("It should revert if a natural rebalance is triggered before the interval time on the smart contract", async function () {
           const {
             tokenFactory,
             smartToken1,
@@ -272,57 +272,57 @@ developmentChains.includes(network.name)
 
           const now = await tokenFactory.getLastTimeStamp(); //block.timestamp;
 
-          const currentRebaseSequenceNumber = await tokenFactory.getRebaseNumber();
+          const currentRebalanceSequenceNumber = await tokenFactory.getRebalanceNumber();
 
-          const nextRebase = BigInt(now) + BigInt(REBASE_INTERVAL);
-          await time.setNextBlockTimestamp(nextRebase);
+          const nextRebalance = BigInt(now) + BigInt(REBALANCE_INTERVAL);
+          await time.setNextBlockTimestamp(nextRebalance);
 
-          const encodedNaturalRebase1 = await signRebase(
+          const encodedNaturalRebalance1 = await signRebalance(
             tokenFactory.signer,
-            defaultRebaseData
+            defaultRebalanceData
           );
 
-          // trigger a rebase
-          await orchestrator.rebase(
-            encodedNaturalRebase1.encodedData,
-            encodedNaturalRebase1.signature
+          // trigger a rebalance
+          await orchestrator.rebalance(
+            encodedNaturalRebalance1.encodedData,
+            encodedNaturalRebalance1.signature
           );
 
-          const firstRebaseSequenceNumber = currentRebaseSequenceNumber.toNumber() + 1;
+          const firstRebalanceSequenceNumber = currentRebalanceSequenceNumber.toNumber() + 1;
           await expect(
-            await tokenFactory.getRebaseNumber()
-          ).to.equal(firstRebaseSequenceNumber);
+            await tokenFactory.getRebalanceNumber()
+          ).to.equal(firstRebalanceSequenceNumber);
 
-          await time.setNextBlockTimestamp(nextRebase);
+          await time.setNextBlockTimestamp(nextRebalance);
 
-          const encodedNaturalRebase3 = await signRebase(
+          const encodedNaturalRebalance3 = await signRebalance(
             tokenFactory.signer,
             {
-              ...defaultRebaseData,
+              ...defaultRebalanceData,
               sequenceNumber: 3,
             }
           );
 
-          // trigger a rebase with the sequence number of 3 instead of 2
+          // trigger a rebalance with the sequence number of 3 instead of 2
           await expect(
-            orchestrator.rebase(
-              encodedNaturalRebase3.encodedData,
-              encodedNaturalRebase3.signature
+            orchestrator.rebalance(
+              encodedNaturalRebalance3.encodedData,
+              encodedNaturalRebalance3.signature
             )
           ).to.be.revertedWithCustomError(
             tokenFactory,
-            "TokenFactory__InvalidNaturalRebase"
+            "TokenFactory__InvalidNaturalRebalance"
           );
 
           await expect(
-            await tokenFactory.getRebaseNumber()
-          ).to.equal(firstRebaseSequenceNumber);
+            await tokenFactory.getRebalanceNumber()
+          ).to.equal(firstRebalanceSequenceNumber);
         });
       });
 
-      //rebase sequences tests
-      describe("Rebase with Sequences", async function () {
-        it(`it should rebase calls in the correct sequence`, async function () {
+      //rebalance sequences tests
+      describe("Rebalance with Sequences", async function () {
+        it(`it should rebalance calls in the correct sequence`, async function () {
           const {
             tokenFactory,
             deployer,
@@ -344,36 +344,36 @@ developmentChains.includes(network.name)
           await underlyingToken.approve(tokenFactory.address, depositAmount);
           await smartToken1.deposit(depositAmount, deployer.address);
 
-          const encodedEarlyRebase1 = await signRebase(
+          const encodedEarlyRebalance1 = await signRebalance(
             tokenFactory.signer,
             {
-              ...defaultRebaseData,
-              isNaturalRebase: false,
+              ...defaultRebalanceData,
+              isNaturalRebalance: false,
             }
           );
-          // trigger a rebase
-          await orchestrator.rebase(
-            encodedEarlyRebase1.encodedData,
-            encodedEarlyRebase1.signature
+          // trigger a rebalance
+          await orchestrator.rebalance(
+            encodedEarlyRebalance1.encodedData,
+            encodedEarlyRebalance1.signature
           );
           expect(await tokenFactory.getNextSequenceNumber()).to.equal(2);
 
-          const encodedEarlyRebase2 = await signRebase(
+          const encodedEarlyRebalance2 = await signRebalance(
             tokenFactory.signer,
             {
-              ...defaultRebaseData,
+              ...defaultRebalanceData,
               sequenceNumber: 2,
-              isNaturalRebase: false,
+              isNaturalRebalance: false,
             }
           );
-          await orchestrator.rebase(
-            encodedEarlyRebase2.encodedData,
-            encodedEarlyRebase2.signature
+          await orchestrator.rebalance(
+            encodedEarlyRebalance2.encodedData,
+            encodedEarlyRebalance2.signature
           );
           expect(await tokenFactory.getNextSequenceNumber()).to.equal(3);
         });
 
-        it(`it should handle out of order rebase calls`, async function () {
+        it(`it should handle out of order rebalance calls`, async function () {
           const {
             tokenFactory,
             deployer,
@@ -395,52 +395,52 @@ developmentChains.includes(network.name)
           await underlyingToken.approve(tokenFactory.address, depositAmount);
           await smartToken1.deposit(depositAmount, deployer.address);
 
-          const encodedEarlyRebase1 = await signRebase(
+          const encodedEarlyRebalance1 = await signRebalance(
             tokenFactory.signer,
             {
-              ...defaultRebaseData,
-              isNaturalRebase: false,
+              ...defaultRebalanceData,
+              isNaturalRebalance: false,
             }
           );
-          // trigger a rebase
-          await orchestrator.rebase(
-            encodedEarlyRebase1.encodedData,
-            encodedEarlyRebase1.signature
+          // trigger a rebalance
+          await orchestrator.rebalance(
+            encodedEarlyRebalance1.encodedData,
+            encodedEarlyRebalance1.signature
           );
 
-          const encodedEarlyRebase3 = await signRebase(
+          const encodedEarlyRebalance3 = await signRebalance(
             tokenFactory.signer,
             {
-              ...defaultRebaseData,
+              ...defaultRebalanceData,
               sequenceNumber: 3,
-              isNaturalRebase: false,
+              isNaturalRebalance: false,
             }
           );
 
-          await orchestrator.rebase(
-            encodedEarlyRebase3.encodedData,
-            encodedEarlyRebase3.signature
+          await orchestrator.rebalance(
+            encodedEarlyRebalance3.encodedData,
+            encodedEarlyRebalance3.signature
           );
 
           expect(await tokenFactory.getNextSequenceNumber()).to.equal(2);
 
-          const encodedEarlyRebase2 = await signRebase(
+          const encodedEarlyRebalance2 = await signRebalance(
             tokenFactory.signer,
             {
-              ...defaultRebaseData,
+              ...defaultRebalanceData,
               sequenceNumber: 2,
-              isNaturalRebase: false,
+              isNaturalRebalance: false,
             }
           );
-          await orchestrator.rebase(
-            encodedEarlyRebase2.encodedData,
-            encodedEarlyRebase2.signature
+          await orchestrator.rebalance(
+            encodedEarlyRebalance2.encodedData,
+            encodedEarlyRebalance2.signature
           );
 
           expect(await tokenFactory.getNextSequenceNumber()).to.equal(4);
         });
 
-        it(`it should execute rebases in the correct order`, async function () {
+        it(`it should execute rebalances in the correct order`, async function () {
           const {
             tokenFactory,
             deployer,
@@ -462,50 +462,50 @@ developmentChains.includes(network.name)
           await underlyingToken.approve(tokenFactory.address, depositAmount);
           await smartToken1.deposit(depositAmount, deployer.address);
 
-          const encodedEarlyRebase1 = await signRebase(
+          const encodedEarlyRebalance1 = await signRebalance(
             tokenFactory.signer,
             {
-              ...defaultRebaseData,
-              isNaturalRebase: false,
+              ...defaultRebalanceData,
+              isNaturalRebalance: false,
             }
           );
-          // trigger a rebase
-          await orchestrator.rebase(
-            encodedEarlyRebase1.encodedData,
-            encodedEarlyRebase1.signature
+          // trigger a rebalance
+          await orchestrator.rebalance(
+            encodedEarlyRebalance1.encodedData,
+            encodedEarlyRebalance1.signature
           );
 
-          const encodedEarlyRebase2 = await signRebase(
+          const encodedEarlyRebalance2 = await signRebalance(
             tokenFactory.signer,
             {
-              ...defaultRebaseData,
+              ...defaultRebalanceData,
               sequenceNumber: 2,
-              isNaturalRebase: false,
+              isNaturalRebalance: false,
             }
           );
-          await orchestrator.rebase(
-            encodedEarlyRebase2.encodedData,
-            encodedEarlyRebase2.signature
+          await orchestrator.rebalance(
+            encodedEarlyRebalance2.encodedData,
+            encodedEarlyRebalance2.signature
           );
 
-          const encodedEarlyRebase3 = await signRebase(
+          const encodedEarlyRebalance3 = await signRebalance(
             tokenFactory.signer,
             {
-              ...defaultRebaseData,
+              ...defaultRebalanceData,
               sequenceNumber: 3,
-              isNaturalRebase: false,
+              isNaturalRebalance: false,
             }
           );
 
-          await orchestrator.rebase(
-            encodedEarlyRebase3.encodedData,
-            encodedEarlyRebase3.signature
+          await orchestrator.rebalance(
+            encodedEarlyRebalance3.encodedData,
+            encodedEarlyRebalance3.signature
           );
 
           expect(await tokenFactory.getNextSequenceNumber()).to.equal(4);
         });
 
-        it(`it should handle rebases with already executed sequence properly`, async function () {
+        it(`it should handle rebalances with already executed sequence properly`, async function () {
           const {
             tokenFactory,
             deployer,
@@ -527,37 +527,37 @@ developmentChains.includes(network.name)
           await underlyingToken.approve(tokenFactory.address, depositAmount);
           await smartToken1.deposit(depositAmount, deployer.address);
 
-          const encodedEarlyRebase1 = await signRebase(
+          const encodedEarlyRebalance1 = await signRebalance(
             tokenFactory.signer,
             {
-              ...defaultRebaseData,
-              isNaturalRebase: false,
+              ...defaultRebalanceData,
+              isNaturalRebalance: false,
             }
           );
-          // trigger a rebase
-          await orchestrator.rebase(
-            encodedEarlyRebase1.encodedData,
-            encodedEarlyRebase1.signature
+          // trigger a rebalance
+          await orchestrator.rebalance(
+            encodedEarlyRebalance1.encodedData,
+            encodedEarlyRebalance1.signature
           );
 
-          const encodedEarlyRebase2 = await signRebase(
+          const encodedEarlyRebalance2 = await signRebalance(
             tokenFactory.signer,
             {
-              ...defaultRebaseData,
+              ...defaultRebalanceData,
               sequenceNumber: 2,
-              isNaturalRebase: false,
+              isNaturalRebalance: false,
             }
           );
 
-          await orchestrator.rebase(
-            encodedEarlyRebase2.encodedData,
-            encodedEarlyRebase2.signature
+          await orchestrator.rebalance(
+            encodedEarlyRebalance2.encodedData,
+            encodedEarlyRebalance2.signature
           );
 
           await expect(
-            orchestrator.rebase(
-              encodedEarlyRebase1.encodedData,
-              encodedEarlyRebase1.signature
+            orchestrator.rebalance(
+              encodedEarlyRebalance1.encodedData,
+              encodedEarlyRebalance1.signature
             )
           ).to.be.revertedWithCustomError(
             tokenFactory,
@@ -566,7 +566,7 @@ developmentChains.includes(network.name)
         });
       });
 
-      it(`it should revert if rebase signature is not signed by API wallet`, async function () {
+      it(`it should revert if rebalance signature is not signed by API wallet`, async function () {
         const {
           tokenFactory,
           deployer,
@@ -588,26 +588,26 @@ developmentChains.includes(network.name)
         await underlyingToken.approve(tokenFactory.address, depositAmount);
         await smartToken1.deposit(depositAmount, deployer.address);
 
-        const encodedEarlyRebase1 = await signRebase(
+        const encodedEarlyRebalance1 = await signRebalance(
           tokenFactory.signer,
           {
-            ...defaultRebaseData,
-            isNaturalRebase: false,
+            ...defaultRebalanceData,
+            isNaturalRebalance: false,
           }
         );
-        const encodedEarlyRebase2 = await signRebase(
+        const encodedEarlyRebalance2 = await signRebalance(
           tokenFactory.signer,
           {
-            ...defaultRebaseData,
+            ...defaultRebalanceData,
             sequenceNumber: 2,
-            isNaturalRebase: false,
+            isNaturalRebalance: false,
           }
         );
-        // trigger a rebase
+        // trigger a rebalance
         await expect(
-          orchestrator.rebase(
-            encodedEarlyRebase1.encodedData,
-            encodedEarlyRebase2.signature //invalid sig
+          orchestrator.rebalance(
+            encodedEarlyRebalance1.encodedData,
+            encodedEarlyRebalance2.signature //invalid sig
           )
         ).to.be.revertedWithCustomError(
           tokenFactory,

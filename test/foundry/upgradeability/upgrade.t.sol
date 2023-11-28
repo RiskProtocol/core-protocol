@@ -24,7 +24,7 @@ contract _Test is Test, TestHelper {
         factoryWrapper = TokenFactory(address(factoryProxy));
         factoryWrapper.initialize(
             underlying,
-            REBASE_INTERVAL,
+            REBALANCE_INTERVAL,
             sanctionsContract,
             signersAddress
         );
@@ -59,7 +59,7 @@ contract _Test is Test, TestHelper {
     }
 
     function testCanInitialize() public {
-        assertEq(factoryWrapper.getInterval(), REBASE_INTERVAL);
+        assertEq(factoryWrapper.getInterval(), REBALANCE_INTERVAL);
         assertEq(address(factoryWrapper.getBaseToken()), address(underlying));
         assertEq(smartTokenYWrapper.name(), TOKEN2_NAME);
         assertEq((smartTokenYWrapper.symbol()), TOKEN2_SYMBOL);
@@ -73,7 +73,7 @@ contract _Test is Test, TestHelper {
         TokenFactory tokenFactory2 = new TokenFactory();
         factoryWrapper.upgradeTo(address(tokenFactory2));
 
-        assertEq(factoryWrapper.getInterval(), REBASE_INTERVAL);
+        assertEq(factoryWrapper.getInterval(), REBALANCE_INTERVAL);
         assertEq(address(factoryWrapper.getBaseToken()), address(underlying));
         assertEq(address(factoryWrapper.owner()), address(owner));
 

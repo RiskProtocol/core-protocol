@@ -151,8 +151,8 @@ contract ERC20Upgradeable is
         return true;
     }
 
-    /// @notice Adjusts the balance of a user after rebase is applied
-    /// @dev Internal function to handle balance adjustments when rebase is applied
+    /// @notice Adjusts the balance of a user after rebalance is applied
+    /// @dev Internal function to handle balance adjustments when rebalance is applied
     /// @param account The address of the user
     /// @param amount The new balance to be set for the user
     /// @return Returns `true` upon successful adjustment.
@@ -352,8 +352,8 @@ contract ERC20Upgradeable is
         }
     }
 
-    /// @notice Internal function to adjust the balance of a user when rebase is applied
-    /// @dev Sets the balance of theuser according to the rebase formula
+    /// @notice Internal function to adjust the balance of a user when rebalance is applied
+    /// @dev Sets the balance of theuser according to the rebalance formula
     /// @param account The address of the user.
     /// @param amount The new balance to be set for the user
     function _balanceAdjust(address account, uint256 amount) internal virtual {

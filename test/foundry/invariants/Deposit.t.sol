@@ -21,7 +21,7 @@ contract Deposit is Test, TestHelper {
         factoryWrapper = TokenFactory(address(factoryProxy));
         factoryWrapper.initialize(
             mockERC20Token,
-            REBASE_INTERVAL,
+            REBALANCE_INTERVAL,
             sanctionsContract,
             signersAddress
         );
@@ -59,7 +59,7 @@ contract Deposit is Test, TestHelper {
     }
 
     // total supply of token x and y should be the same as total
-    // deposit provided that rebase/withdrwal has not taken place
+    // deposit provided that rebalance/withdrwal has not taken place
     function invariant_TotalDeposit() public {
         assertEq(handler.totalDeposit(), smartTokenXWrapper.totalSupply());
         assertEq(handler.totalDeposit(), smartTokenYWrapper.totalSupply());

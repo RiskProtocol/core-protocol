@@ -402,7 +402,7 @@
             "src": "contracts/vaults/TokenFactory.sol:48"
           },
           {
-            "label": "lastRebaseCount",
+            "label": "lastRebalanceCount",
             "offset": 0,
             "slot": "254",
             "type": "t_mapping(t_address,t_uint256)",
@@ -506,10 +506,10 @@
             "src": "contracts/vaults/TokenFactory.sol:63"
           },
           {
-            "label": "scheduledRebases",
+            "label": "scheduledRebalances",
             "offset": 0,
             "slot": "265",
-            "type": "t_array(t_struct(ScheduledRebase)6594_storage)dyn_storage",
+            "type": "t_array(t_struct(ScheduledRebalance)6594_storage)dyn_storage",
             "contract": "TokenFactory",
             "src": "contracts/vaults/TokenFactory.sol:73"
           },
@@ -531,8 +531,8 @@
             "label": "contract SmartToken[]",
             "numberOfBytes": "32"
           },
-          "t_array(t_struct(ScheduledRebase)6594_storage)dyn_storage": {
-            "label": "struct TokenFactory.ScheduledRebase[]",
+          "t_array(t_struct(ScheduledRebalance)6594_storage)dyn_storage": {
+            "label": "struct TokenFactory.ScheduledRebalance[]",
             "numberOfBytes": "32"
           },
           "t_array(t_uint256)49_storage": {
@@ -571,8 +571,8 @@
             "label": "mapping(uint256 => bool)",
             "numberOfBytes": "32"
           },
-          "t_struct(ScheduledRebase)6594_storage": {
-            "label": "struct TokenFactory.ScheduledRebase",
+          "t_struct(ScheduledRebalance)6594_storage": {
+            "label": "struct TokenFactory.ScheduledRebalance",
             "members": [
               {
                 "label": "sequenceNumber",
@@ -581,7 +581,7 @@
                 "slot": "0"
               },
               {
-                "label": "isNaturalRebase",
+                "label": "isNaturalRebalance",
                 "type": "t_bool",
                 "offset": 0,
                 "slot": "1"
@@ -1015,7 +1015,7 @@
             "src": "contracts/vaults/TokenFactory.sol:48"
           },
           {
-            "label": "lastRebaseCount",
+            "label": "lastRebalanceCount",
             "offset": 0,
             "slot": "254",
             "type": "t_mapping(t_address,t_uint256)",
@@ -1119,10 +1119,10 @@
             "src": "contracts/vaults/TokenFactory.sol:63"
           },
           {
-            "label": "scheduledRebases",
+            "label": "scheduledRebalances",
             "offset": 0,
             "slot": "265",
-            "type": "t_array(t_struct(ScheduledRebase)10545_storage)dyn_storage",
+            "type": "t_array(t_struct(ScheduledRebalance)10545_storage)dyn_storage",
             "contract": "TokenFactory",
             "src": "contracts/vaults/TokenFactory.sol:73"
           },
@@ -1144,8 +1144,8 @@
             "label": "contract SmartToken[]",
             "numberOfBytes": "32"
           },
-          "t_array(t_struct(ScheduledRebase)10545_storage)dyn_storage": {
-            "label": "struct TokenFactory.ScheduledRebase[]",
+          "t_array(t_struct(ScheduledRebalance)10545_storage)dyn_storage": {
+            "label": "struct TokenFactory.ScheduledRebalance[]",
             "numberOfBytes": "32"
           },
           "t_array(t_uint256)49_storage": {
@@ -1184,8 +1184,8 @@
             "label": "mapping(uint256 => bool)",
             "numberOfBytes": "32"
           },
-          "t_struct(ScheduledRebase)10545_storage": {
-            "label": "struct TokenFactory.ScheduledRebase",
+          "t_struct(ScheduledRebalance)10545_storage": {
+            "label": "struct TokenFactory.ScheduledRebalance",
             "members": [
               {
                 "label": "sequenceNumber",
@@ -1194,7 +1194,7 @@
                 "slot": "0"
               },
               {
-                "label": "isNaturalRebase",
+                "label": "isNaturalRebalance",
                 "type": "t_bool",
                 "offset": 0,
                 "slot": "1"
@@ -1923,7 +1923,7 @@
             "src": "contracts/vaults/TokenFactory.sol:49"
           },
           {
-            "label": "lastRebaseCount",
+            "label": "lastRebalanceCount",
             "offset": 0,
             "slot": "254",
             "type": "t_mapping(t_address,t_uint256)",
@@ -2027,10 +2027,10 @@
             "src": "contracts/vaults/TokenFactory.sol:64"
           },
           {
-            "label": "scheduledRebases",
+            "label": "scheduledRebalances",
             "offset": 0,
             "slot": "265",
-            "type": "t_array(t_struct(ScheduledRebase)10501_storage)dyn_storage",
+            "type": "t_array(t_struct(ScheduledRebalance)10501_storage)dyn_storage",
             "contract": "TokenFactory",
             "src": "contracts/vaults/TokenFactory.sol:74"
           },
@@ -2052,8 +2052,8 @@
             "label": "contract SmartToken[]",
             "numberOfBytes": "32"
           },
-          "t_array(t_struct(ScheduledRebase)10501_storage)dyn_storage": {
-            "label": "struct TokenFactory.ScheduledRebase[]",
+          "t_array(t_struct(ScheduledRebalance)10501_storage)dyn_storage": {
+            "label": "struct TokenFactory.ScheduledRebalance[]",
             "numberOfBytes": "32"
           },
           "t_array(t_uint256)49_storage": {
@@ -2092,8 +2092,8 @@
             "label": "mapping(uint256 => bool)",
             "numberOfBytes": "32"
           },
-          "t_struct(ScheduledRebase)10501_storage": {
-            "label": "struct TokenFactory.ScheduledRebase",
+          "t_struct(ScheduledRebalance)10501_storage": {
+            "label": "struct TokenFactory.ScheduledRebalance",
             "members": [
               {
                 "label": "sequenceNumber",
@@ -2102,7 +2102,7 @@
                 "slot": "0"
               },
               {
-                "label": "isNaturalRebase",
+                "label": "isNaturalRebalance",
                 "type": "t_bool",
                 "offset": 0,
                 "slot": "1"
@@ -2249,7 +2249,7 @@
             "src": "contracts/vaults/BaseContract.sol:32"
           },
           {
-            "label": "rebaseCircuitBreaker",
+            "label": "rebalanceCircuitBreaker",
             "offset": 23,
             "slot": "251",
             "type": "t_bool",
@@ -2257,18 +2257,18 @@
             "src": "contracts/vaults/BaseContract.sol:33"
           },
           {
-            "label": "rebaseElements",
+            "label": "rebalanceElements",
             "offset": 0,
             "slot": "252",
-            "type": "t_array(t_struct(RebaseElements)11365_storage)dyn_storage",
+            "type": "t_array(t_struct(RebalanceElements)11365_storage)dyn_storage",
             "contract": "TokenFactory",
             "src": "contracts/vaults/TokenFactory.sol:47"
           },
           {
-            "label": "userRebaseElements",
+            "label": "userRebalanceElements",
             "offset": 0,
             "slot": "253",
-            "type": "t_mapping(t_address,t_struct(UserRebaseElements)11374_storage)",
+            "type": "t_mapping(t_address,t_struct(UserRebalanceElements)11374_storage)",
             "contract": "TokenFactory",
             "src": "contracts/vaults/TokenFactory.sol:48"
           },
@@ -2281,7 +2281,7 @@
             "src": "contracts/vaults/TokenFactory.sol:51"
           },
           {
-            "label": "lastRebaseCount",
+            "label": "lastRebalanceCount",
             "offset": 0,
             "slot": "255",
             "type": "t_mapping(t_address,t_uint256)",
@@ -2361,7 +2361,7 @@
             "src": "contracts/vaults/TokenFactory.sol:71"
           },
           {
-            "label": "lastRebaseFees",
+            "label": "lastRebalanceFees",
             "offset": 0,
             "slot": "263",
             "type": "t_uint256",
@@ -2385,10 +2385,10 @@
             "src": "contracts/vaults/TokenFactory.sol:74"
           },
           {
-            "label": "scheduledRebases",
+            "label": "scheduledRebalances",
             "offset": 0,
             "slot": "266",
-            "type": "t_array(t_struct(ScheduledRebase)11356_storage)dyn_storage",
+            "type": "t_array(t_struct(ScheduledRebalance)11356_storage)dyn_storage",
             "contract": "TokenFactory",
             "src": "contracts/vaults/TokenFactory.sol:104"
           },
@@ -2410,12 +2410,12 @@
             "label": "contract SmartToken[]",
             "numberOfBytes": "32"
           },
-          "t_array(t_struct(RebaseElements)11365_storage)dyn_storage": {
-            "label": "struct TokenFactory.RebaseElements[]",
+          "t_array(t_struct(RebalanceElements)11365_storage)dyn_storage": {
+            "label": "struct TokenFactory.RebalanceElements[]",
             "numberOfBytes": "32"
           },
-          "t_array(t_struct(ScheduledRebase)11356_storage)dyn_storage": {
-            "label": "struct TokenFactory.ScheduledRebase[]",
+          "t_array(t_struct(ScheduledRebalance)11356_storage)dyn_storage": {
+            "label": "struct TokenFactory.ScheduledRebalance[]",
             "numberOfBytes": "32"
           },
           "t_array(t_uint256)49_storage": {
@@ -2438,8 +2438,8 @@
             "label": "contract SmartToken",
             "numberOfBytes": "20"
           },
-          "t_mapping(t_address,t_struct(UserRebaseElements)11374_storage)": {
-            "label": "mapping(address => struct TokenFactory.UserRebaseElements)",
+          "t_mapping(t_address,t_struct(UserRebalanceElements)11374_storage)": {
+            "label": "mapping(address => struct TokenFactory.UserRebalanceElements)",
             "numberOfBytes": "32"
           },
           "t_mapping(t_address,t_uint256)": {
@@ -2450,8 +2450,8 @@
             "label": "mapping(uint256 => bool)",
             "numberOfBytes": "32"
           },
-          "t_struct(RebaseElements)11365_storage": {
-            "label": "struct TokenFactory.RebaseElements",
+          "t_struct(RebalanceElements)11365_storage": {
+            "label": "struct TokenFactory.RebalanceElements",
             "members": [
               {
                 "label": "BalanceFactorXY",
@@ -2480,8 +2480,8 @@
             ],
             "numberOfBytes": "128"
           },
-          "t_struct(ScheduledRebase)11356_storage": {
-            "label": "struct TokenFactory.ScheduledRebase",
+          "t_struct(ScheduledRebalance)11356_storage": {
+            "label": "struct TokenFactory.ScheduledRebalance",
             "members": [
               {
                 "label": "sequenceNumber",
@@ -2490,7 +2490,7 @@
                 "slot": "0"
               },
               {
-                "label": "isNaturalRebase",
+                "label": "isNaturalRebalance",
                 "type": "t_bool",
                 "offset": 0,
                 "slot": "1"
@@ -2510,8 +2510,8 @@
             ],
             "numberOfBytes": "128"
           },
-          "t_struct(UserRebaseElements)11374_storage": {
-            "label": "struct TokenFactory.UserRebaseElements",
+          "t_struct(UserRebalanceElements)11374_storage": {
+            "label": "struct TokenFactory.UserRebalanceElements",
             "members": [
               {
                 "label": "netX",
@@ -2762,7 +2762,7 @@
             "src": "contracts/vaults/BaseContract.sol:32"
           },
           {
-            "label": "rebaseCircuitBreaker",
+            "label": "rebalanceCircuitBreaker",
             "offset": 23,
             "slot": "354",
             "type": "t_bool",
@@ -3142,7 +3142,7 @@
             "src": "contracts/vaults/BaseContract.sol:32"
           },
           {
-            "label": "rebaseCircuitBreaker",
+            "label": "rebalanceCircuitBreaker",
             "offset": 23,
             "slot": "251",
             "type": "t_bool",
@@ -3150,18 +3150,18 @@
             "src": "contracts/vaults/BaseContract.sol:33"
           },
           {
-            "label": "rebaseElements",
+            "label": "rebalanceElements",
             "offset": 0,
             "slot": "252",
-            "type": "t_array(t_struct(RebaseElements)11365_storage)dyn_storage",
+            "type": "t_array(t_struct(RebalanceElements)11365_storage)dyn_storage",
             "contract": "TokenFactory",
             "src": "contracts/vaults/TokenFactory.sol:47"
           },
           {
-            "label": "userRebaseElements",
+            "label": "userRebalanceElements",
             "offset": 0,
             "slot": "253",
-            "type": "t_mapping(t_address,t_struct(UserRebaseElements)11374_storage)",
+            "type": "t_mapping(t_address,t_struct(UserRebalanceElements)11374_storage)",
             "contract": "TokenFactory",
             "src": "contracts/vaults/TokenFactory.sol:48"
           },
@@ -3174,7 +3174,7 @@
             "src": "contracts/vaults/TokenFactory.sol:51"
           },
           {
-            "label": "lastRebaseCount",
+            "label": "lastRebalanceCount",
             "offset": 0,
             "slot": "255",
             "type": "t_mapping(t_address,t_uint256)",
@@ -3254,7 +3254,7 @@
             "src": "contracts/vaults/TokenFactory.sol:71"
           },
           {
-            "label": "lastRebaseFees",
+            "label": "lastRebalanceFees",
             "offset": 0,
             "slot": "263",
             "type": "t_uint256",
@@ -3278,15 +3278,15 @@
             "src": "contracts/vaults/TokenFactory.sol:74"
           },
           {
-            "label": "scheduledRebases",
+            "label": "scheduledRebalances",
             "offset": 0,
             "slot": "266",
-            "type": "t_mapping(t_uint256,t_struct(ScheduledRebase)11356_storage)",
+            "type": "t_mapping(t_uint256,t_struct(ScheduledRebalance)11356_storage)",
             "contract": "TokenFactory",
             "src": "contracts/vaults/TokenFactory.sol:104"
           },
           {
-            "label": "scheduledRebasesLength",
+            "label": "scheduledRebalancesLength",
             "offset": 0,
             "slot": "267",
             "type": "t_uint256",
@@ -3311,8 +3311,8 @@
             "label": "contract SmartToken[]",
             "numberOfBytes": "32"
           },
-          "t_array(t_struct(RebaseElements)11365_storage)dyn_storage": {
-            "label": "struct TokenFactory.RebaseElements[]",
+          "t_array(t_struct(RebalanceElements)11365_storage)dyn_storage": {
+            "label": "struct TokenFactory.RebalanceElements[]",
             "numberOfBytes": "32"
           },
           "t_array(t_uint256)49_storage": {
@@ -3335,8 +3335,8 @@
             "label": "contract SmartToken",
             "numberOfBytes": "20"
           },
-          "t_mapping(t_address,t_struct(UserRebaseElements)11374_storage)": {
-            "label": "mapping(address => struct TokenFactory.UserRebaseElements)",
+          "t_mapping(t_address,t_struct(UserRebalanceElements)11374_storage)": {
+            "label": "mapping(address => struct TokenFactory.UserRebalanceElements)",
             "numberOfBytes": "32"
           },
           "t_mapping(t_address,t_uint256)": {
@@ -3347,12 +3347,12 @@
             "label": "mapping(uint256 => bool)",
             "numberOfBytes": "32"
           },
-          "t_mapping(t_uint256,t_struct(ScheduledRebase)11356_storage)": {
-            "label": "mapping(uint256 => struct TokenFactory.ScheduledRebase)",
+          "t_mapping(t_uint256,t_struct(ScheduledRebalance)11356_storage)": {
+            "label": "mapping(uint256 => struct TokenFactory.ScheduledRebalance)",
             "numberOfBytes": "32"
           },
-          "t_struct(RebaseElements)11365_storage": {
-            "label": "struct TokenFactory.RebaseElements",
+          "t_struct(RebalanceElements)11365_storage": {
+            "label": "struct TokenFactory.RebalanceElements",
             "members": [
               {
                 "label": "BalanceFactorXY",
@@ -3381,8 +3381,8 @@
             ],
             "numberOfBytes": "128"
           },
-          "t_struct(ScheduledRebase)11356_storage": {
-            "label": "struct TokenFactory.ScheduledRebase",
+          "t_struct(ScheduledRebalance)11356_storage": {
+            "label": "struct TokenFactory.ScheduledRebalance",
             "members": [
               {
                 "label": "sequenceNumber",
@@ -3391,7 +3391,7 @@
                 "slot": "0"
               },
               {
-                "label": "isNaturalRebase",
+                "label": "isNaturalRebalance",
                 "type": "t_bool",
                 "offset": 0,
                 "slot": "1"
@@ -3411,8 +3411,8 @@
             ],
             "numberOfBytes": "128"
           },
-          "t_struct(UserRebaseElements)11374_storage": {
-            "label": "struct TokenFactory.UserRebaseElements",
+          "t_struct(UserRebalanceElements)11374_storage": {
+            "label": "struct TokenFactory.UserRebalanceElements",
             "members": [
               {
                 "label": "netX",
@@ -3564,7 +3564,7 @@
             "src": "contracts/vaults/BaseContract.sol:32"
           },
           {
-            "label": "rebaseCircuitBreaker",
+            "label": "rebalanceCircuitBreaker",
             "offset": 23,
             "slot": "251",
             "type": "t_bool",
@@ -3572,18 +3572,18 @@
             "src": "contracts/vaults/BaseContract.sol:33"
           },
           {
-            "label": "rebaseElements",
+            "label": "rebalanceElements",
             "offset": 0,
             "slot": "252",
-            "type": "t_array(t_struct(RebaseElements)7055_storage)dyn_storage",
+            "type": "t_array(t_struct(RebalanceElements)7055_storage)dyn_storage",
             "contract": "TokenFactory",
             "src": "contracts/vaults/TokenFactory.sol:49"
           },
           {
-            "label": "userRebaseElements",
+            "label": "userRebalanceElements",
             "offset": 0,
             "slot": "253",
-            "type": "t_mapping(t_address,t_struct(UserRebaseElements)7064_storage)",
+            "type": "t_mapping(t_address,t_struct(UserRebalanceElements)7064_storage)",
             "contract": "TokenFactory",
             "src": "contracts/vaults/TokenFactory.sol:50"
           },
@@ -3596,7 +3596,7 @@
             "src": "contracts/vaults/TokenFactory.sol:53"
           },
           {
-            "label": "lastRebaseCount",
+            "label": "lastRebalanceCount",
             "offset": 0,
             "slot": "255",
             "type": "t_mapping(t_address,t_uint256)",
@@ -3676,7 +3676,7 @@
             "src": "contracts/vaults/TokenFactory.sol:73"
           },
           {
-            "label": "lastRebaseFees",
+            "label": "lastRebalanceFees",
             "offset": 0,
             "slot": "263",
             "type": "t_uint256",
@@ -3700,15 +3700,15 @@
             "src": "contracts/vaults/TokenFactory.sol:76"
           },
           {
-            "label": "scheduledRebases",
+            "label": "scheduledRebalances",
             "offset": 0,
             "slot": "266",
-            "type": "t_mapping(t_uint256,t_struct(ScheduledRebase)7046_storage)",
+            "type": "t_mapping(t_uint256,t_struct(ScheduledRebalance)7046_storage)",
             "contract": "TokenFactory",
             "src": "contracts/vaults/TokenFactory.sol:106"
           },
           {
-            "label": "scheduledRebasesLength",
+            "label": "scheduledRebalancesLength",
             "offset": 0,
             "slot": "267",
             "type": "t_uint256",
@@ -3733,8 +3733,8 @@
             "label": "contract SmartToken[]",
             "numberOfBytes": "32"
           },
-          "t_array(t_struct(RebaseElements)7055_storage)dyn_storage": {
-            "label": "struct TokenFactory.RebaseElements[]",
+          "t_array(t_struct(RebalanceElements)7055_storage)dyn_storage": {
+            "label": "struct TokenFactory.RebalanceElements[]",
             "numberOfBytes": "32"
           },
           "t_array(t_uint256)49_storage": {
@@ -3757,8 +3757,8 @@
             "label": "contract SmartToken",
             "numberOfBytes": "20"
           },
-          "t_mapping(t_address,t_struct(UserRebaseElements)7064_storage)": {
-            "label": "mapping(address => struct TokenFactory.UserRebaseElements)",
+          "t_mapping(t_address,t_struct(UserRebalanceElements)7064_storage)": {
+            "label": "mapping(address => struct TokenFactory.UserRebalanceElements)",
             "numberOfBytes": "32"
           },
           "t_mapping(t_address,t_uint256)": {
@@ -3769,12 +3769,12 @@
             "label": "mapping(uint256 => bool)",
             "numberOfBytes": "32"
           },
-          "t_mapping(t_uint256,t_struct(ScheduledRebase)7046_storage)": {
-            "label": "mapping(uint256 => struct TokenFactory.ScheduledRebase)",
+          "t_mapping(t_uint256,t_struct(ScheduledRebalance)7046_storage)": {
+            "label": "mapping(uint256 => struct TokenFactory.ScheduledRebalance)",
             "numberOfBytes": "32"
           },
-          "t_struct(RebaseElements)7055_storage": {
-            "label": "struct TokenFactory.RebaseElements",
+          "t_struct(RebalanceElements)7055_storage": {
+            "label": "struct TokenFactory.RebalanceElements",
             "members": [
               {
                 "label": "BalanceFactorXY",
@@ -3803,8 +3803,8 @@
             ],
             "numberOfBytes": "128"
           },
-          "t_struct(ScheduledRebase)7046_storage": {
-            "label": "struct TokenFactory.ScheduledRebase",
+          "t_struct(ScheduledRebalance)7046_storage": {
+            "label": "struct TokenFactory.ScheduledRebalance",
             "members": [
               {
                 "label": "sequenceNumber",
@@ -3813,7 +3813,7 @@
                 "slot": "0"
               },
               {
-                "label": "isNaturalRebase",
+                "label": "isNaturalRebalance",
                 "type": "t_bool",
                 "offset": 0,
                 "slot": "1"
@@ -3833,8 +3833,8 @@
             ],
             "numberOfBytes": "128"
           },
-          "t_struct(UserRebaseElements)7064_storage": {
-            "label": "struct TokenFactory.UserRebaseElements",
+          "t_struct(UserRebalanceElements)7064_storage": {
+            "label": "struct TokenFactory.UserRebalanceElements",
             "members": [
               {
                 "label": "netX",
@@ -4130,7 +4130,7 @@
             "src": "contracts/vaults/BaseContract.sol:32"
           },
           {
-            "label": "rebaseCircuitBreaker",
+            "label": "rebalanceCircuitBreaker",
             "offset": 23,
             "slot": "251",
             "type": "t_bool",
@@ -4138,18 +4138,18 @@
             "src": "contracts/vaults/BaseContract.sol:33"
           },
           {
-            "label": "rebaseElements",
+            "label": "rebalanceElements",
             "offset": 0,
             "slot": "252",
-            "type": "t_array(t_struct(RebaseElements)7448_storage)dyn_storage",
+            "type": "t_array(t_struct(RebalanceElements)7448_storage)dyn_storage",
             "contract": "TokenFactory",
             "src": "contracts/vaults/TokenFactory.sol:47"
           },
           {
-            "label": "userRebaseElements",
+            "label": "userRebalanceElements",
             "offset": 0,
             "slot": "253",
-            "type": "t_mapping(t_address,t_struct(UserRebaseElements)7457_storage)",
+            "type": "t_mapping(t_address,t_struct(UserRebalanceElements)7457_storage)",
             "contract": "TokenFactory",
             "src": "contracts/vaults/TokenFactory.sol:48"
           },
@@ -4162,7 +4162,7 @@
             "src": "contracts/vaults/TokenFactory.sol:51"
           },
           {
-            "label": "lastRebaseCount",
+            "label": "lastRebalanceCount",
             "offset": 0,
             "slot": "255",
             "type": "t_mapping(t_address,t_uint256)",
@@ -4242,7 +4242,7 @@
             "src": "contracts/vaults/TokenFactory.sol:71"
           },
           {
-            "label": "lastRebaseFees",
+            "label": "lastRebalanceFees",
             "offset": 0,
             "slot": "263",
             "type": "t_uint256",
@@ -4266,15 +4266,15 @@
             "src": "contracts/vaults/TokenFactory.sol:74"
           },
           {
-            "label": "scheduledRebases",
+            "label": "scheduledRebalances",
             "offset": 0,
             "slot": "266",
-            "type": "t_mapping(t_uint256,t_struct(ScheduledRebase)7439_storage)",
+            "type": "t_mapping(t_uint256,t_struct(ScheduledRebalance)7439_storage)",
             "contract": "TokenFactory",
             "src": "contracts/vaults/TokenFactory.sol:104"
           },
           {
-            "label": "scheduledRebasesLength",
+            "label": "scheduledRebalancesLength",
             "offset": 0,
             "slot": "267",
             "type": "t_uint256",
@@ -4299,8 +4299,8 @@
             "label": "contract SmartToken[]",
             "numberOfBytes": "32"
           },
-          "t_array(t_struct(RebaseElements)7448_storage)dyn_storage": {
-            "label": "struct TokenFactory.RebaseElements[]",
+          "t_array(t_struct(RebalanceElements)7448_storage)dyn_storage": {
+            "label": "struct TokenFactory.RebalanceElements[]",
             "numberOfBytes": "32"
           },
           "t_array(t_uint256)49_storage": {
@@ -4323,8 +4323,8 @@
             "label": "contract SmartToken",
             "numberOfBytes": "20"
           },
-          "t_mapping(t_address,t_struct(UserRebaseElements)7457_storage)": {
-            "label": "mapping(address => struct TokenFactory.UserRebaseElements)",
+          "t_mapping(t_address,t_struct(UserRebalanceElements)7457_storage)": {
+            "label": "mapping(address => struct TokenFactory.UserRebalanceElements)",
             "numberOfBytes": "32"
           },
           "t_mapping(t_address,t_uint256)": {
@@ -4335,12 +4335,12 @@
             "label": "mapping(uint256 => bool)",
             "numberOfBytes": "32"
           },
-          "t_mapping(t_uint256,t_struct(ScheduledRebase)7439_storage)": {
-            "label": "mapping(uint256 => struct TokenFactory.ScheduledRebase)",
+          "t_mapping(t_uint256,t_struct(ScheduledRebalance)7439_storage)": {
+            "label": "mapping(uint256 => struct TokenFactory.ScheduledRebalance)",
             "numberOfBytes": "32"
           },
-          "t_struct(RebaseElements)7448_storage": {
-            "label": "struct TokenFactory.RebaseElements",
+          "t_struct(RebalanceElements)7448_storage": {
+            "label": "struct TokenFactory.RebalanceElements",
             "members": [
               {
                 "label": "BalanceFactorXY",
@@ -4369,8 +4369,8 @@
             ],
             "numberOfBytes": "128"
           },
-          "t_struct(ScheduledRebase)7439_storage": {
-            "label": "struct TokenFactory.ScheduledRebase",
+          "t_struct(ScheduledRebalance)7439_storage": {
+            "label": "struct TokenFactory.ScheduledRebalance",
             "members": [
               {
                 "label": "sequenceNumber",
@@ -4379,7 +4379,7 @@
                 "slot": "0"
               },
               {
-                "label": "isNaturalRebase",
+                "label": "isNaturalRebalance",
                 "type": "t_bool",
                 "offset": 0,
                 "slot": "1"
@@ -4399,8 +4399,8 @@
             ],
             "numberOfBytes": "128"
           },
-          "t_struct(UserRebaseElements)7457_storage": {
-            "label": "struct TokenFactory.UserRebaseElements",
+          "t_struct(UserRebalanceElements)7457_storage": {
+            "label": "struct TokenFactory.UserRebalanceElements",
             "members": [
               {
                 "label": "netX",
