@@ -18,7 +18,7 @@ contract Orchestrator is UUPSUpgradeable, OwnableUpgradeable {
 
     Operation[] public operations;
     ITokenFactory private tokenFactory;
-    address[] public balancerPools;
+    address[] private balancerPools;
     mapping(address => bool) private poolExists;
 
     event OperationAdded(bool enabled, address destination, bytes data);
@@ -178,7 +178,7 @@ contract Orchestrator is UUPSUpgradeable, OwnableUpgradeable {
     function addBalancerPool(uint256 index, address _pool) external onlyOwner {
         require(!poolExists[_pool], "Pool already added");
         //expand the array
-        balancerPools.push(address(0));
+        balancerPools.push(_pool);
 
         //shift every element after i by 1
         for (uint256 i = balancerPools.length - 1; i > index; i--) {
@@ -206,5 +206,10 @@ contract Orchestrator is UUPSUpgradeable, OwnableUpgradeable {
         //remove the last duplicated pool now
         balancerPools.pop();
         emit BalancerPoolRemoved(index);
+    }
+
+    /// @return the balancer pools array
+    function getBalancerPools() external view returns (address[] memory) {
+        return balancerPools;
     }
 }
