@@ -9,7 +9,6 @@ import {
   TOKEN2_SYMBOL,
   signRebalance,
   defaultRebalanceData,
-  SmartTokenXValue,
 } from "../../helper-hardhat-config";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 
@@ -737,7 +736,8 @@ developmentChains.includes(network.name)
           const { Orchestrator } = await loadFixture(deployTokenFixture);
           const poolAddress = ethers.Wallet.createRandom().address;
           await Orchestrator.addBalancerPool(0, poolAddress);
-          expect(await Orchestrator.balancerPools(0)).to.equal(poolAddress);
+          const balancerPools = await Orchestrator.getBalancerPools();
+          expect(balancerPools[0]).to.equal(poolAddress);
         });
         it("should not add a duplicate Balancer pool", async function () {
           const { Orchestrator } = await loadFixture(deployTokenFixture);
@@ -751,26 +751,44 @@ developmentChains.includes(network.name)
           const { Orchestrator } = await loadFixture(deployTokenFixture);
           const poolAddress = ethers.Wallet.createRandom().address;
           await Orchestrator.addBalancerPool(0, poolAddress);
-          expect(await Orchestrator.balancerPools(0)).to.equal(poolAddress);
+
+          let balancerPools = await Orchestrator.getBalancerPools();
+
+
+          expect(balancerPools[0]).to.equal(poolAddress);
 
           await Orchestrator.addBalancerPool(1, ethers.constants.AddressZero);
-          expect(await Orchestrator.balancerPools(1)).to.equal(
+
+          balancerPools = await Orchestrator.getBalancerPools();
+
+          expect(balancerPools[1]).to.equal(
             ethers.constants.AddressZero
           );
 
           const thirdAdd = ethers.Wallet.createRandom(["15661"]);
           await Orchestrator.addBalancerPool(0, thirdAdd.address);
-          expect(await Orchestrator.balancerPools(0)).to.equal(
+
+          balancerPools = await Orchestrator.getBalancerPools();
+
+          expect(balancerPools[0]).to.equal(
             thirdAdd.address
           );
-          expect(await Orchestrator.balancerPools(1)).to.equal(poolAddress);
+          expect(balancerPools[1]).to.equal(poolAddress);
         });
         it("should remove a Balancer pool", async function () {
           const { Orchestrator } = await loadFixture(deployTokenFixture);
-          const poolAddress = ethers.Wallet.createRandom().address;
-          await Orchestrator.addBalancerPool(0, poolAddress);
+
+          await Orchestrator.addBalancerPool(0, ethers.Wallet.createRandom().address);
+          await Orchestrator.addBalancerPool(1, ethers.Wallet.createRandom().address);
+          await Orchestrator.addBalancerPool(2, ethers.Wallet.createRandom().address);
+
+          await Orchestrator.removeBalancerPool(1);
+          await Orchestrator.removeBalancerPool(1);
           await Orchestrator.removeBalancerPool(0);
-          expect(await Orchestrator.balancerPools.length).equals(0);
+
+          const balancerPools = await Orchestrator.getBalancerPools();
+
+          expect(balancerPools.length).equals(0);
         });
         it("should revert when trying to remove a non-existent pool", async function () {
           const { Orchestrator } = await loadFixture(deployTokenFixture);
@@ -845,6 +863,23 @@ developmentChains.includes(network.name)
           for (let i = 0; i < mockPools.length; i++) {
             expect(resyncEvents[i].args.data).to.equal(mockPools[i]);
           }
+        });
+
+        it("should use (underlyingprice - smartTokenx) as minumum price if smartTokenx > (underlyingprice - smartTokenx)", async function () {
+          const { Orchestrator, tokenFactory } = await loadFixture(deployTokenFixture);
+          //rebalance and resync
+          const encodedEarlyRebalance1 = await signRebalance(tokenFactory.signer, {
+            ...defaultRebalanceData,
+            sequenceNumber: 1,
+            isNaturalRebalance: false,
+            smartTokenXValue: "1333000000000000000000"
+          });
+
+          await Orchestrator.rebalance(
+            encodedEarlyRebalance1.encodedData,
+            encodedEarlyRebalance1.signature
+          );
+          expect(await tokenFactory.getNextSequenceNumber()).to.equal(2);
         });
       });
     })
