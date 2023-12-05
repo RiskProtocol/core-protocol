@@ -38,6 +38,7 @@ contract TokenFactory is
     error TokenFactory__InvalidSignature();
     error TokenFactory__InvalidSignatureLength();
     error TokenFactory__InvalidManagementFees();
+    error TokenFactory__SmartTokenArrayOutOfBounds();
 
     using MathUpgradeable for uint256;
     using SafeMathUpgradeable for uint256;
@@ -498,7 +499,9 @@ contract TokenFactory is
         // Mint either riskON/OFF to the receiver. Please see 'mintAsset' in SmartToken contract for more info.
         smartTokenArray[smartTokenIndex].mintAsset(receiver, assets);
         //Update the virtual records
-        UserRebalanceElements memory currentElement = userRebalanceElements[receiver];
+        UserRebalanceElements memory currentElement = userRebalanceElements[
+            receiver
+        ];
         if (smartTokenIndex == 0) {
             currentElement.netX = prevBalX + assets;
         } else {
@@ -524,7 +527,9 @@ contract TokenFactory is
 
         smartTokenArray[smartTokenIndex].burn(owner_, amount);
         //Update the virtual records
-        UserRebalanceElements memory currentElement = userRebalanceElements[owner_];
+        UserRebalanceElements memory currentElement = userRebalanceElements[
+            owner_
+        ];
 
         if (smartTokenIndex == 0) {
             currentElement.netX = prevBalX - amount;
@@ -607,7 +612,11 @@ contract TokenFactory is
      * @dev This function is called when the scheduled rebalance queue had more than 5 entries
      * only 5 will be executed and the rest will be left in the queue
      */
-    function executeScheduledRebalances() external stopRebalance onlyOrchestrator {
+    function executeScheduledRebalances()
+        external
+        stopRebalance
+        onlyOrchestrator
+    {
         if (
             scheduledRebalancesLength > 0 &&
             scheduledRebalances[nextSequenceNumber].sequenceNumber ==
@@ -630,11 +639,16 @@ contract TokenFactory is
             rebalanceCheck(treasuryWallet);
 
             //We charge the fees due by the contract as well
-            lastRebalanceFees -= calculateManagementFee(lastRebalanceFees, true, 0);
+            lastRebalanceFees -= calculateManagementFee(
+                lastRebalanceFees,
+                true,
+                0
+            );
 
             uint256 fee = (smartTokenArray[0].balanceOf(address(this)) >=
                 lastRebalanceFees &&
-                smartTokenArray[1].balanceOf(address(this)) >= lastRebalanceFees &&
+                smartTokenArray[1].balanceOf(address(this)) >=
+                lastRebalanceFees &&
                 lastRebalanceFees != 0)
                 ? lastRebalanceFees
                 : (
@@ -668,9 +682,10 @@ contract TokenFactory is
         uint256 i = 0;
         while (i < 5) {
             // a maximum of 5 rebalances per transaction
-            Shared.ScheduledRebalance memory scheduledRebalance = scheduledRebalances[
-                nextSequenceNumber
-            ];
+            Shared.ScheduledRebalance
+                memory scheduledRebalance = scheduledRebalances[
+                    nextSequenceNumber
+                ];
             // Skip to the next iteration if the sequence number doesn't match
             if (scheduledRebalance.sequenceNumber != nextSequenceNumber) {
                 break;
@@ -709,7 +724,8 @@ contract TokenFactory is
                     lastRebalance
                         .BalanceFactorXY
                         .mul(
-                            scheduledRebalance.smartTokenXprice > smartTokenYprice
+                            scheduledRebalance.smartTokenXprice >
+                                smartTokenYprice
                                 ? (scheduledRebalance.smartTokenXprice -
                                     smartTokenYprice)
                                 : 0
@@ -722,7 +738,8 @@ contract TokenFactory is
                     lastRebalance
                         .BalanceFactorXY
                         .mul(
-                            smartTokenYprice > scheduledRebalance.smartTokenXprice
+                            smartTokenYprice >
+                                scheduledRebalance.smartTokenXprice
                                 ? (smartTokenYprice -
                                     scheduledRebalance.smartTokenXprice)
                                 : 0
@@ -798,9 +815,8 @@ contract TokenFactory is
             (lastRebalanceCount[owner_])
         ];
 
-        UserRebalanceElements memory userLastRebalanceInfo = userRebalanceElements[
-            owner_
-        ];
+        UserRebalanceElements
+            memory userLastRebalanceInfo = userRebalanceElements[owner_];
 
         uint256 netX = userLastRebalanceInfo
             .netX
@@ -1091,5 +1107,16 @@ contract TokenFactory is
     /// @return The interval
     function getInterval() public view returns (uint256) {
         return interval;
+    }
+
+    function insufficientUnderlying() external view returns (bool) {
+        if (!smartTokenInitialized) {
+            revert TokenFactory__SmartTokenArrayOutOfBounds();
+        }
+
+        return (IERC20Update(address(smartTokenArray[0])).totalSupply() >
+            baseToken.balanceOf(address(this)) ||
+            IERC20Update(address(smartTokenArray[1])).totalSupply() >
+            baseToken.balanceOf(address(this)));
     }
 }
