@@ -56,7 +56,10 @@ contract Orchestrator is UUPSUpgradeable, OwnableUpgradeable {
         address
     ) internal override(UUPSUpgradeable) onlyOwner {}
 
-    function rebalance(bytes memory encodedData, bytes memory signature) external {
+    function rebalance(
+        bytes memory encodedData,
+        bytes memory signature
+    ) external {
         tokenFactory.executeRebalance(encodedData, signature);
         if (balancerPools.length != 0) {
             //get price
@@ -65,7 +68,8 @@ contract Orchestrator is UUPSUpgradeable, OwnableUpgradeable {
             //resync
             for (uint256 i = 0; i < balancerPools.length; i++) {
                 IElasticPoolSupply(balancerPools[i]).resyncWeight(
-                    uint256(rebalanceCall.smartTokenXprice)
+                    uint256(rebalanceCall.price / 2) //Since this is executed after rebase,
+                    //the price of X is now underlying/2 rather than previously priceX
                 );
                 emit BalancerResynced(balancerPools[i]);
             }
