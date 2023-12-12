@@ -1109,6 +1109,10 @@ contract TokenFactory is
         return interval;
     }
 
+    /// @notice Validates if the amount of underlying locked in the token factory is
+    // always >= than the totalSupply of RiskOn/Off
+    /// @dev This function is used the smartoken modifer
+    /// @return true if underlying is less
     function insufficientUnderlying() external view returns (bool) {
         if (!smartTokenInitialized) {
             revert TokenFactory__SmartTokenArrayOutOfBounds();

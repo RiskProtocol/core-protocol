@@ -69,7 +69,9 @@ contract SmartToken is
         _validateDepositAmount(assets, receiver);
         _;
     }
-    //todo
+    /// @dev Validates if the underlying locked is always >= than the total supply of
+    /// riskON/OFF
+    /// reverts if not
     modifier insufficientUnderlying() {
         if (tokenFactory.insufficientUnderlying()) {
             revert SmartToken__InsufficientUnderlying();
