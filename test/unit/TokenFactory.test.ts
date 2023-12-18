@@ -285,10 +285,9 @@ developmentChains.includes(network.name)
             deployTokenFixture
           );
           await tokenFactory.setSignersAddress(deployer.address);
-          await expect(
-            await tokenFactory.getSignersAddress()
-          ).to.be.equal(deployer.address);
-
+          await expect(await tokenFactory.getSignersAddress()).to.be.equal(
+            deployer.address
+          );
         });
       });
 
@@ -325,14 +324,31 @@ developmentChains.includes(network.name)
         });
 
         it("it should revert when user wants to deposit 0 token", async function () {
-          const { deployer, smartToken1 } = await loadFixture(
-            deployTokenFixture
+          const { deployer, smartToken1, tokenFactory, smartToken2 } =
+            await loadFixture(deployTokenFixture);
+          await tokenFactory.initializeSMART(
+            smartToken1.address,
+            smartToken2.address
           );
+
           await expect(
             smartToken1.deposit("0", deployer.address)
           ).to.be.revertedWithCustomError(
             smartToken1,
             "SmartToken__ZeroDeposit"
+          );
+        });
+
+        it("it should revert with appropriate error if smartToken not initialized", async function () {
+          const { deployer, smartToken1, tokenFactory } = await loadFixture(
+            deployTokenFixture
+          );
+
+          await expect(
+            smartToken1.deposit("0", deployer.address)
+          ).to.be.revertedWithCustomError(
+            tokenFactory,
+            "TokenFactory__SmartTokenArrayOutOfBounds"
           );
         });
 
@@ -582,7 +598,8 @@ developmentChains.includes(network.name)
           await smartToken1.deposit(depositAmount, deployer.address);
           const now = await tokenFactory.getLastTimeStamp();
 
-          const nextRebalanceTimeStamp = BigInt(now) + BigInt(REBALANCE_INTERVAL);
+          const nextRebalanceTimeStamp =
+            BigInt(now) + BigInt(REBALANCE_INTERVAL);
           await time.setNextBlockTimestamp(nextRebalanceTimeStamp);
 
           const encodedNaturalRebalance1 = await signRebalance(
@@ -629,7 +646,8 @@ developmentChains.includes(network.name)
           await smartToken1.deposit(depositAmount, deployer.address);
           const now = await tokenFactory.getLastTimeStamp();
 
-          const nextRebalanceTimeStamp = BigInt(now) + BigInt(REBALANCE_INTERVAL);
+          const nextRebalanceTimeStamp =
+            BigInt(now) + BigInt(REBALANCE_INTERVAL);
           await time.setNextBlockTimestamp(nextRebalanceTimeStamp);
 
           const encodedNaturalRebalance1 = await signRebalance(
@@ -1000,7 +1018,8 @@ developmentChains.includes(network.name)
           await smartToken1.deposit(depositAmount, deployer.address);
           const now = await tokenFactory.getLastTimeStamp();
 
-          const nextRebalanceTimeStamp = BigInt(now) + BigInt(REBALANCE_INTERVAL);
+          const nextRebalanceTimeStamp =
+            BigInt(now) + BigInt(REBALANCE_INTERVAL);
           await time.setNextBlockTimestamp(nextRebalanceTimeStamp);
 
           const encodedNaturalRebalance1 = await signRebalance(
@@ -1211,38 +1230,34 @@ developmentChains.includes(network.name)
           expect(fee).to.equal(BigNumber.from(Math.trunc(expectFee)));
         });
         it(`Should throw error if rebalance interval is not set`, async () => {
-            const { sanctionsContract, underlyingToken, deployer } = await loadFixture(
-              deployTokenFixture
-            );
+          const { sanctionsContract, underlyingToken, deployer } =
+            await loadFixture(deployTokenFixture);
 
-            const TokenFactory = await ethers.getContractFactory(
-              "TokenFactory",
-              deployer
-            );
-    
-            const tokenFactory = await upgrades.deployProxy(TokenFactory, [
-              underlyingToken.address,
-              0,
-              sanctionsContract.address,
-              deployer.address,
-            ]);
-            await tokenFactory.deployed();
+          const TokenFactory = await ethers.getContractFactory(
+            "TokenFactory",
+            deployer
+          );
 
+          const tokenFactory = await upgrades.deployProxy(TokenFactory, [
+            underlyingToken.address,
+            0,
+            sanctionsContract.address,
+            deployer.address,
+          ]);
+          await tokenFactory.deployed();
 
-            const mgmtFee = 200; // Assuming 0.2% fee rate per day
-            await tokenFactory.connect(deployer).setManagementFeeRate(mgmtFee);
-            const amount = 1000;
-            const isDefault = true;
+          const mgmtFee = 200; // Assuming 0.2% fee rate per day
+          await tokenFactory.connect(deployer).setManagementFeeRate(mgmtFee);
+          const amount = 1000;
+          const isDefault = true;
 
-            await expect(tokenFactory.calculateManagementFee(
-              amount,
-              false,
-              mgmtFee
-            )).to.be.revertedWithCustomError(
-              tokenFactory,
-              "TokenFactory__InvalidDivision"
-            );
-          });
+          await expect(
+            tokenFactory.calculateManagementFee(amount, false, mgmtFee)
+          ).to.be.revertedWithCustomError(
+            tokenFactory,
+            "TokenFactory__InvalidDivision"
+          );
+        });
 
         it(`Should calculate the correct fees amount for 0 ether`, async () => {
           const { tokenFactory, deployer } = await loadFixture(
@@ -1260,8 +1275,10 @@ developmentChains.includes(network.name)
           );
 
           const oneYear: bigint = BigInt(86400 * 366);
-          const numberOfRebalance: bigint = oneYear / BigInt(REBALANCE_INTERVAL);
-          const mgmtFeePerInterval: bigint = BigInt(mgmtFee) / numberOfRebalance;
+          const numberOfRebalance: bigint =
+            oneYear / BigInt(REBALANCE_INTERVAL);
+          const mgmtFeePerInterval: bigint =
+            BigInt(mgmtFee) / numberOfRebalance;
 
           let block = await ethers.provider.getBlock("latest");
           const now: bigint = BigInt(block.timestamp);
@@ -1382,7 +1399,8 @@ developmentChains.includes(network.name)
           );
           const now = await tokenFactory.getLastTimeStamp();
 
-          const nextRebalanceTimeStamp = BigInt(now) + BigInt(REBALANCE_INTERVAL);
+          const nextRebalanceTimeStamp =
+            BigInt(now) + BigInt(REBALANCE_INTERVAL);
           await time.setNextBlockTimestamp(nextRebalanceTimeStamp);
 
           const encodedNaturalRebalance1 = await signRebalance(
@@ -1406,7 +1424,8 @@ developmentChains.includes(network.name)
           );
           const now = await tokenFactory.getLastTimeStamp();
 
-          const nextRebalanceTimeStamp = BigInt(now) + BigInt(REBALANCE_INTERVAL);
+          const nextRebalanceTimeStamp =
+            BigInt(now) + BigInt(REBALANCE_INTERVAL);
           await time.setNextBlockTimestamp(nextRebalanceTimeStamp);
           const encodedNaturalRebalance1 = await signRebalance(
             tokenFactory.signer,
@@ -1452,7 +1471,8 @@ developmentChains.includes(network.name)
           // trigger a rebalance
           const now = await tokenFactory.getLastTimeStamp();
 
-          const nextRebalanceTimeStamp = BigInt(now) + BigInt(REBALANCE_INTERVAL);
+          const nextRebalanceTimeStamp =
+            BigInt(now) + BigInt(REBALANCE_INTERVAL);
           await time.setNextBlockTimestamp(nextRebalanceTimeStamp);
           const encodedNaturalRebalance1 = await signRebalance(
             tokenFactory.signer,
@@ -1571,7 +1591,8 @@ developmentChains.includes(network.name)
           // trigger a rebalance
           const now = await tokenFactory.getLastTimeStamp();
 
-          const nextRebalanceTimeStamp = BigInt(now) + BigInt(REBALANCE_INTERVAL);
+          const nextRebalanceTimeStamp =
+            BigInt(now) + BigInt(REBALANCE_INTERVAL);
           await time.setNextBlockTimestamp(nextRebalanceTimeStamp);
           const encodedNaturalRebalance1 = await signRebalance(
             tokenFactory.signer,
@@ -1718,7 +1739,8 @@ developmentChains.includes(network.name)
           // trigger a rebalance
           const now = await tokenFactory.getLastTimeStamp();
 
-          const nextRebalanceTimeStamp = BigInt(now) + BigInt(REBALANCE_INTERVAL);
+          const nextRebalanceTimeStamp =
+            BigInt(now) + BigInt(REBALANCE_INTERVAL);
           await time.setNextBlockTimestamp(nextRebalanceTimeStamp);
           const encodedNaturalRebalance1 = await signRebalance(
             tokenFactory.signer,

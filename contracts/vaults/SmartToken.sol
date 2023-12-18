@@ -40,6 +40,7 @@ contract SmartToken is
     error SmartToken__RedeemMoreThanMax();
     error SmartToken__OnlyAssetOwner();
     error SmartToken__ZeroDeposit();
+    error SmartToken__InsufficientUnderlying();
 
     /// @notice The tokenFactory instance
     TokenFactory private tokenFactory;
@@ -66,6 +67,15 @@ contract SmartToken is
     /// @param receiver The address receiving the deposit.
     modifier validateDepositAmount(uint256 assets, address receiver) {
         _validateDepositAmount(assets, receiver);
+        _;
+    }
+    /// @dev Validates if the underlying locked is always >= than the total supply of
+    /// riskON/OFF
+    /// reverts if not
+    modifier insufficientUnderlying() {
+        if (tokenFactory.insufficientUnderlying()) {
+            revert SmartToken__InsufficientUnderlying();
+        }
         _;
     }
 
@@ -142,6 +152,7 @@ contract SmartToken is
         public
         override(ERC20Upgradeable, IERC20Upgradeable)
         stopTransfer
+        insufficientUnderlying
         onlyNotSanctioned(recipient)
         onlyNotSanctioned(_msgSender())
         returns (bool)
@@ -261,6 +272,7 @@ contract SmartToken is
         public
         override(ERC20Upgradeable, IERC20Upgradeable)
         stopTransfer
+        insufficientUnderlying
         onlyNotSanctioned(recipient)
         onlyNotSanctioned(sender)
         returns (bool)
@@ -374,6 +386,7 @@ contract SmartToken is
         virtual
         override
         stopDeposit
+        insufficientUnderlying
         validateDepositAmount(assets, receiver)
         returns (uint256)
     {
@@ -408,6 +421,7 @@ contract SmartToken is
     )
         public
         stopDeposit
+        insufficientUnderlying
         validateDepositAmount(assets, receiver)
         returns (uint256)
     {
@@ -461,7 +475,14 @@ contract SmartToken is
     function mint(
         uint256 shares,
         address receiver
-    ) public virtual override stopDeposit returns (uint256) {
+    )
+        public
+        virtual
+        override
+        stopDeposit
+        insufficientUnderlying
+        returns (uint256)
+    {
         if (shares > maxMint(receiver)) revert SmartToken__MintMoreThanMax();
         //Use 'previewMint' method to get the converted amount of shares to underlying
         uint256 assets = previewMint(shares);
@@ -510,6 +531,7 @@ contract SmartToken is
         virtual
         override
         stopWithdraw
+        insufficientUnderlying
         onlyAssetOwner(owner_)
         nonReentrant
         returns (uint256)
@@ -573,6 +595,7 @@ contract SmartToken is
         virtual
         override
         stopWithdraw
+        insufficientUnderlying
         onlyAssetOwner(owner_)
         nonReentrant
         returns (uint256)
