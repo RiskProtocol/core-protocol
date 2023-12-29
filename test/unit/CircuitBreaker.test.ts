@@ -9,6 +9,7 @@ import {
   TOKEN2_SYMBOL,
   signRebalance,
   defaultRebalanceData,
+  rateLimitsDefault,
 } from "../../helper-hardhat-config";
 import { getPermitDigest, sign } from "../../utils/signatures";
 import { loadFixture, time } from "@nomicfoundation/hardhat-network-helpers";
@@ -46,6 +47,9 @@ developmentChains.includes(network.name)
           REBALANCE_INTERVAL,
           sanctionsContract.address,
           deployer.address,
+          rateLimitsDefault.withdraw,
+          rateLimitsDefault.deposit,
+          rateLimitsDefault.period,
         ]);
         await tokenFactory.deployed();
 
@@ -428,7 +432,8 @@ developmentChains.includes(network.name)
 
           const now = await tokenFactory.getLastTimeStamp();
 
-          const nextRebalanceTimeStamp = BigInt(now) + BigInt(REBALANCE_INTERVAL);
+          const nextRebalanceTimeStamp =
+            BigInt(now) + BigInt(REBALANCE_INTERVAL);
           await time.setNextBlockTimestamp(nextRebalanceTimeStamp);
 
           await tokenFactory.toggleRebalanceCircuitBreaker();
@@ -438,10 +443,7 @@ developmentChains.includes(network.name)
             defaultRebalanceData
           );
           await expect(
-            tokenFactory.executeRebalance(
-              encodedData,
-              signature
-            )
+            tokenFactory.executeRebalance(encodedData, signature)
           ).to.be.revertedWithCustomError(
             tokenFactory,
             "BaseContract__RebalanceCircuitBreaker"

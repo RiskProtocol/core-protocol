@@ -12,6 +12,7 @@ import {
   RebalanceElements,
   UserRebalanceElements,
   callculateRolloverAmount,
+  rateLimitsDefault,
 } from "../../helper-hardhat-config";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 
@@ -44,6 +45,9 @@ developmentChains.includes(network.name)
           REBALANCE_INTERVAL,
           sanctionsContract.address,
           deployer.address,
+          rateLimitsDefault.withdraw,
+          rateLimitsDefault.deposit,
+          rateLimitsDefault.period,
         ]);
         await tokenFactory.deployed();
 
@@ -356,16 +360,19 @@ developmentChains.includes(network.name)
           );
 
           // because of the 50 transfer, the max deposit should return balance of MaxUint256 - balanceOf(smartToken2)
-          await expect(
-            await smartToken1.maxDeposit(deployer.address)).to.gte(ethers.constants.MaxUint256.div(2).toString());
+          await expect(await smartToken1.maxDeposit(deployer.address)).to.gte(
+            ethers.constants.MaxUint256.div(2).toString()
+          );
 
           await expect(
             smartToken1.deposit(
               ethers.constants.MaxUint256.div(2).add(2),
               deployer.address
             )
-          ).to.be.revertedWithCustomError(smartToken1, "SmartToken__DepositMoreThanMax");
-
+          ).to.be.revertedWithCustomError(
+            smartToken1,
+            "SmartToken__DepositMoreThanMax"
+          );
 
           // Transfer a lot of smartToken1 to tester
           await smartToken1.transfer(
@@ -374,8 +381,9 @@ developmentChains.includes(network.name)
           );
 
           // because of the previous transfer, the max deposit should return balance of MaxUint256 - balanceOf(smartToken1)
-          await expect(
-            await smartToken1.maxDeposit(deployer.address)).to.gte(ethers.constants.MaxUint256.div(2).toString());
+          await expect(await smartToken1.maxDeposit(deployer.address)).to.gte(
+            ethers.constants.MaxUint256.div(2).toString()
+          );
         });
       });
     })

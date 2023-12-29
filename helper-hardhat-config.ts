@@ -1,4 +1,5 @@
 import { Signer, utils } from "ethers";
+import { ethers } from "hardhat";
 
 export const developmentChains = ["localhost", "hardhat"];
 export const MULTIPLIER = 1e18;
@@ -13,13 +14,26 @@ export const TOKEN2_NAME = "RistP Two";
 export const TOKEN2_SYMBOL = "R2";
 export const REBALANCE_INTERVAL = 1800; // 30 minutes
 export const defaultOperators: string[] = [];
+export const rateLimitsDefault = {
+  deposit: ethers.constants.MaxUint256,
+  withdraw: ethers.constants.MaxUint256,
+  period: 1,
+};
 export const defaultRebalanceData = {
   sequenceNumber: 1,
   isNaturalRebalance: true,
   underlyingValue: INITIAL_PRICE,
   smartTokenXValue: SmartTokenXValue,
-}
-export const signRebalance = async (signer: Signer, data: { sequenceNumber: number; isNaturalRebalance: boolean; underlyingValue: string; smartTokenXValue: string;}) => {
+};
+export const signRebalance = async (
+  signer: Signer,
+  data: {
+    sequenceNumber: number;
+    isNaturalRebalance: boolean;
+    underlyingValue: string;
+    smartTokenXValue: string;
+  }
+) => {
   const types = ["uint256", "bool", "uint256", "uint256"];
   // Encode the data
   const encodedData = utils.defaultAbiCoder.encode(types, [
@@ -33,7 +47,7 @@ export const signRebalance = async (signer: Signer, data: { sequenceNumber: numb
   // Sign the data
   const signature = await signer.signMessage(utils.arrayify(hashedData));
   return { signature, encodedData };
-}
+};
 
 export const feeCalculator = (assetBal1: bigint, mgmtFee: bigint) => {
   const depositCycle = REBALANCE_INTERVAL;
@@ -67,23 +81,27 @@ export const callculateRolloverAmount = (
   userLastRebalanceInfo: any
 ) => {
   const netX =
-    (BigInt(userLastRebalanceInfo.netX) * BigInt(lastRebalance.BalanceFactorXY)) /
+    (BigInt(userLastRebalanceInfo.netX) *
+      BigInt(lastRebalance.BalanceFactorXY)) /
     BigInt(lastUserRebalance.BalanceFactorXY);
   const netY =
-    (BigInt(userLastRebalanceInfo.netY) * BigInt(lastRebalance.BalanceFactorXY)) /
+    (BigInt(userLastRebalanceInfo.netY) *
+      BigInt(lastRebalance.BalanceFactorXY)) /
     BigInt(lastUserRebalance.BalanceFactorXY);
 
   const uX =
     BigInt(
-      BigInt(lastRebalance.BalanceFactorUx - lastUserRebalance.BalanceFactorUx) *
-        BigInt(userLastRebalanceInfo.netX)
+      BigInt(
+        lastRebalance.BalanceFactorUx - lastUserRebalance.BalanceFactorUx
+      ) * BigInt(userLastRebalanceInfo.netX)
     ) /
       BigInt(lastUserRebalance.BalanceFactorXY) +
     BigInt(userLastRebalanceInfo.Ux);
   const uY =
     BigInt(
-      BigInt(lastRebalance.BalanceFactorUy - lastUserRebalance.BalanceFactorUy) *
-        BigInt(userLastRebalanceInfo.netY)
+      BigInt(
+        lastRebalance.BalanceFactorUy - lastUserRebalance.BalanceFactorUy
+      ) * BigInt(userLastRebalanceInfo.netY)
     ) /
       BigInt(lastUserRebalance.BalanceFactorXY) +
     BigInt(userLastRebalanceInfo.Uy);

@@ -23,7 +23,10 @@ contract Deposit is Test, TestHelper {
             mockERC20Token,
             REBALANCE_INTERVAL,
             sanctionsContract,
-            signersAddress
+            signersAddress,
+            withdraw,
+            deposit,
+            period
         );
 
         // deploy token X

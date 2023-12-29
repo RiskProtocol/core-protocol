@@ -158,7 +158,10 @@ contract TokenFactory is
         IERC20Update baseTokenAddress,
         uint256 rebalanceInterval, // in seconds
         address sanctionsContract_,
-        address signersAddress_
+        address signersAddress_,
+        uint256 withdrawLimit_,
+        uint256 depositLimit_,
+        uint256 limitPeriod_
     ) public initializer {
         //initialize deriving contracts
 
@@ -185,6 +188,9 @@ contract TokenFactory is
                 FeeFactor: 1 * REBALANCE_INT_MULTIPLIER
             })
         );
+        withdrawLimit = withdrawLimit_;
+        depositLimit = depositLimit_;
+        period = limitPeriod_;
     }
 
     /// @notice Authorizes an upgrade to a new contract implementation.
@@ -1122,5 +1128,125 @@ contract TokenFactory is
             baseToken.balanceOf(address(this)) ||
             IERC20Update(address(smartTokenArray[1])).totalSupply() >
             baseToken.balanceOf(address(this)));
+    }
+
+    ///////////////
+    uint256 private period; //should this really be 256?
+    uint256 private withdrawLimit;
+    uint256 private depositLimit;
+    bool private hasWithdrawLimit;
+    bool private hasDepositLimit;
+    mapping(address => uint256) private currentWithdrawPeriodEnd;
+    mapping(address => uint256) private currentWithdrawPeriodAmount;
+    mapping(address => uint256) private currentDepositPeriodEnd;
+    mapping(address => uint256) private currentDepositPeriodAmount;
+    event WithdrawLimitToggled(bool enabled);
+    event DepositLimitToggled(bool enabled);
+
+    function withdrawLimitMod(
+        uint256 amount
+    ) external onlySmartTokens returns (bool) {
+        if (hasWithdrawLimit) {
+            updatePeriod(
+                _msgSender(),
+                currentWithdrawPeriodEnd,
+                currentWithdrawPeriodAmount
+            );
+
+            if (
+                currentWithdrawPeriodAmount[_msgSender()] + amount <=
+                withdrawLimit
+            ) {
+                currentWithdrawPeriodAmount[_msgSender()] += amount;
+                return false;
+            }
+            return true;
+        } else return false;
+    }
+
+    function depositLimitMod(
+        uint256 amount
+    ) external onlySmartTokens returns (bool) {
+        if (hasDepositLimit) {
+            updatePeriod(
+                _msgSender(),
+                currentDepositPeriodEnd,
+                currentDepositPeriodAmount
+            );
+
+            if (
+                currentDepositPeriodAmount[_msgSender()] + amount <=
+                depositLimit
+            ) {
+                currentDepositPeriodAmount[_msgSender()] += amount;
+                return false; //returns false if the user is well in his limits
+            }
+            return true; //returns true if the limit is breached
+        } else return false;
+    }
+
+    function updatePeriod(
+        address user,
+        mapping(address => uint256) storage currentPeriodEnd,
+        mapping(address => uint256) storage currentPeriodAmount
+    ) internal {
+        if (currentPeriodEnd[user] < block.timestamp) {
+            currentPeriodEnd[user] = block.timestamp + period;
+            currentPeriodAmount[user] = 0;
+        }
+    }
+
+    function updateWithdrawLimit(uint newLimit) external onlyOwner {
+        require(newLimit > 0, "Deposit limit must be positive");
+        withdrawLimit = newLimit;
+    }
+
+    function updateDepositLimit(uint newLimit) external onlyOwner {
+        require(newLimit > 0, "Deposit limit must be positive");
+        depositLimit = newLimit;
+    }
+
+    function updateLimitPeriod(uint newPeriod) external onlyOwner {
+        require(newPeriod > 0, "Period must be positive");
+        period = newPeriod;
+    }
+
+    function toggleWithdrawLimit() external onlyOwner {
+        hasWithdrawLimit = !hasWithdrawLimit;
+        emit WithdrawLimitToggled(hasWithdrawLimit);
+    }
+
+    function toggleDepositLimit() external onlyOwner {
+        hasDepositLimit = !hasDepositLimit;
+        emit DepositLimitToggled(hasDepositLimit);
+    }
+
+    function getWithdrawLimit() public view returns (bool) {
+        return hasWithdrawLimit;
+    }
+
+    function getDepositLimit() public view returns (bool) {
+        return hasDepositLimit;
+    }
+
+    function getLimitPeriod() public view returns (uint256) {
+        return period;
+    }
+
+    function getUserLimitPerPeriod(
+        address user,
+        bool isWithdraw
+    ) public view returns (uint256 periodEnd, uint256 currentAmount) {
+        if (isWithdraw) {
+            return (
+                currentWithdrawPeriodEnd[user],
+                currentWithdrawPeriodAmount[user]
+            );
+        } else {
+            return (
+                currentDepositPeriodEnd[user],
+                currentDepositPeriodAmount[user]
+            );
+        }
     }
 }

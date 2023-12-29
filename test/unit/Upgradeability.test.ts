@@ -2,6 +2,7 @@ import { assert, expect } from "chai";
 import { ethers, network, upgrades } from "hardhat";
 import {
   developmentChains,
+  rateLimitsDefault,
   REBALANCE_INTERVAL,
   TOKEN1_NAME,
   TOKEN1_SYMBOL,
@@ -43,6 +44,9 @@ developmentChains.includes(network.name)
           REBALANCE_INTERVAL,
           sanctionsContract.address,
           deployer.address,
+          rateLimitsDefault.withdraw,
+          rateLimitsDefault.deposit,
+          rateLimitsDefault.period,
         ]);
         await tokenFactory.deployed();
 
@@ -87,6 +91,9 @@ developmentChains.includes(network.name)
           REBALANCE_INTERVAL,
           sanctionsContract.address,
           deployer.address,
+          rateLimitsDefault.withdraw,
+          rateLimitsDefault.deposit,
+          rateLimitsDefault.period,
         ]);
         await tokenFactory2.deployed();
 
@@ -109,6 +116,9 @@ developmentChains.includes(network.name)
           REBALANCE_INTERVAL,
           sanctionsContract.address,
           deployer.address,
+          rateLimitsDefault.withdraw,
+          rateLimitsDefault.deposit,
+          rateLimitsDefault.period,
         ]);
         await tokenFactory3.deployed();
 

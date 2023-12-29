@@ -27,7 +27,10 @@ contract ERC4626Test is Test, TestHelper {
             underlying,
             REBALANCE_INTERVAL,
             sanctionsContract,
-            signersAddress
+            signersAddress,
+            withdraw,
+            deposit,
+            period
         );
 
         vault = new SmartToken();

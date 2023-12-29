@@ -2,6 +2,7 @@ import { assert, expect } from "chai";
 import { ethers, network, upgrades } from "hardhat";
 import {
   developmentChains,
+  rateLimitsDefault,
   REBALANCE_INTERVAL,
   TOKEN1_NAME,
   TOKEN1_SYMBOL,
@@ -43,6 +44,9 @@ developmentChains.includes(network.name)
           REBALANCE_INTERVAL,
           sanctionsContract.address,
           deployer.address,
+          rateLimitsDefault.withdraw,
+          rateLimitsDefault.deposit,
+          rateLimitsDefault.period,
         ]);
         await tokenFactory.deployed();
 
@@ -65,6 +69,9 @@ developmentChains.includes(network.name)
           REBALANCE_INTERVAL,
           sanctionsContract.address,
           deployer.address,
+          rateLimitsDefault.withdraw,
+          rateLimitsDefault.deposit,
+          rateLimitsDefault.period,
         ]);
         await tokenFactory1.deployed();
 
@@ -314,14 +321,16 @@ developmentChains.includes(network.name)
           const privateKey1Buffer = Buffer.from(ownerPrivateKey, "hex");
           const { v, r, s } = sign(digest, privateKey1Buffer);
 
-          await expect(await smartToken1.depositWithPermit(
-            approve.value,
-            approve.owner,
-            deadline,
-            v,
-            r,
-            s
-          )).to.haveOwnProperty("hash");
+          await expect(
+            await smartToken1.depositWithPermit(
+              approve.value,
+              approve.owner,
+              deadline,
+              v,
+              r,
+              s
+            )
+          ).to.haveOwnProperty("hash");
         });
       });
     })
