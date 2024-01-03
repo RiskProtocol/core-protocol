@@ -80,14 +80,18 @@ contract SmartToken is
         }
         _;
     }
-
+    /// @dev Validates if the user has hit the periodic deposit limit
+    /// prevents the user from depositing more if hit
+    /// @param amount The amount of token to deposit.
     modifier depositLimitHit(uint256 amount) {
         if (tokenFactory.depositLimitMod(amount)) {
             revert SmartToken__DepositLimitHit();
         }
         _;
     }
-
+    /// @dev Validates if the user has hit the periodic withdraw limit
+    /// prevents the user from withdrawing more if hit
+    /// @param amount The amount of token to withdraw.
     modifier withdrawLimitHit(uint256 amount) {
         if (tokenFactory.withdrawLimitMod(amount)) {
             revert SmartToken__WithdrawLimitHit();
