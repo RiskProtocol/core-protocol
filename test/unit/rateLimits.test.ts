@@ -305,7 +305,8 @@ developmentChains.includes(network.name)
             deployer.address
           ); // Simulate the passing of blocks to exceed the period
           const now = await tokenFactory.getLastTimeStamp(); //block.timestamp;
-          const nextPeriodTimeStamp = BigInt(now) + BigInt(period) + BigInt(2);
+          const nextPeriodTimeStamp =
+            BigInt(now) + BigInt(period) + BigInt(0.5 * +period);
           await time.setNextBlockTimestamp(nextPeriodTimeStamp);
           // Attempt another withdraw which should be successful as the period has reset
           await smartToken1.withdraw(
@@ -400,7 +401,8 @@ developmentChains.includes(network.name)
 
           // Simulate the passing of blocks to exceed the period
           const now = await tokenFactory.getLastTimeStamp(); //block.timestamp;
-          const nextPeriodTimeStamp = BigInt(now) + BigInt(period) + BigInt(2);
+          const nextPeriodTimeStamp =
+            BigInt(now) + BigInt(period) + BigInt(0.5 * +period);
           await time.setNextBlockTimestamp(nextPeriodTimeStamp);
 
           // Attempt another withdraw which should be successful as the period has reset
