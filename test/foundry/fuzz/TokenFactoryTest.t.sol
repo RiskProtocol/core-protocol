@@ -21,9 +21,9 @@ contract TokenFactoryTest is Test, TestHelper {
             REBALANCE_INTERVAL,
             sanctionsContract,
             signersAddress,
-            withdraw,
-            deposit,
-            period
+            WITHDRAW,
+            DEPOSIT,
+            PERIOD
         );
 
         // deploy token X

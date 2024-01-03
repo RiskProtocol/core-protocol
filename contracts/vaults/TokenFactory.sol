@@ -1131,8 +1131,8 @@ contract TokenFactory is
     }
 
     ///////////////
-    uint256 private period; //should this really be 256?
-    uint256 private withdrawLimit;
+    uint256 private period; //should this really be 256?, period is in seconds
+    uint256 private withdrawLimit; //is in wei
     uint256 private depositLimit;
     bool private hasWithdrawLimit;
     bool private hasDepositLimit;
@@ -1221,12 +1221,20 @@ contract TokenFactory is
         emit DepositLimitToggled(hasDepositLimit);
     }
 
-    function getWithdrawLimit() public view returns (bool) {
+    function withdrawLimitStatus() public view returns (bool) {
         return hasWithdrawLimit;
     }
 
-    function getDepositLimit() public view returns (bool) {
+    function depositLimitStatus() public view returns (bool) {
         return hasDepositLimit;
+    }
+
+    function getWithdrawLimit() public view returns (uint256) {
+        return withdrawLimit;
+    }
+
+    function getDepositLimit() public view returns (uint256) {
+        return depositLimit;
     }
 
     function getLimitPeriod() public view returns (uint256) {

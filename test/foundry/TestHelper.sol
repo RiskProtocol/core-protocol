@@ -28,7 +28,7 @@ abstract contract TestHelper {
     address public sanctionsContract =
         0x40C57923924B5c5c5455c48D93317139ADDaC8fb; //polygon network
     address public signersAddress = 0x786d956DBc070815F9b53a6dd03D38EDf33EE2C7;
-    uint public deposit = 10 * 10 ** 50;
-    uint public withdraw = 10 * 10 ** 50;
-    uint public period = 1;
+    uint public DEPOSIT = 10 * 10 ** 50;
+    uint public WITHDRAW = 10 * 10 ** 50;
+    uint public PERIOD = 1;
 }

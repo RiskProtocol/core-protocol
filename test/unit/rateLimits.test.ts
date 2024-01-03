@@ -95,50 +95,7 @@ developmentChains.includes(network.name)
         };
       }
 
-      describe("Withdraw, test circuit breakers to stop withdraw", async function () {
-        // it("Should not withdraw tokens when circuit breaker is on", async function () {
-        //   const {
-        //     smartToken1,
-        //     deployer,
-        //     tokenFactory,
-        //     smartToken2,
-        //     underlyingToken,
-        //   } = await loadFixture(deployTokenFixture);
-        //   const depositAmount = ethers.constants.MaxUint256.div(2).add(1);
-
-        //   await tokenFactory.initializeSMART(
-        //     smartToken1.address,
-        //     smartToken2.address
-        //   );
-
-        //   await underlyingToken.approve(tokenFactory.address, depositAmount);
-
-        //   await smartToken1.deposit(depositAmount, deployer.address);
-
-        //   const depositorBalanceBefore = await smartToken1.balanceOf(
-        //     deployer.address
-        //   );
-
-        //   await smartToken1.toggleWithdrawCircuitBreaker();
-
-        //   await expect(
-        //     smartToken1.withdraw(
-        //       depositAmount,
-        //       deployer.address,
-        //       deployer.address
-        //     )
-        //   ).to.be.revertedWithCustomError(
-        //     smartToken1,
-        //     "BaseContract__WithdrawCircuitBreaker"
-        //   );
-
-        //   expect(await smartToken1.balanceOf(deployer.address)).to.equal(
-        //     depositorBalanceBefore
-        //   );
-
-        //   await smartToken1.toggleWithdrawCircuitBreaker();
-        // });
-
+      describe("Withdraw, Deposit Rate Limits", async function () {
         it("Should toggle withdraw limit correctly", async function () {
           const {
             smartToken1,
@@ -154,9 +111,9 @@ developmentChains.includes(network.name)
             smartToken2.address
           );
           await tokenFactory.connect(deployer).toggleWithdrawLimit();
-          expect(await tokenFactory.getWithdrawLimit()).to.equal(true);
+          expect(await tokenFactory.withdrawLimitStatus()).to.equal(true);
           await tokenFactory.connect(deployer).toggleWithdrawLimit();
-          expect(await tokenFactory.getWithdrawLimit()).to.equal(false);
+          expect(await tokenFactory.withdrawLimitStatus()).to.equal(false);
         });
 
         it("Should toggle deposit limit correctly", async function () {
@@ -174,9 +131,283 @@ developmentChains.includes(network.name)
             smartToken2.address
           );
           await tokenFactory.connect(deployer).toggleDepositLimit();
-          expect(await tokenFactory.getDepositLimit()).to.equal(true);
+          expect(await tokenFactory.depositLimitStatus()).to.equal(true);
           await tokenFactory.connect(deployer).toggleDepositLimit();
-          expect(await tokenFactory.getDepositLimit()).to.equal(false);
+          expect(await tokenFactory.depositLimitStatus()).to.equal(false);
+        });
+
+        it("Should update the period correctly", async function () {
+          const {
+            smartToken1,
+            deployer,
+            tokenFactory,
+            smartToken2,
+            underlyingToken,
+          } = await loadFixture(deployTokenFixture);
+
+          await tokenFactory.initializeSMART(
+            smartToken1.address,
+            smartToken2.address
+          );
+          await tokenFactory.connect(deployer).updateLimitPeriod(200);
+          expect(await tokenFactory.getLimitPeriod()).to.equal(200);
+        });
+        it("Should not allow non-owner to update the period", async function () {
+          const {
+            smartToken1,
+            deployer,
+            tokenFactory,
+            smartToken2,
+            underlyingToken,
+            tester,
+          } = await loadFixture(deployTokenFixture);
+          await tokenFactory.initializeSMART(
+            smartToken1.address,
+            smartToken2.address
+          );
+          await expect(
+            tokenFactory.connect(tester).updateLimitPeriod(200)
+          ).to.be.revertedWith("Ownable: caller is not the owner");
+        });
+        it("Should update withdraw limit correctly", async function () {
+          const {
+            smartToken1,
+            deployer,
+            tokenFactory,
+            smartToken2,
+            underlyingToken,
+            tester,
+          } = await loadFixture(deployTokenFixture);
+          await tokenFactory.initializeSMART(
+            smartToken1.address,
+            smartToken2.address
+          );
+
+          await tokenFactory.connect(deployer).updateWithdrawLimit(200000);
+          expect(
+            await tokenFactory.connect(deployer).getWithdrawLimit()
+          ).to.be.equal(200000);
+        });
+        it("Should update deposit limit correctly", async function () {
+          const {
+            smartToken1,
+            deployer,
+            tokenFactory,
+            smartToken2,
+            underlyingToken,
+            tester,
+          } = await loadFixture(deployTokenFixture);
+          await tokenFactory.initializeSMART(
+            smartToken1.address,
+            smartToken2.address
+          );
+
+          await tokenFactory.connect(deployer).updateDepositLimit(200000);
+          expect(
+            await tokenFactory.connect(deployer).getDepositLimit()
+          ).to.be.equal(200000);
+        });
+      });
+
+      describe("Withdraw Functionality", async function () {
+        it("Should allow a valid withdrawal within limit", async function () {
+          const {
+            smartToken1,
+            deployer,
+            tokenFactory,
+            smartToken2,
+            underlyingToken,
+            tester,
+          } = await loadFixture(deployTokenFixture);
+          await tokenFactory.initializeSMART(
+            smartToken1.address,
+            smartToken2.address
+          );
+          //toggle the withdraw limits since it is initially false
+          await tokenFactory.connect(deployer).toggleWithdrawLimit();
+          await tokenFactory.connect(deployer).updateLimitPeriod(120); //120 seconds
+          await tokenFactory.connect(deployer).updateWithdrawLimit(20000); // 20000 wei of underlying
+
+          const depositAmount = 10000;
+          await underlyingToken.approve(tokenFactory.address, depositAmount);
+          await smartToken1.deposit(depositAmount, deployer.address);
+          const deployerBalbef = await smartToken1.balanceOf(deployer.address);
+          const withdrawAmt = 100;
+          await smartToken1.withdraw(
+            withdrawAmt,
+            deployer.address,
+            deployer.address
+          );
+          const deployerBalAft = await smartToken1.balanceOf(deployer.address);
+          expect(+deployerBalbef).to.be.equal(+deployerBalAft + +withdrawAmt);
+        });
+
+        it("Should not allow withdrawal that exceeds limit", async function () {
+          const {
+            smartToken1,
+            deployer,
+            tokenFactory,
+            smartToken2,
+            underlyingToken,
+            tester,
+          } = await loadFixture(deployTokenFixture);
+          await tokenFactory.initializeSMART(
+            smartToken1.address,
+            smartToken2.address
+          );
+          //toggle the withdraw limits since it is initially false
+          await tokenFactory.connect(deployer).toggleWithdrawLimit();
+          await tokenFactory.connect(deployer).updateLimitPeriod(120); //120 seconds
+          await tokenFactory.connect(deployer).updateWithdrawLimit(20000); // 20000 wei of underlying
+
+          const depositAmount = 100000;
+          await underlyingToken.approve(tokenFactory.address, depositAmount);
+          await smartToken1.deposit(depositAmount, deployer.address);
+          await expect(
+            smartToken1.withdraw(
+              depositAmount,
+              deployer.address,
+              deployer.address
+            )
+          ).to.be.revertedWithCustomError(
+            smartToken1,
+            "SmartToken__WithdrawLimitHit"
+          );
+        });
+        it("Should reset the withdraw limit after period ends", async function () {
+          const {
+            smartToken1,
+            deployer,
+            tokenFactory,
+            smartToken2,
+            underlyingToken,
+            tester,
+          } = await loadFixture(deployTokenFixture);
+          await tokenFactory.initializeSMART(
+            smartToken1.address,
+            smartToken2.address
+          );
+          const period = 120;
+
+          //toggle the withdraw limits since it is initially false
+          await tokenFactory.connect(deployer).toggleWithdrawLimit();
+          await tokenFactory.connect(deployer).updateLimitPeriod(period); //120 seconds
+          await tokenFactory.connect(deployer).updateWithdrawLimit(20000); // 20000 wei of underlying
+          const depositAmount = 100000;
+          await underlyingToken.approve(tokenFactory.address, depositAmount);
+          await smartToken1.deposit(depositAmount, deployer.address);
+          const withdrawAmount = 20000;
+          const firstBalance = await smartToken1.balanceOf(deployer.address);
+
+          await smartToken1.withdraw(
+            withdrawAmount,
+            deployer.address,
+            deployer.address
+          ); // Simulate the passing of blocks to exceed the period
+          const now = await tokenFactory.getLastTimeStamp(); //block.timestamp;
+          const nextPeriodTimeStamp = BigInt(now) + BigInt(period) + BigInt(2);
+          await time.setNextBlockTimestamp(nextPeriodTimeStamp);
+          // Attempt another withdraw which should be successful as the period has reset
+          await smartToken1.withdraw(
+            withdrawAmount,
+            deployer.address,
+            deployer.address
+          );
+          const newBalance = await smartToken1.balanceOf(deployer.address);
+          expect(+newBalance).to.equal(+firstBalance - 2 * +withdrawAmount);
+        });
+      });
+      describe("Deposit Functionality", async function () {
+        it("Should allow a valid deposit within limit", async function () {
+          const {
+            smartToken1,
+            deployer,
+            tokenFactory,
+            smartToken2,
+            underlyingToken,
+            tester,
+          } = await loadFixture(deployTokenFixture);
+          await tokenFactory.initializeSMART(
+            smartToken1.address,
+            smartToken2.address
+          );
+          //toggle the deposit limits since it is initially false
+          await tokenFactory.connect(deployer).toggleDepositLimit();
+          await tokenFactory.connect(deployer).updateLimitPeriod(120); //120 seconds
+          await tokenFactory.connect(deployer).updateDepositLimit(20000); // 20000 wei of underlying
+
+          const depositAmount = 20000;
+          await underlyingToken.approve(tokenFactory.address, depositAmount);
+          await smartToken1.deposit(depositAmount, deployer.address);
+
+          const deployerBalAft = await smartToken1.balanceOf(deployer.address);
+          expect(+deployerBalAft).to.be.equal(+depositAmount);
+        });
+
+        it("Should not allow deposit that exceeds limit", async function () {
+          const {
+            smartToken1,
+            deployer,
+            tokenFactory,
+            smartToken2,
+            underlyingToken,
+            tester,
+          } = await loadFixture(deployTokenFixture);
+          await tokenFactory.initializeSMART(
+            smartToken1.address,
+            smartToken2.address
+          );
+          //toggle the deposit limits since it is initially false
+          await tokenFactory.connect(deployer).toggleDepositLimit();
+          await tokenFactory.connect(deployer).updateLimitPeriod(120); //120 seconds
+          await tokenFactory.connect(deployer).updateDepositLimit(20000); // 20000 wei of underlying
+
+          const depositAmount = 200000;
+          await underlyingToken.approve(tokenFactory.address, depositAmount);
+          await expect(
+            smartToken1.deposit(depositAmount, deployer.address)
+          ).to.be.revertedWithCustomError(
+            smartToken1,
+            "SmartToken__DepositLimitHit"
+          );
+        });
+        it("Should reset the Deposit limit after period ends", async function () {
+          const {
+            smartToken1,
+            deployer,
+            tokenFactory,
+            smartToken2,
+            underlyingToken,
+            tester,
+          } = await loadFixture(deployTokenFixture);
+          await tokenFactory.initializeSMART(
+            smartToken1.address,
+            smartToken2.address
+          );
+          const period = 120;
+
+          //toggle the deposit limits since it is initially false
+          await tokenFactory.connect(deployer).toggleDepositLimit();
+          await tokenFactory.connect(deployer).updateLimitPeriod(period); //120 seconds
+          await tokenFactory.connect(deployer).updateDepositLimit(20000); // 20000 wei of underlying
+          const depositAmount = 20000;
+          await underlyingToken.approve(
+            tokenFactory.address,
+            +depositAmount * +2
+          );
+          await smartToken1.deposit(depositAmount, deployer.address);
+          const firstBalance = await smartToken1.balanceOf(deployer.address);
+
+          // Simulate the passing of blocks to exceed the period
+          const now = await tokenFactory.getLastTimeStamp(); //block.timestamp;
+          const nextPeriodTimeStamp = BigInt(now) + BigInt(period) + BigInt(2);
+          await time.setNextBlockTimestamp(nextPeriodTimeStamp);
+
+          // Attempt another withdraw which should be successful as the period has reset
+          await smartToken1.deposit(depositAmount, deployer.address);
+
+          const newBalance = await smartToken1.balanceOf(deployer.address);
+          expect(+newBalance).to.equal(+firstBalance + depositAmount);
         });
       });
     })
