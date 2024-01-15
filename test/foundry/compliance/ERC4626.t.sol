@@ -14,11 +14,14 @@ contract ERC4626Test is Test, TestHelper {
 
     function setUp() public {
         vm.createSelectFork(vm.rpcUrl("mainnet"), 17268750);
+        address deployer = address(1);
 
         // deploy chainlink mock
 
         // deploy underlying asset
         underlying = new MockERC20Token();
+        vm.startPrank(deployer);
+
         tokenFactory = new TokenFactory();
 
         factoryProxy = new UUPSProxy(address(tokenFactory), "");
@@ -57,6 +60,7 @@ contract ERC4626Test is Test, TestHelper {
 
         // initialize dev tokens in token factory
         factoryWrapper.initializeSMART(vaultWrapper1, vaultWrapper2);
+        vm.stopPrank();
     }
 
     function testMetadata() public {
