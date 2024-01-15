@@ -23,7 +23,6 @@ contract ERC4626Test is Test, TestHelper {
         vm.startPrank(deployer);
 
         tokenFactory = new TokenFactory();
-
         factoryProxy = new UUPSProxy(address(tokenFactory), "");
         factoryWrapper = TokenFactory(address(factoryProxy));
         factoryWrapper.initialize(
@@ -31,7 +30,7 @@ contract ERC4626Test is Test, TestHelper {
             REBALANCE_INTERVAL,
             sanctionsContract,
             signersAddress,
-            signersAddress
+            deployer
         );
 
         vault = new SmartToken();
@@ -43,7 +42,7 @@ contract ERC4626Test is Test, TestHelper {
             address(factoryWrapper),
             sanctionsContract,
             true,
-            signersAddress
+            deployer
         );
 
         vault2 = new SmartToken();
@@ -55,7 +54,7 @@ contract ERC4626Test is Test, TestHelper {
             address(factoryWrapper),
             sanctionsContract,
             false,
-            signersAddress
+            deployer
         );
 
         // initialize dev tokens in token factory
