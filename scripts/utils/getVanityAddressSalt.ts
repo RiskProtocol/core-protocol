@@ -12,13 +12,8 @@ export async function get(
   for (let salt = 0; ; salt++) {
     let saltEncoded = ethers.utils.formatBytes32String(`${salt}`);
 
-    // const instanceOfFactory = await new ethers.Contract(
-    //   factoryaddress,
-    //   factoryJson.abi,
-    //   wallet
-    // );
     const instanceOfFactory = await ethers.getContractAt(
-      "SKYBITCREATE3Factory", //@todo rename later
+      "SKYBITCREATE3Factory",
       factoryaddress
     );
 
@@ -28,10 +23,10 @@ export async function get(
       saltEncoded
     );
 
-    console.log(`L77777::::proxyAddress:::${proxyAddress}`);
+    console.log(`::::proxyAddress:::${proxyAddress}`);
 
     if (proxyAddress.toLowerCase().startsWith(`0x${desiredPrefix}`)) {
-      console.log(`L322222222222:::::${proxyAddress}:::::salt:${salt}`);
+      console.log(`:::::${proxyAddress}:::::salt:${salt}\n`);
 
       if (count === countNum) {
         const saltStr = `${salt}`;

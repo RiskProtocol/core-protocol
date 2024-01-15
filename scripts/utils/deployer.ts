@@ -41,7 +41,7 @@ export async function deployUUPSviaCreate3(
     proxyConstructorArgs,
     salt,
     wallet
-  ); // Gas cost: 425068
+  );
   if (typeof proxy === "string") return proxy;
   const proxyAddress = proxy.address;
 

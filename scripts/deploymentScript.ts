@@ -2,6 +2,7 @@ import { ethers } from "hardhat";
 import { deployUUPSviaCreate3 } from "./utils/deployer";
 import vanityConfig from "./vanityConfig.json";
 import {
+  BASE_TOKEN_ADDRESS,
   REBALANCE_INTERVAL,
   TOKEN1_NAME,
   TOKEN1_SYMBOL,
@@ -21,7 +22,7 @@ async function main() {
     "TokenFactory",
     pxSalt.tokenFactory.saltStr, //salt
     [
-      "0x6031339bf7A13743b4bcDAFC45CB59B7ff4D99C1", //Base Token
+      BASE_TOKEN_ADDRESS, //Base Token
       REBALANCE_INTERVAL,
       sanctionsContractAddress, //sanctions but just testing
       wallet.address,

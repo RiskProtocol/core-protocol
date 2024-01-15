@@ -10,9 +10,11 @@ contract TokenFactoryTest is Test, TestHelper {
 
     function setUp() public {
         vm.createSelectFork(vm.rpcUrl("mainnet"), 17268750);
+        address deployer = address(1);
 
         // deploy underlying asset
         mockERC20Token = new MockERC20Token();
+        vm.startPrank(deployer);
         tokenFactory = new TokenFactory();
         factoryProxy = new UUPSProxy(address(tokenFactory), "");
         factoryWrapper = TokenFactory(address(factoryProxy));
@@ -21,7 +23,7 @@ contract TokenFactoryTest is Test, TestHelper {
             REBALANCE_INTERVAL,
             sanctionsContract,
             signersAddress,
-            signersAddress
+            address(msg.sender)
         );
 
         // deploy token X
@@ -35,7 +37,7 @@ contract TokenFactoryTest is Test, TestHelper {
             address(factoryWrapper),
             sanctionsContract,
             true,
-            signersAddress
+            address(msg.sender)
         );
         // deploy token Y
         smartTokenY = new SmartToken();
@@ -47,11 +49,12 @@ contract TokenFactoryTest is Test, TestHelper {
             address(factoryWrapper),
             sanctionsContract,
             false,
-            signersAddress
+            address(msg.sender)
         );
 
         // initialize dev tokens in token factory
         factoryWrapper.initializeSMART(smartTokenXWrapper, smartTokenYWrapper);
+        vm.stopPrank();
     }
 
     function invariant_RebalanceInterval() public {

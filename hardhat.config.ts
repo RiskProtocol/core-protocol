@@ -77,7 +77,7 @@ const config: HardhatUserConfig = {
       /* you get the url abv when you run "yarn hardhat node" it comes with several address
        and private key, you don't need to specify accounts. The terminal needs to be active
         before you use localhost  to deploy, the terminal will be showing logs as you work */
-      chainId: 31337,
+      chainId: 1337,
       allowUnlimitedContractSize: true,
     },
   },

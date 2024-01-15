@@ -9,10 +9,12 @@ contract TokenFactoryTest is Test, TestHelper {
     SmartToken smartTokenYWrapper;
 
     function setUp() public {
+        address deployer = address(1);
         vm.createSelectFork(vm.rpcUrl("mainnet"), 17268750);
 
         // deploy underlying asset
         mockERC20Token = new MockERC20Token();
+        vm.startPrank(deployer);
         tokenFactory = new TokenFactory();
         factoryProxy = new UUPSProxy(address(tokenFactory), "");
         factoryWrapper = TokenFactory(address(factoryProxy));
@@ -21,7 +23,7 @@ contract TokenFactoryTest is Test, TestHelper {
             REBALANCE_INTERVAL,
             sanctionsContract,
             signersAddress,
-            signersAddress
+            deployer
         );
 
         // deploy token X
@@ -35,7 +37,7 @@ contract TokenFactoryTest is Test, TestHelper {
             address(factoryWrapper),
             sanctionsContract,
             true,
-            signersAddress
+            deployer
         );
         // deploy token Y
         smartTokenY = new SmartToken();
@@ -47,11 +49,12 @@ contract TokenFactoryTest is Test, TestHelper {
             address(factoryWrapper),
             sanctionsContract,
             false,
-            signersAddress
+            deployer
         );
 
         // initialize dev tokens in token factory
         factoryWrapper.initializeSMART(smartTokenXWrapper, smartTokenYWrapper);
+        vm.stopPrank();
     }
 
     function testFuzz_ConvertToShares(uint256 amount) public {

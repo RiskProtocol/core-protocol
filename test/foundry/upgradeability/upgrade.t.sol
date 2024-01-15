@@ -27,7 +27,7 @@ contract _Test is Test, TestHelper {
             REBALANCE_INTERVAL,
             sanctionsContract,
             signersAddress,
-            signersAddress
+            owner
         );
 
         // deploy token X
@@ -41,7 +41,7 @@ contract _Test is Test, TestHelper {
             address(factoryWrapper),
             sanctionsContract,
             true,
-            signersAddress
+            owner
         );
         // deploy token Y
         smartTokenY = new SmartToken();
@@ -53,7 +53,7 @@ contract _Test is Test, TestHelper {
             address(factoryWrapper),
             sanctionsContract,
             false,
-            signersAddress
+            owner
         );
 
         // initialize dev tokens in token factory

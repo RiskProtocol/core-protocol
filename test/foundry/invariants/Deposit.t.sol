@@ -12,9 +12,11 @@ contract Deposit is Test, TestHelper {
 
     function setUp() public {
         vm.createSelectFork(vm.rpcUrl("mainnet"), 17268750);
+        address deployer = address(1);
 
         // deploy underlying asset
         mockERC20Token = new MockERC20Token();
+        vm.startPrank(deployer);
         tokenFactory = new TokenFactory();
         tokenFactory = new TokenFactory();
         factoryProxy = new UUPSProxy(address(tokenFactory), "");
@@ -24,7 +26,7 @@ contract Deposit is Test, TestHelper {
             REBALANCE_INTERVAL,
             sanctionsContract,
             signersAddress,
-            signersAddress
+            deployer
         );
 
         // deploy token X
@@ -38,7 +40,7 @@ contract Deposit is Test, TestHelper {
             address(factoryWrapper),
             sanctionsContract,
             true,
-            signersAddress
+            deployer
         );
         // deploy token Y
         smartTokenY = new SmartToken();
@@ -50,12 +52,12 @@ contract Deposit is Test, TestHelper {
             address(factoryWrapper),
             sanctionsContract,
             false,
-            signersAddress
+            deployer
         );
 
         // initialize dev tokens in token factory
         factoryWrapper.initializeSMART(smartTokenXWrapper, smartTokenYWrapper);
-
+        vm.stopPrank();
         // invariant test
         handler = new DepositHandler(smartTokenXWrapper, mockERC20Token);
         targetContract(address(handler));

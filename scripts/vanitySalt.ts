@@ -13,35 +13,35 @@ async function run(prefix: string) {
   const tokenFactoryPxAddress = await get(
     vanityConfig.factoryAddress,
     wallet,
-    prefix,
+    vanityConfig.tokenFactory.desiredPrefix,
     0
   );
   const SmartXPxAddress = await get(
     vanityConfig.factoryAddress,
     wallet,
-    prefix,
+    vanityConfig.smartTokenX.desiredPrefix,
     1
   );
   const SmartYPxAddress = await get(
     vanityConfig.factoryAddress,
     wallet,
-    prefix,
+    vanityConfig.smartTokenY.desiredPrefix,
     2
   );
   const OrchestratorPxAddress = await get(
     vanityConfig.factoryAddress,
     wallet,
-    prefix,
+    vanityConfig.orchestrator.desiredPrefix,
     3
   );
 
   console.log(
-    `tokenFactoryPxAddress address: ${JSON.stringify(tokenFactoryPxAddress)}`
+    `tokenFactoryPxAddress address: ${JSON.stringify(tokenFactoryPxAddress)}\n`
   );
-  console.log(`SmartXPxAddress address: ${JSON.stringify(SmartXPxAddress)}`);
-  console.log(`SmartYPxAddress address: ${JSON.stringify(SmartYPxAddress)}`);
+  console.log(`SmartXPxAddress address: ${JSON.stringify(SmartXPxAddress)}\n`);
+  console.log(`SmartYPxAddress address: ${JSON.stringify(SmartYPxAddress)}\n`);
   console.log(
-    `OrchestratorPxAddress address: ${JSON.stringify(OrchestratorPxAddress)}`
+    `OrchestratorPxAddress address: ${JSON.stringify(OrchestratorPxAddress)}\n`
   );
 
   const ContractSalts = {
