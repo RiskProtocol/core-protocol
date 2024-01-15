@@ -15,7 +15,7 @@ const func: DeployFunction = async ({
 
   let baseTokenAddress: string;
 
-  if (['local', 'development'].includes(process.env.ENVIRONMENT!)) {
+  if (["local", "development"].includes(process.env.ENVIRONMENT!)) {
     const mockERC20TokenWithPermit = await deployments.get(
       "MockERC20TokenWithPermit"
     );
@@ -33,7 +33,6 @@ const func: DeployFunction = async ({
     sanctionsContractAddress = process.env.SANCTIONS_CONTRACT_ADDRESS!;
   }
 
-
   // Deploying the contract as a UUPS upgradeable contract.
   const TokenFactoryContract = await ethers.getContractFactory("TokenFactory");
   const TokenFactory = await upgrades.deployProxy(
@@ -42,6 +41,7 @@ const func: DeployFunction = async ({
       baseTokenAddress,
       REBALANCE_INTERVAL,
       sanctionsContractAddress,
+      deployer,
       deployer,
     ],
     { initializer: "initialize", kind: "uups" }

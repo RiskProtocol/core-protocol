@@ -21,7 +21,7 @@ const func: DeployFunction = async ({
 
   let baseTokenAddress: string;
 
-  if (['local', 'development'].includes(process.env.ENVIRONMENT!)) {
+  if (["local", "development"].includes(process.env.ENVIRONMENT!)) {
     const mockERC20TokenWithPermit = await deployments.get(
       "MockERC20TokenWithPermit"
     );
@@ -38,7 +38,6 @@ const func: DeployFunction = async ({
   } else {
     sanctionsContractAddress = process.env.SANCTIONS_CONTRACT_ADDRESS!;
   }
-
 
   const tokenFactory = await ethers.getContractAt(
     "TokenFactory",
@@ -60,6 +59,7 @@ const func: DeployFunction = async ({
       tokenFactory.address,
       sanctionsContractAddress,
       true,
+      deployer,
     ],
     { initializer: "initialize", kind: "uups" }
   );
@@ -83,6 +83,7 @@ const func: DeployFunction = async ({
       tokenFactory.address,
       sanctionsContractAddress,
       false,
+      deployer,
     ],
     { initializer: "initialize", kind: "uups" }
   );
@@ -101,7 +102,10 @@ const func: DeployFunction = async ({
   log("Intializing Tokens in Token Factory...");
   // initialize tokens
   await tokenFactory.initializeSMART(SmartToken1.address, SmartToken2.address);
-  const smartToken1 = await ethers.getContractAt("SmartToken", SmartToken1.address);
+  const smartToken1 = await ethers.getContractAt(
+    "SmartToken",
+    SmartToken1.address
+  );
 
   const approveERC20Spender = await mockERC20TokenWithPermit.approve(
     tokenFactory.address,
