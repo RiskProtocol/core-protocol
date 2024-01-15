@@ -73,6 +73,7 @@ developmentChains.includes(network.name)
           REBALANCE_INTERVAL,
           sanctionsContract.address,
           deployer.address,
+          deployer.address,
         ]);
         await tokenFactory.deployed();
 
@@ -88,6 +89,7 @@ developmentChains.includes(network.name)
           tokenFactory.address,
           sanctionsContract.address,
           true,
+          deployer.address,
         ]);
         await smartToken1.deployed();
 
@@ -103,6 +105,7 @@ developmentChains.includes(network.name)
           tokenFactory.address,
           sanctionsContract.address,
           false,
+          deployer.address,
         ]);
         await smartToken2.deployed();
 
@@ -117,6 +120,7 @@ developmentChains.includes(network.name)
           REBALANCE_INTERVAL,
           sanctionsContract.address,
           deployer.address,
+          deployer.address,
         ]);
 
         await tokenFactory2.deployed();
@@ -130,6 +134,7 @@ developmentChains.includes(network.name)
 
         const orchestrator = await upgrades.deployProxy(OrchestratorFactory, [
           tokenFactory.address,
+          deployer.address,
         ]);
         await orchestrator.deployed();
 
@@ -221,7 +226,8 @@ developmentChains.includes(network.name)
 
             const now = await tokenFactory.getLastTimeStamp();
 
-            const nextRebalanceTimeStamp = BigInt(now) + BigInt(REBALANCE_INTERVAL);
+            const nextRebalanceTimeStamp =
+              BigInt(now) + BigInt(REBALANCE_INTERVAL);
             await time.setNextBlockTimestamp(nextRebalanceTimeStamp);
 
             const { signature, encodedData } = await signRebalance(
@@ -361,7 +367,8 @@ developmentChains.includes(network.name)
               (BigInt(mgmtFee) * BigInt(REBALANCE_INTERVAL)) / oneDay;
             const lastRebalance = await tokenFactory.getLastTimeStamp();
             //contract call
-            const nextRebalance = BigInt(lastRebalance) + BigInt(REBALANCE_INTERVAL);
+            const nextRebalance =
+              BigInt(lastRebalance) + BigInt(REBALANCE_INTERVAL);
 
             let block = await ethers.provider.getBlock("latest");
 
@@ -466,7 +473,8 @@ developmentChains.includes(network.name)
 
             const lastRebalance = await tokenFactory.getLastTimeStamp();
             //contract call and make a rebalance
-            const nextRebalance = BigInt(lastRebalance) + BigInt(REBALANCE_INTERVAL);
+            const nextRebalance =
+              BigInt(lastRebalance) + BigInt(REBALANCE_INTERVAL);
             await time.setNextBlockTimestamp(nextRebalance);
 
             const { signature, encodedData } = await signRebalance(
@@ -549,7 +557,8 @@ developmentChains.includes(network.name)
             await smartToken1.mint(depositAmount, tester.address);
 
             // contract call and make 3 rebalance
-            const nextRebalance = BigInt(lastRebalance) + BigInt(REBALANCE_INTERVAL);
+            const nextRebalance =
+              BigInt(lastRebalance) + BigInt(REBALANCE_INTERVAL);
             await time.setNextBlockTimestamp(nextRebalance);
 
             const encodedNaturalRebalance1 = await signRebalance(
@@ -562,7 +571,8 @@ developmentChains.includes(network.name)
               encodedNaturalRebalance1.signature
             );
 
-            const secondRebalance = BigInt(nextRebalance) + BigInt(REBALANCE_INTERVAL);
+            const secondRebalance =
+              BigInt(nextRebalance) + BigInt(REBALANCE_INTERVAL);
             await time.setNextBlockTimestamp(secondRebalance);
 
             const encodedNaturalRebalance2 = await signRebalance(deployer, {
@@ -575,7 +585,8 @@ developmentChains.includes(network.name)
               encodedNaturalRebalance2.signature
             );
 
-            const thirdRebalance = BigInt(secondRebalance) + BigInt(REBALANCE_INTERVAL);
+            const thirdRebalance =
+              BigInt(secondRebalance) + BigInt(REBALANCE_INTERVAL);
             await time.setNextBlockTimestamp(thirdRebalance);
 
             const encodedNaturalRebalance3 = await signRebalance(deployer, {
@@ -642,7 +653,8 @@ developmentChains.includes(network.name)
             );
 
             //contract call and make 3 rebalance
-            const nextRebalance = BigInt(lastRebalance) + BigInt(REBALANCE_INTERVAL);
+            const nextRebalance =
+              BigInt(lastRebalance) + BigInt(REBALANCE_INTERVAL);
             await time.setNextBlockTimestamp(nextRebalance);
 
             const encodedNaturalRebalance1 = await signRebalance(
@@ -666,7 +678,8 @@ developmentChains.includes(network.name)
               deployer.address
             );
 
-            const secondRebalance = BigInt(nextRebalance) + BigInt(REBALANCE_INTERVAL);
+            const secondRebalance =
+              BigInt(nextRebalance) + BigInt(REBALANCE_INTERVAL);
             await time.setNextBlockTimestamp(secondRebalance);
 
             const encodedNaturalRebalance2 = await signRebalance(deployer, {
@@ -693,7 +706,8 @@ developmentChains.includes(network.name)
               deployer.address
             );
 
-            const thirdRebalance = BigInt(secondRebalance) + BigInt(REBALANCE_INTERVAL);
+            const thirdRebalance =
+              BigInt(secondRebalance) + BigInt(REBALANCE_INTERVAL);
             await time.setNextBlockTimestamp(thirdRebalance);
 
             const encodedNaturalRebalance3 = await signRebalance(deployer, {
@@ -750,7 +764,8 @@ developmentChains.includes(network.name)
 
             const lastRebalance = await tokenFactory.getLastTimeStamp();
             //contract call and make a rebalance
-            const nextRebalance = BigInt(lastRebalance) + BigInt(REBALANCE_INTERVAL);
+            const nextRebalance =
+              BigInt(lastRebalance) + BigInt(REBALANCE_INTERVAL);
             await time.setNextBlockTimestamp(nextRebalance);
 
             const encodedNaturalRebalance1 = await signRebalance(
@@ -791,7 +806,8 @@ developmentChains.includes(network.name)
 
             const lastRebalance2 = await tokenFactory.getLastTimeStamp();
             //contract call and make a rebalance
-            const nextRebalance2 = BigInt(lastRebalance2) + BigInt(REBALANCE_INTERVAL);
+            const nextRebalance2 =
+              BigInt(lastRebalance2) + BigInt(REBALANCE_INTERVAL);
             await time.setNextBlockTimestamp(nextRebalance2);
 
             const encodedNaturalRebalance2 = await signRebalance(deployer, {
@@ -808,9 +824,11 @@ developmentChains.includes(network.name)
             // We also have to consider that fees we held on tokenFactory has also to pay fees for the next rebalance
             const newTreasuryBalance =
               BigInt(TheTreasuryWallet) -
-              (BigInt(feeRate * REBALANCE_INTERVAL) * BigInt(TheTreasuryWallet)) /
+              (BigInt(feeRate * REBALANCE_INTERVAL) *
+                BigInt(TheTreasuryWallet)) /
                 (BigInt(MULTIPLIER) * BigInt(86400)) +
-              (BigInt(FeeRebalance2) - feeCalculator(FeeRebalance2, BigInt(feeRate)));
+              (BigInt(FeeRebalance2) -
+                feeCalculator(FeeRebalance2, BigInt(feeRate)));
 
             const threashold = Number(0.01 / 100) * Number(newTreasuryBalance);
             //if the difference between the expected and the real value is more than 0.01%, it should fail

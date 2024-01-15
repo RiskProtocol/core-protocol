@@ -96,7 +96,8 @@ contract SmartToken is
         string memory tokenSymbol,
         address factoryAddress,
         address sanctionsContract_,
-        bool isX_ //is this token X or Y?
+        bool isX_, //is this token X or Y?
+        address owner_
     ) public initializer {
         //initialize deriving contracts
         __ERC20_init(tokenName, tokenSymbol);
@@ -104,6 +105,7 @@ contract SmartToken is
         __BaseContract_init(sanctionsContract_);
         //@note This is required as we'd need to ensure only owner can upgrade
         __Ownable_init();
+        transferOwnership(owner_);
         __UUPSUpgradeable_init();
         tokenFactory = TokenFactory(factoryAddress);
         underlyingToken = tokenFactory.getBaseToken();

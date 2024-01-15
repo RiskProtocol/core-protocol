@@ -26,6 +26,7 @@ contract _Test is Test, TestHelper {
             underlying,
             REBALANCE_INTERVAL,
             sanctionsContract,
+            signersAddress,
             signersAddress
         );
 
@@ -39,7 +40,8 @@ contract _Test is Test, TestHelper {
             TOKEN1_SYMBOL,
             address(factoryWrapper),
             sanctionsContract,
-            true
+            true,
+            signersAddress
         );
         // deploy token Y
         smartTokenY = new SmartToken();
@@ -50,7 +52,8 @@ contract _Test is Test, TestHelper {
             TOKEN2_SYMBOL,
             address(factoryWrapper),
             sanctionsContract,
-            false
+            false,
+            signersAddress
         );
 
         // initialize dev tokens in token factory

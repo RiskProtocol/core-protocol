@@ -43,6 +43,7 @@ developmentChains.includes(network.name)
           REBALANCE_INTERVAL,
           sanctionsContract.address,
           deployer.address,
+          deployer.address,
         ]);
         await tokenFactory.deployed();
 
@@ -65,6 +66,7 @@ developmentChains.includes(network.name)
           REBALANCE_INTERVAL,
           sanctionsContract.address,
           deployer.address,
+          deployer.address,
         ]);
         await tokenFactory1.deployed();
 
@@ -80,6 +82,7 @@ developmentChains.includes(network.name)
           tokenFactory.address,
           sanctionsContract.address,
           true,
+          deployer.address,
         ]);
         await smartToken1.deployed();
 
@@ -95,6 +98,7 @@ developmentChains.includes(network.name)
           tokenFactory.address,
           sanctionsContract.address,
           false,
+          deployer.address,
         ]);
         await smartToken2.deployed();
 
@@ -314,14 +318,16 @@ developmentChains.includes(network.name)
           const privateKey1Buffer = Buffer.from(ownerPrivateKey, "hex");
           const { v, r, s } = sign(digest, privateKey1Buffer);
 
-          await expect(await smartToken1.depositWithPermit(
-            approve.value,
-            approve.owner,
-            deadline,
-            v,
-            r,
-            s
-          )).to.haveOwnProperty("hash");
+          await expect(
+            await smartToken1.depositWithPermit(
+              approve.value,
+              approve.owner,
+              deadline,
+              v,
+              r,
+              s
+            )
+          ).to.haveOwnProperty("hash");
         });
       });
     })

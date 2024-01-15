@@ -43,6 +43,7 @@ developmentChains.includes(network.name)
           REBALANCE_INTERVAL,
           sanctionsContract.address,
           deployer.address,
+          deployer.address,
         ]);
         await tokenFactory.deployed();
 
@@ -58,6 +59,7 @@ developmentChains.includes(network.name)
           tokenFactory.address,
           sanctionsContract.address,
           true,
+          deployer.address,
         ]);
         await SmartToken1.deployed();
 
@@ -73,6 +75,7 @@ developmentChains.includes(network.name)
           tokenFactory.address,
           sanctionsContract.address,
           false,
+          deployer.address,
         ]);
         await SmartToken2.deployed();
 
@@ -86,6 +89,7 @@ developmentChains.includes(network.name)
           "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D",
           REBALANCE_INTERVAL,
           sanctionsContract.address,
+          deployer.address,
           deployer.address,
         ]);
         await tokenFactory2.deployed();
@@ -109,6 +113,7 @@ developmentChains.includes(network.name)
           REBALANCE_INTERVAL,
           sanctionsContract.address,
           deployer.address,
+          deployer.address,
         ]);
         await tokenFactory3.deployed();
 
@@ -124,6 +129,7 @@ developmentChains.includes(network.name)
           tokenFactory3.address,
           sanctionsContract.address,
           true,
+          deployer.address,
         ]);
         await SmartTokenX.deployed();
 
@@ -139,6 +145,7 @@ developmentChains.includes(network.name)
           tokenFactory3.address,
           sanctionsContract.address,
           false,
+          deployer.address,
         ]);
         await SmartTokenY.deployed();
 

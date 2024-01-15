@@ -20,6 +20,7 @@ contract TokenFactoryTest is Test, TestHelper {
             mockERC20Token,
             REBALANCE_INTERVAL,
             sanctionsContract,
+            signersAddress,
             signersAddress
         );
 
@@ -33,7 +34,8 @@ contract TokenFactoryTest is Test, TestHelper {
             TOKEN1_SYMBOL,
             address(factoryWrapper),
             sanctionsContract,
-            true
+            true,
+            signersAddress
         );
         // deploy token Y
         smartTokenY = new SmartToken();
@@ -44,7 +46,8 @@ contract TokenFactoryTest is Test, TestHelper {
             TOKEN2_SYMBOL,
             address(factoryWrapper),
             sanctionsContract,
-            false
+            false,
+            signersAddress
         );
 
         // initialize dev tokens in token factory

@@ -158,12 +158,14 @@ contract TokenFactory is
         IERC20Update baseTokenAddress,
         uint256 rebalanceInterval, // in seconds
         address sanctionsContract_,
-        address signersAddress_
+        address signersAddress_,
+        address owner_
     ) public initializer {
         //initialize deriving contracts
 
         __BaseContract_init(sanctionsContract_);
         __Ownable_init();
+        transferOwnership(owner_);
         __UUPSUpgradeable_init();
 
         baseToken = IERC20Update(baseTokenAddress);

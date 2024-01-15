@@ -44,6 +44,7 @@ developmentChains.includes(network.name)
           REBALANCE_INTERVAL,
           sanctionsContract.address,
           deployer.address,
+          deployer.address,
         ]);
         await tokenFactory.deployed();
 
@@ -59,6 +60,7 @@ developmentChains.includes(network.name)
           tokenFactory.address,
           sanctionsContract.address,
           true,
+          deployer.address,
         ]);
         await smartToken1.deployed();
 
@@ -74,6 +76,7 @@ developmentChains.includes(network.name)
           tokenFactory.address,
           sanctionsContract.address,
           false,
+          deployer.address,
         ]);
         await smartToken2.deployed();
         const OrchestratorFactory = await ethers.getContractFactory(
@@ -83,6 +86,7 @@ developmentChains.includes(network.name)
 
         const orchestrator = await upgrades.deployProxy(OrchestratorFactory, [
           tokenFactory.address,
+          deployer.address,
         ]);
         await orchestrator.deployed();
 
@@ -356,16 +360,19 @@ developmentChains.includes(network.name)
           );
 
           // because of the 50 transfer, the max deposit should return balance of MaxUint256 - balanceOf(smartToken2)
-          await expect(
-            await smartToken1.maxDeposit(deployer.address)).to.gte(ethers.constants.MaxUint256.div(2).toString());
+          await expect(await smartToken1.maxDeposit(deployer.address)).to.gte(
+            ethers.constants.MaxUint256.div(2).toString()
+          );
 
           await expect(
             smartToken1.deposit(
               ethers.constants.MaxUint256.div(2).add(2),
               deployer.address
             )
-          ).to.be.revertedWithCustomError(smartToken1, "SmartToken__DepositMoreThanMax");
-
+          ).to.be.revertedWithCustomError(
+            smartToken1,
+            "SmartToken__DepositMoreThanMax"
+          );
 
           // Transfer a lot of smartToken1 to tester
           await smartToken1.transfer(
@@ -374,8 +381,9 @@ developmentChains.includes(network.name)
           );
 
           // because of the previous transfer, the max deposit should return balance of MaxUint256 - balanceOf(smartToken1)
-          await expect(
-            await smartToken1.maxDeposit(deployer.address)).to.gte(ethers.constants.MaxUint256.div(2).toString());
+          await expect(await smartToken1.maxDeposit(deployer.address)).to.gte(
+            ethers.constants.MaxUint256.div(2).toString()
+          );
         });
       });
     })
