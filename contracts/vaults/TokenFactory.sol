@@ -1067,43 +1067,39 @@ contract TokenFactory is
     function withdrawLimitMod(
         uint256 amount
     ) external onlySmartTokens returns (bool) {
-        if (hasWithdrawLimit) {
-            updatePeriod(
-                _msgSender(),
-                currentWithdrawPeriodEnd,
-                currentWithdrawPeriodAmount
-            );
+        if (!hasWithdrawLimit) return false;
 
-            if (
-                currentWithdrawPeriodAmount[_msgSender()] + amount <=
-                withdrawLimit
-            ) {
-                currentWithdrawPeriodAmount[_msgSender()] += amount;
-                return false;
-            }
-            return true;
-        } else return false;
+        updatePeriod(
+            _msgSender(),
+            currentWithdrawPeriodEnd,
+            currentWithdrawPeriodAmount
+        );
+
+        uint256 newWithdrawAmount = currentWithdrawPeriodAmount[_msgSender()] +
+            amount;
+        if (newWithdrawAmount > withdrawLimit) return true;
+
+        currentWithdrawPeriodAmount[_msgSender()] = newWithdrawAmount;
+        return false;
     }
 
     function depositLimitMod(
         uint256 amount
     ) external onlySmartTokens returns (bool) {
-        if (hasDepositLimit) {
-            updatePeriod(
-                _msgSender(),
-                currentDepositPeriodEnd,
-                currentDepositPeriodAmount
-            );
+        if (!hasDepositLimit) return false;
 
-            if (
-                currentDepositPeriodAmount[_msgSender()] + amount <=
-                depositLimit
-            ) {
-                currentDepositPeriodAmount[_msgSender()] += amount;
-                return false; //returns false if the user is well in his limits
-            }
-            return true; //returns true if the limit is breached
-        } else return false;
+        updatePeriod(
+            _msgSender(),
+            currentDepositPeriodEnd,
+            currentDepositPeriodAmount
+        );
+
+        uint256 newDepositAmount = currentDepositPeriodAmount[_msgSender()] +
+            amount;
+        if (newDepositAmount > depositLimit) return true;
+
+        currentDepositPeriodAmount[_msgSender()] = newDepositAmount;
+        return false;
     }
 
     function updatePeriod(
