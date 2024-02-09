@@ -2,6 +2,7 @@ import { DeployFunction } from "hardhat-deploy/types";
 import {
   BASE_TOKEN_ADDRESS,
   REBALANCE_INTERVAL,
+  rateLimitsDefault,
 } from "../helper-hardhat-config";
 const { ethers, upgrades } = require("hardhat");
 
@@ -15,7 +16,7 @@ const func: DeployFunction = async ({
 
   let baseTokenAddress: string;
 
-  if (['local', 'development'].includes(process.env.ENVIRONMENT!)) {
+  if (["local", "development"].includes(process.env.ENVIRONMENT!)) {
     const mockERC20TokenWithPermit = await deployments.get(
       "MockERC20TokenWithPermit"
     );
@@ -33,7 +34,6 @@ const func: DeployFunction = async ({
     sanctionsContractAddress = process.env.SANCTIONS_CONTRACT_ADDRESS!;
   }
 
-
   // Deploying the contract as a UUPS upgradeable contract.
   const TokenFactoryContract = await ethers.getContractFactory("TokenFactory");
   const TokenFactory = await upgrades.deployProxy(
@@ -43,6 +43,9 @@ const func: DeployFunction = async ({
       REBALANCE_INTERVAL,
       sanctionsContractAddress,
       deployer,
+      rateLimitsDefault.withdraw,
+      rateLimitsDefault.deposit,
+      rateLimitsDefault.period,
     ],
     { initializer: "initialize", kind: "uups" }
   );

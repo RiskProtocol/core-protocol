@@ -41,6 +41,8 @@ contract SmartToken is
     error SmartToken__OnlyAssetOwner();
     error SmartToken__ZeroDeposit();
     error SmartToken__InsufficientUnderlying();
+    error SmartToken__DepositLimitHit();
+    error SmartToken__WithdrawLimitHit();
 
     /// @notice The tokenFactory instance
     TokenFactory private tokenFactory;
@@ -75,6 +77,24 @@ contract SmartToken is
     modifier insufficientUnderlying() {
         if (tokenFactory.insufficientUnderlying()) {
             revert SmartToken__InsufficientUnderlying();
+        }
+        _;
+    }
+    /// @dev Validates if the user has hit the periodic deposit limit
+    /// prevents the user from depositing more if hit
+    /// @param amount The amount of token to deposit.
+    modifier depositLimitHit(uint256 amount) {
+        if (tokenFactory.depositLimitMod(amount)) {
+            revert SmartToken__DepositLimitHit();
+        }
+        _;
+    }
+    /// @dev Validates if the user has hit the periodic withdraw limit
+    /// prevents the user from withdrawing more if hit
+    /// @param amount The amount of token to withdraw.
+    modifier withdrawLimitHit(uint256 amount) {
+        if (tokenFactory.withdrawLimitMod(amount)) {
+            revert SmartToken__WithdrawLimitHit();
         }
         _;
     }
@@ -387,6 +407,7 @@ contract SmartToken is
         override
         stopDeposit
         insufficientUnderlying
+        depositLimitHit(assets)
         validateDepositAmount(assets, receiver)
         returns (uint256)
     {
@@ -422,6 +443,7 @@ contract SmartToken is
         public
         stopDeposit
         insufficientUnderlying
+        depositLimitHit(assets)
         validateDepositAmount(assets, receiver)
         returns (uint256)
     {
@@ -481,6 +503,7 @@ contract SmartToken is
         override
         stopDeposit
         insufficientUnderlying
+        depositLimitHit(shares)
         returns (uint256)
     {
         if (shares > maxMint(receiver)) revert SmartToken__MintMoreThanMax();
@@ -532,6 +555,7 @@ contract SmartToken is
         override
         stopWithdraw
         insufficientUnderlying
+        withdrawLimitHit(assets)
         onlyAssetOwner(owner_)
         nonReentrant
         returns (uint256)
@@ -596,6 +620,7 @@ contract SmartToken is
         override
         stopWithdraw
         insufficientUnderlying
+        withdrawLimitHit(shares)
         onlyAssetOwner(owner_)
         nonReentrant
         returns (uint256)

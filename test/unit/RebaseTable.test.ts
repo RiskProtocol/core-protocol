@@ -9,6 +9,7 @@ import {
   TOKEN2_SYMBOL,
   signRebalance,
   defaultRebalanceData,
+  rateLimitsDefault,
 } from "../../helper-hardhat-config";
 import { loadFixture, time } from "@nomicfoundation/hardhat-network-helpers";
 
@@ -78,6 +79,9 @@ developmentChains.includes(network.name)
           REBALANCE_INTERVAL,
           sanctionsContract.address,
           deployer.address,
+          rateLimitsDefault.withdraw,
+          rateLimitsDefault.deposit,
+          rateLimitsDefault.period,
         ]);
         await tokenFactory.deployed();
 
@@ -122,6 +126,9 @@ developmentChains.includes(network.name)
           REBALANCE_INTERVAL,
           sanctionsContract.address,
           deployer.address,
+          rateLimitsDefault.withdraw,
+          rateLimitsDefault.deposit,
+          rateLimitsDefault.period,
         ]);
         await tokenFactory2.deployed();
 
@@ -182,7 +189,8 @@ developmentChains.includes(network.name)
             await smartToken1.transfer(tester.address, transferAmount);
             const now = await tokenFactory.getLastTimeStamp(); //block.timestamp;
 
-            const nextRebalanceTimeStamp = BigInt(now) + BigInt(REBALANCE_INTERVAL);
+            const nextRebalanceTimeStamp =
+              BigInt(now) + BigInt(REBALANCE_INTERVAL);
             await time.setNextBlockTimestamp(nextRebalanceTimeStamp);
 
             const encodedNaturalRebalance1 = await signRebalance(
@@ -200,14 +208,8 @@ developmentChains.includes(network.name)
             const balanceOfY = await smartToken2.balanceOf(deployer.address);
 
             // confirm user balances when rebalance has taken place
-            assert.equal(
-              balanceOfX.toString(),
-              item.afterRebalance.x
-            );
-            assert.equal(
-              balanceOfY.toString(),
-              item.afterRebalance.y
-            );
+            assert.equal(balanceOfX.toString(), item.afterRebalance.x);
+            assert.equal(balanceOfY.toString(), item.afterRebalance.y);
           });
         });
         it("Should throw an error if natural rebalance is triggered at the wrong time", async function () {
@@ -237,7 +239,8 @@ developmentChains.includes(network.name)
           await smartToken1.transfer(tester.address, transferAmount);
           const now = await tokenFactory.getLastTimeStamp(); //block.timestamp;
 
-          const nextRebalanceTimeStamp = BigInt(now) + BigInt((2/3) * REBALANCE_INTERVAL); // set rebalance interval to 2/3 of the actual interval hence the rebalance will be triggered at the wrong time
+          const nextRebalanceTimeStamp =
+            BigInt(now) + BigInt((2 / 3) * REBALANCE_INTERVAL); // set rebalance interval to 2/3 of the actual interval hence the rebalance will be triggered at the wrong time
           await time.setNextBlockTimestamp(nextRebalanceTimeStamp);
 
           const encodedNaturalRebalance1 = await signRebalance(
@@ -246,25 +249,22 @@ developmentChains.includes(network.name)
           );
 
           // trigger a rebalance
-          await expect(orchestrator.rebalance(
-            encodedNaturalRebalance1.encodedData,
-            encodedNaturalRebalance1.signature
-          )).to.be.revertedWithCustomError(
+          await expect(
+            orchestrator.rebalance(
+              encodedNaturalRebalance1.encodedData,
+              encodedNaturalRebalance1.signature
+            )
+          ).to.be.revertedWithCustomError(
             tokenFactory,
             "TokenFactory__InvalidNaturalRebalance"
           );
-
         });
       });
 
       describe("Natural Rebalance", async function () {
         it("It should revert if a natural rebalance is triggered before the interval time on the smart contract", async function () {
-          const {
-            tokenFactory,
-            smartToken1,
-            smartToken2,
-            orchestrator,
-          } = await loadFixture(deployTokenFixture);
+          const { tokenFactory, smartToken1, smartToken2, orchestrator } =
+            await loadFixture(deployTokenFixture);
           await tokenFactory.initializeSMART(
             smartToken1.address,
             smartToken2.address
@@ -272,7 +272,8 @@ developmentChains.includes(network.name)
 
           const now = await tokenFactory.getLastTimeStamp(); //block.timestamp;
 
-          const currentRebalanceSequenceNumber = await tokenFactory.getRebalanceNumber();
+          const currentRebalanceSequenceNumber =
+            await tokenFactory.getRebalanceNumber();
 
           const nextRebalance = BigInt(now) + BigInt(REBALANCE_INTERVAL);
           await time.setNextBlockTimestamp(nextRebalance);
@@ -288,10 +289,11 @@ developmentChains.includes(network.name)
             encodedNaturalRebalance1.signature
           );
 
-          const firstRebalanceSequenceNumber = currentRebalanceSequenceNumber.toNumber() + 1;
-          await expect(
-            await tokenFactory.getRebalanceNumber()
-          ).to.equal(firstRebalanceSequenceNumber);
+          const firstRebalanceSequenceNumber =
+            currentRebalanceSequenceNumber.toNumber() + 1;
+          await expect(await tokenFactory.getRebalanceNumber()).to.equal(
+            firstRebalanceSequenceNumber
+          );
 
           await time.setNextBlockTimestamp(nextRebalance);
 
@@ -314,9 +316,9 @@ developmentChains.includes(network.name)
             "TokenFactory__InvalidNaturalRebalance"
           );
 
-          await expect(
-            await tokenFactory.getRebalanceNumber()
-          ).to.equal(firstRebalanceSequenceNumber);
+          await expect(await tokenFactory.getRebalanceNumber()).to.equal(
+            firstRebalanceSequenceNumber
+          );
         });
       });
 
