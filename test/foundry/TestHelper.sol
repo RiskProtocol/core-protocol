@@ -12,10 +12,10 @@ abstract contract TestHelper {
     TokenFactory public tokenFactory;
     SmartToken public smartTokenX;
     SmartToken public smartTokenY;
-    UUPSProxy public proxy;
-    UUPSProxy public factoryProxy;
-    UUPSProxy public vaultProxy;
-    UUPSProxy public vault2Proxy;
+    ERC1967Proxy public proxy;
+    ERC1967Proxy public factoryProxy;
+    ERC1967Proxy public vaultProxy;
+    ERC1967Proxy public vault2Proxy;
 
     uint8 public constant DECIMALS = 18;
     int256 public constant INITIAL_PRICE = 2000000000000000000000;

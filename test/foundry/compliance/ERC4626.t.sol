@@ -23,7 +23,7 @@ contract ERC4626Test is Test, TestHelper {
         vm.startPrank(deployer);
 
         tokenFactory = new TokenFactory();
-        factoryProxy = new UUPSProxy(address(tokenFactory), "");
+        factoryProxy = new ERC1967Proxy(address(tokenFactory), "");
         factoryWrapper = TokenFactory(address(factoryProxy));
         factoryWrapper.initialize(
             underlying,
@@ -34,7 +34,7 @@ contract ERC4626Test is Test, TestHelper {
         );
 
         vault = new SmartToken();
-        vaultProxy = new UUPSProxy(address(vault), "");
+        vaultProxy = new ERC1967Proxy(address(vault), "");
         vaultWrapper1 = SmartToken(address(vaultProxy));
         vaultWrapper1.initialize(
             TOKEN1_NAME,
@@ -46,7 +46,7 @@ contract ERC4626Test is Test, TestHelper {
         );
 
         vault2 = new SmartToken();
-        vault2Proxy = new UUPSProxy(address(vault2), "");
+        vault2Proxy = new ERC1967Proxy(address(vault2), "");
         vaultWrapper2 = SmartToken(address(vault2Proxy));
         vaultWrapper2.initialize(
             TOKEN2_NAME,
@@ -64,7 +64,7 @@ contract ERC4626Test is Test, TestHelper {
 
     function testMetadata() public {
         SmartToken vlt = new SmartToken();
-        UUPSProxy vltProxy = new UUPSProxy(address(vlt), "");
+        ERC1967Proxy vltProxy = new ERC1967Proxy(address(vlt), "");
         SmartToken vltWrapper = SmartToken(address(vltProxy));
         vltWrapper.initialize(
             TOKEN1_NAME,

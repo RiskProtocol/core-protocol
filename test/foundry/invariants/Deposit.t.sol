@@ -19,7 +19,7 @@ contract Deposit is Test, TestHelper {
         vm.startPrank(deployer);
         tokenFactory = new TokenFactory();
         tokenFactory = new TokenFactory();
-        factoryProxy = new UUPSProxy(address(tokenFactory), "");
+        factoryProxy = new ERC1967Proxy(address(tokenFactory), "");
         factoryWrapper = TokenFactory(address(factoryProxy));
         factoryWrapper.initialize(
             mockERC20Token,
@@ -32,7 +32,7 @@ contract Deposit is Test, TestHelper {
         // deploy token X
         smartTokenX = new SmartToken();
 
-        vaultProxy = new UUPSProxy(address(smartTokenX), "");
+        vaultProxy = new ERC1967Proxy(address(smartTokenX), "");
         smartTokenXWrapper = SmartToken(address(vaultProxy));
         smartTokenXWrapper.initialize(
             TOKEN1_NAME,
@@ -44,7 +44,7 @@ contract Deposit is Test, TestHelper {
         );
         // deploy token Y
         smartTokenY = new SmartToken();
-        vault2Proxy = new UUPSProxy(address(smartTokenY), "");
+        vault2Proxy = new ERC1967Proxy(address(smartTokenY), "");
         smartTokenYWrapper = SmartToken(address(vault2Proxy));
         smartTokenYWrapper.initialize(
             TOKEN2_NAME,
