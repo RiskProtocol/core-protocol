@@ -8,6 +8,7 @@ import {
   TOKEN2_NAME,
   TOKEN2_SYMBOL,
   BASE_TOKEN_ADDRESS,
+  rateLimitsDefault,
 } from "../../helper-hardhat-config";
 import { deployUUPSviaCreate3 } from "../../scripts/utils/deployer";
 import { get } from "../../scripts/utils/getVanityAddressSalt";
@@ -84,6 +85,9 @@ developmentChains.includes(network.name)
               sanctionsContractAddress, //sanctions but just testing
               wallet.address,
               wallet.address,
+              rateLimitsDefault.withdraw,
+              rateLimitsDefault.deposit,
+              rateLimitsDefault.period,
             ],
             factoryAddress,
             false,

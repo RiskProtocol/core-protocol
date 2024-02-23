@@ -442,7 +442,6 @@ developmentChains.includes(network.name)
               encodedEarlyRebalance2.encodedData,
 
               encodedEarlyRebalance1.signature,
-              ,
             ]
           );
           await expect(Orchestrator.addOperation(0, tokenFactory.address, data))
@@ -482,7 +481,6 @@ developmentChains.includes(network.name)
               encodedEarlyRebalance1.encodedData,
 
               encodedEarlyRebalance1.signature,
-              ,
             ]
           );
           await expect(
@@ -556,7 +554,6 @@ developmentChains.includes(network.name)
               encodedEarlyRebalance2.encodedData,
 
               encodedEarlyRebalance2.signature,
-              ,
             ]
           );
           const destination2 = ethers.constants.AddressZero;
@@ -584,7 +581,6 @@ developmentChains.includes(network.name)
               encodedEarlyRebalance3.encodedData,
 
               encodedEarlyRebalance3.signature,
-              ,
             ]
           );
           const destination3 = tokenFactory.address;
@@ -617,7 +613,6 @@ developmentChains.includes(network.name)
               encodedEarlyRebalance1.encodedData,
 
               encodedEarlyRebalance1.signature,
-              ,
             ]
           );
           const destination = ethers.constants.AddressZero;
@@ -638,7 +633,6 @@ developmentChains.includes(network.name)
               encodedEarlyRebalance2.encodedData,
 
               encodedEarlyRebalance2.signature,
-              ,
             ]
           );
           const destination2 = ethers.constants.AddressZero;
@@ -659,7 +653,6 @@ developmentChains.includes(network.name)
               encodedEarlyRebalance3.encodedData,
 
               encodedEarlyRebalance3.signature,
-              ,
             ]
           );
           const destination3 = tokenFactory.address;
@@ -672,7 +665,6 @@ developmentChains.includes(network.name)
               encodedEarlyRebalance3.encodedData,
 
               encodedEarlyRebalance3.signature,
-              ,
             ]
           );
           const destinationNewOPs = ethers.constants.AddressZero;
@@ -715,7 +707,6 @@ developmentChains.includes(network.name)
               encodedEarlyRebalance1.encodedData,
 
               encodedEarlyRebalance1.signature,
-              ,
             ]
           );
           const destination = ethers.constants.AddressZero;
@@ -737,7 +728,6 @@ developmentChains.includes(network.name)
               encodedEarlyRebalance2.encodedData,
 
               encodedEarlyRebalance2.signature,
-              ,
             ]
           );
           const destination2 = ethers.constants.AddressZero;
@@ -759,7 +749,6 @@ developmentChains.includes(network.name)
               encodedEarlyRebalance3.encodedData,
 
               encodedEarlyRebalance3.signature,
-              ,
             ]
           );
           const destination3 = tokenFactory.address;
@@ -916,20 +905,8 @@ developmentChains.includes(network.name)
             2,
             ethers.Wallet.createRandom().address
           );
-          await Orchestrator.addBalancerPool(
-            0,
-            ethers.Wallet.createRandom().address
-          );
-          await Orchestrator.addBalancerPool(
-            1,
-            ethers.Wallet.createRandom().address
-          );
-          await Orchestrator.addBalancerPool(
-            2,
-            ethers.Wallet.createRandom().address
-          );
 
-          await Orchestrator.removeBalancerPool(1);
+          await Orchestrator.removeBalancerPool(2);
           await Orchestrator.removeBalancerPool(1);
           await Orchestrator.removeBalancerPool(0);
 
