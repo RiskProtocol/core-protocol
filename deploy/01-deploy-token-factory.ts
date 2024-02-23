@@ -17,7 +17,6 @@ const func: DeployFunction = async ({
   let baseTokenAddress: string;
 
   if (["local", "development"].includes(process.env.ENVIRONMENT!)) {
-  if (["local", "development"].includes(process.env.ENVIRONMENT!)) {
     const mockERC20TokenWithPermit = await deployments.get(
       "MockERC20TokenWithPermit"
     );
@@ -63,5 +62,6 @@ const func: DeployFunction = async ({
   log("TokenFactory Deployed!");
   log("----------------------------------");
 };
+
 export default func;
 func.tags = ["all"];
