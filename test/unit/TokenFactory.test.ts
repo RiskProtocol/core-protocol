@@ -13,6 +13,7 @@ import {
   MULTIPLIER,
   signRebalance,
   defaultRebalanceData,
+  rateLimitsDefault,
 } from "../../helper-hardhat-config";
 import { loadFixture, time } from "@nomicfoundation/hardhat-network-helpers";
 import { BigNumber, utils } from "ethers";
@@ -48,6 +49,9 @@ developmentChains.includes(network.name)
           sanctionsContract.address,
           deployer.address,
           deployer.address,
+          rateLimitsDefault.withdraw,
+          rateLimitsDefault.deposit,
+          rateLimitsDefault.period,
         ]);
         await tokenFactory.deployed();
 
@@ -111,6 +115,9 @@ developmentChains.includes(network.name)
           sanctionsContract.address,
           deployer.address,
           deployer.address,
+          rateLimitsDefault.withdraw,
+          rateLimitsDefault.deposit,
+          rateLimitsDefault.period,
         ]);
         await tokenFactory2.deployed();
 
@@ -134,6 +141,9 @@ developmentChains.includes(network.name)
           sanctionsContract.address,
           deployer.address,
           deployer.address,
+          rateLimitsDefault.withdraw,
+          rateLimitsDefault.deposit,
+          rateLimitsDefault.period,
         ]);
         await tokenFactory3.deployed();
 
@@ -1252,6 +1262,9 @@ developmentChains.includes(network.name)
             sanctionsContract.address,
             deployer.address,
             deployer.address,
+            rateLimitsDefault.withdraw,
+            rateLimitsDefault.deposit,
+            rateLimitsDefault.period,
           ]);
           await tokenFactory.deployed();
 

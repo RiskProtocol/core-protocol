@@ -100,6 +100,17 @@ contract TokenFactory is
     /// This ensures that rebalances are executed in the order they are scheduled.
     uint256 private nextSequenceNumber;
 
+    //ratelimits
+    uint256 private period; //period is in seconds
+    uint256 private withdrawLimit; //is in wei
+    uint256 private depositLimit; //is in wei
+    bool private hasWithdrawLimit;
+    bool private hasDepositLimit;
+    mapping(address => uint256) private currentWithdrawPeriodEnd;
+    mapping(address => uint256) private currentWithdrawPeriodAmount;
+    mapping(address => uint256) private currentDepositPeriodEnd;
+    mapping(address => uint256) private currentDepositPeriodAmount;
+
     // Events
     event RebalanceApplied(address userAddress, uint256 rebalanceCount);
     event Rebalance(uint256 rebalanceCount);
@@ -116,6 +127,9 @@ contract TokenFactory is
         uint256 assets,
         uint256 shares
     );
+
+    event WithdrawLimitToggled(bool enabled);
+    event DepositLimitToggled(bool enabled);
     /// @notice Ensures the caller is one of the SmartTokens(RiskOn/Off).
     /// @dev This modifier checks if the caller is either smartTokenArray[0] or smartTokenArray[1].
     ///      If not, it reverts with a custom error message.
@@ -159,7 +173,10 @@ contract TokenFactory is
         uint256 rebalanceInterval, // in seconds
         address sanctionsContract_,
         address signersAddress_,
-        address owner_
+        address owner_,
+        uint256 withdrawLimit_,
+        uint256 depositLimit_,
+        uint256 limitPeriod_
     ) public initializer {
         //initialize deriving contracts
 
@@ -187,6 +204,9 @@ contract TokenFactory is
                 FeeFactor: 1 * REBALANCE_INT_MULTIPLIER
             })
         );
+        withdrawLimit = withdrawLimit_;
+        depositLimit = depositLimit_;
+        period = limitPeriod_;
     }
 
     /// @notice Authorizes an upgrade to a new contract implementation.
@@ -1045,6 +1065,81 @@ contract TokenFactory is
         return signersAddress;
     }
 
+    /// ratelimits
+    function withdrawLimitMod(
+        uint256 amount
+    ) external onlySmartTokens returns (bool) {
+        if (!hasWithdrawLimit) return false;
+
+        updatePeriod(
+            _msgSender(),
+            currentWithdrawPeriodEnd,
+            currentWithdrawPeriodAmount
+        );
+
+        uint256 newWithdrawAmount = currentWithdrawPeriodAmount[_msgSender()] +
+            amount;
+        if (newWithdrawAmount > withdrawLimit) return true;
+
+        currentWithdrawPeriodAmount[_msgSender()] = newWithdrawAmount;
+        return false;
+    }
+
+    function depositLimitMod(
+        uint256 amount
+    ) external onlySmartTokens returns (bool) {
+        if (!hasDepositLimit) return false;
+
+        updatePeriod(
+            _msgSender(),
+            currentDepositPeriodEnd,
+            currentDepositPeriodAmount
+        );
+
+        uint256 newDepositAmount = currentDepositPeriodAmount[_msgSender()] +
+            amount;
+        if (newDepositAmount > depositLimit) return true;
+
+        currentDepositPeriodAmount[_msgSender()] = newDepositAmount;
+        return false;
+    }
+
+    function updatePeriod(
+        address user,
+        mapping(address => uint256) storage currentPeriodEnd,
+        mapping(address => uint256) storage currentPeriodAmount
+    ) internal {
+        if (currentPeriodEnd[user] < block.timestamp) {
+            currentPeriodEnd[user] = block.timestamp + period;
+            currentPeriodAmount[user] = 0;
+        }
+    }
+
+    function updateWithdrawLimit(uint newLimit) external onlyOwner {
+        require(newLimit > 0, "Deposit limit must be positive");
+        withdrawLimit = newLimit;
+    }
+
+    function updateDepositLimit(uint newLimit) external onlyOwner {
+        require(newLimit > 0, "Deposit limit must be positive");
+        depositLimit = newLimit;
+    }
+
+    function updateLimitPeriod(uint newPeriod) external onlyOwner {
+        require(newPeriod > 0, "Period must be positive");
+        period = newPeriod;
+    }
+
+    function toggleWithdrawLimit() external onlyOwner {
+        hasWithdrawLimit = !hasWithdrawLimit;
+        emit WithdrawLimitToggled(hasWithdrawLimit);
+    }
+
+    function toggleDepositLimit() external onlyOwner {
+        hasDepositLimit = !hasDepositLimit;
+        emit DepositLimitToggled(hasDepositLimit);
+    }
+
     /// @notice Retrieves the `scheduledRebalance` struct at the given sequence number.
     /// @dev This function is a getter for a single `scheduledRebalance` struct.
     /// @param sequenceNumber The sequence number of the `scheduledRebalances` mapping to retrieve.
@@ -1124,5 +1219,42 @@ contract TokenFactory is
             baseToken.balanceOf(address(this)) ||
             IERC20Update(address(smartTokenArray[1])).totalSupply() >
             baseToken.balanceOf(address(this)));
+    }
+
+    function withdrawLimitStatus() public view returns (bool) {
+        return hasWithdrawLimit;
+    }
+
+    function depositLimitStatus() public view returns (bool) {
+        return hasDepositLimit;
+    }
+
+    function getWithdrawLimit() public view returns (uint256) {
+        return withdrawLimit;
+    }
+
+    function getDepositLimit() public view returns (uint256) {
+        return depositLimit;
+    }
+
+    function getLimitPeriod() public view returns (uint256) {
+        return period;
+    }
+
+    function getUserLimitPerPeriod(
+        address user,
+        bool isWithdraw
+    ) public view returns (uint256 periodEnd, uint256 currentAmount) {
+        if (isWithdraw) {
+            return (
+                currentWithdrawPeriodEnd[user],
+                currentWithdrawPeriodAmount[user]
+            );
+        } else {
+            return (
+                currentDepositPeriodEnd[user],
+                currentDepositPeriodAmount[user]
+            );
+        }
     }
 }

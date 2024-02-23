@@ -27,7 +27,10 @@ contract _Test is Test, TestHelper {
             REBALANCE_INTERVAL,
             sanctionsContract,
             signersAddress,
-            owner
+            owner,
+            WITHDRAW,
+            DEPOSIT,
+            PERIOD
         );
 
         // deploy token X

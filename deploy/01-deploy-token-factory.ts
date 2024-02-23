@@ -2,6 +2,7 @@ import { DeployFunction } from "hardhat-deploy/types";
 import {
   BASE_TOKEN_ADDRESS,
   REBALANCE_INTERVAL,
+  rateLimitsDefault,
 } from "../helper-hardhat-config";
 const { ethers, upgrades } = require("hardhat");
 
@@ -15,6 +16,7 @@ const func: DeployFunction = async ({
 
   let baseTokenAddress: string;
 
+  if (["local", "development"].includes(process.env.ENVIRONMENT!)) {
   if (["local", "development"].includes(process.env.ENVIRONMENT!)) {
     const mockERC20TokenWithPermit = await deployments.get(
       "MockERC20TokenWithPermit"
@@ -43,6 +45,9 @@ const func: DeployFunction = async ({
       sanctionsContractAddress,
       deployer,
       deployer,
+      rateLimitsDefault.withdraw,
+      rateLimitsDefault.deposit,
+      rateLimitsDefault.period,
     ],
     { initializer: "initialize", kind: "uups" }
   );

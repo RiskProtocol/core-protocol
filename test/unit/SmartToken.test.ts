@@ -12,6 +12,7 @@ import {
   RebalanceElements,
   UserRebalanceElements,
   callculateRolloverAmount,
+  rateLimitsDefault,
 } from "../../helper-hardhat-config";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 
@@ -45,6 +46,9 @@ developmentChains.includes(network.name)
           sanctionsContract.address,
           deployer.address,
           deployer.address,
+          rateLimitsDefault.withdraw,
+          rateLimitsDefault.deposit,
+          rateLimitsDefault.period,
         ]);
         await tokenFactory.deployed();
 

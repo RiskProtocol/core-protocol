@@ -9,6 +9,7 @@ import {
   TOKEN2_SYMBOL,
   signRebalance,
   defaultRebalanceData,
+  rateLimitsDefault,
 } from "../../helper-hardhat-config";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 
@@ -43,6 +44,9 @@ developmentChains.includes(network.name)
           sanctionsContract.address,
           deployer.address,
           deployer.address,
+          rateLimitsDefault.withdraw,
+          rateLimitsDefault.deposit,
+          rateLimitsDefault.period,
         ]);
         await tokenFactory.deployed();
 
@@ -353,6 +357,7 @@ developmentChains.includes(network.name)
 
           const encodedEarlyRebalance2 = await signRebalance(
             tokenFactory.signer,
+
             {
               ...defaultRebalanceData,
               sequenceNumber: 2,
@@ -414,6 +419,7 @@ developmentChains.includes(network.name)
 
           const encodedEarlyRebalance2 = await signRebalance(
             tokenFactory.signer,
+
             {
               ...defaultRebalanceData,
               sequenceNumber: 2,
@@ -423,6 +429,7 @@ developmentChains.includes(network.name)
 
           const encodedEarlyRebalance1 = await signRebalance(
             tokenFactory.signer,
+
             {
               ...defaultRebalanceData,
               isNaturalRebalance: false,
@@ -433,7 +440,9 @@ developmentChains.includes(network.name)
             "executeRebalance",
             [
               encodedEarlyRebalance2.encodedData,
+
               encodedEarlyRebalance1.signature,
+              ,
             ]
           );
           await expect(Orchestrator.addOperation(0, tokenFactory.address, data))
@@ -460,6 +469,7 @@ developmentChains.includes(network.name)
 
           const encodedEarlyRebalance1 = await signRebalance(
             tokenFactory.signer,
+
             {
               ...defaultRebalanceData,
               isNaturalRebalance: false,
@@ -470,7 +480,9 @@ developmentChains.includes(network.name)
             "executeRebalance",
             [
               encodedEarlyRebalance1.encodedData,
+
               encodedEarlyRebalance1.signature,
+              ,
             ]
           );
           await expect(
@@ -505,6 +517,7 @@ developmentChains.includes(network.name)
 
           const encodedEarlyRebalance1 = await signRebalance(
             tokenFactory.signer,
+
             {
               ...defaultRebalanceData,
               isNaturalRebalance: false,
@@ -529,6 +542,7 @@ developmentChains.includes(network.name)
 
           const encodedEarlyRebalance2 = await signRebalance(
             tokenFactory.signer,
+
             {
               ...defaultRebalanceData,
               sequenceNumber: 2,
@@ -540,7 +554,9 @@ developmentChains.includes(network.name)
             "executeRebalance",
             [
               encodedEarlyRebalance2.encodedData,
+
               encodedEarlyRebalance2.signature,
+              ,
             ]
           );
           const destination2 = ethers.constants.AddressZero;
@@ -554,6 +570,7 @@ developmentChains.includes(network.name)
 
           const encodedEarlyRebalance3 = await signRebalance(
             tokenFactory.signer,
+
             {
               ...defaultRebalanceData,
               sequenceNumber: 2,
@@ -565,7 +582,9 @@ developmentChains.includes(network.name)
             "executeRebalance",
             [
               encodedEarlyRebalance3.encodedData,
+
               encodedEarlyRebalance3.signature,
+              ,
             ]
           );
           const destination3 = tokenFactory.address;
@@ -585,6 +604,7 @@ developmentChains.includes(network.name)
 
           const encodedEarlyRebalance1 = await signRebalance(
             tokenFactory.signer,
+
             {
               ...defaultRebalanceData,
               isNaturalRebalance: false,
@@ -595,7 +615,9 @@ developmentChains.includes(network.name)
             "executeRebalance",
             [
               encodedEarlyRebalance1.encodedData,
+
               encodedEarlyRebalance1.signature,
+              ,
             ]
           );
           const destination = ethers.constants.AddressZero;
@@ -614,7 +636,9 @@ developmentChains.includes(network.name)
             "executeRebalance",
             [
               encodedEarlyRebalance2.encodedData,
+
               encodedEarlyRebalance2.signature,
+              ,
             ]
           );
           const destination2 = ethers.constants.AddressZero;
@@ -633,7 +657,9 @@ developmentChains.includes(network.name)
             "executeRebalance",
             [
               encodedEarlyRebalance3.encodedData,
+
               encodedEarlyRebalance3.signature,
+              ,
             ]
           );
           const destination3 = tokenFactory.address;
@@ -644,7 +670,9 @@ developmentChains.includes(network.name)
             "executeRebalance",
             [
               encodedEarlyRebalance3.encodedData,
+
               encodedEarlyRebalance3.signature,
+              ,
             ]
           );
           const destinationNewOPs = ethers.constants.AddressZero;
@@ -674,6 +702,7 @@ developmentChains.includes(network.name)
 
           const encodedEarlyRebalance1 = await signRebalance(
             tokenFactory.signer,
+
             {
               ...defaultRebalanceData,
               isNaturalRebalance: false,
@@ -684,7 +713,9 @@ developmentChains.includes(network.name)
             "executeRebalance",
             [
               encodedEarlyRebalance1.encodedData,
+
               encodedEarlyRebalance1.signature,
+              ,
             ]
           );
           const destination = ethers.constants.AddressZero;
@@ -692,6 +723,7 @@ developmentChains.includes(network.name)
 
           const encodedEarlyRebalance2 = await signRebalance(
             tokenFactory.signer,
+
             {
               ...defaultRebalanceData,
               sequenceNumber: 2,
@@ -703,7 +735,9 @@ developmentChains.includes(network.name)
             "executeRebalance",
             [
               encodedEarlyRebalance2.encodedData,
+
               encodedEarlyRebalance2.signature,
+              ,
             ]
           );
           const destination2 = ethers.constants.AddressZero;
@@ -711,6 +745,7 @@ developmentChains.includes(network.name)
 
           const encodedEarlyRebalance3 = await signRebalance(
             tokenFactory.signer,
+
             {
               ...defaultRebalanceData,
               sequenceNumber: 2,
@@ -722,7 +757,9 @@ developmentChains.includes(network.name)
             "executeRebalance",
             [
               encodedEarlyRebalance3.encodedData,
+
               encodedEarlyRebalance3.signature,
+              ,
             ]
           );
           const destination3 = tokenFactory.address;
@@ -772,6 +809,7 @@ developmentChains.includes(network.name)
           for (let i = 1; i < 10; i++) {
             const encodedEarlyRebalance = await signRebalance(
               tokenFactory.signer,
+
               {
                 ...defaultRebalanceData,
                 sequenceNumber: i + 1,
@@ -852,6 +890,7 @@ developmentChains.includes(network.name)
           balancerPools = await Orchestrator.getBalancerPools();
 
           expect(balancerPools[1]).to.equal(ethers.constants.AddressZero);
+          expect(balancerPools[1]).to.equal(ethers.constants.AddressZero);
 
           const thirdAdd = ethers.Wallet.createRandom(["15661"]);
           await Orchestrator.addBalancerPool(0, thirdAdd.address);
@@ -859,11 +898,24 @@ developmentChains.includes(network.name)
           balancerPools = await Orchestrator.getBalancerPools();
 
           expect(balancerPools[0]).to.equal(thirdAdd.address);
+          expect(balancerPools[0]).to.equal(thirdAdd.address);
           expect(balancerPools[1]).to.equal(poolAddress);
         });
         it("should remove a Balancer pool", async function () {
           const { Orchestrator } = await loadFixture(deployTokenFixture);
 
+          await Orchestrator.addBalancerPool(
+            0,
+            ethers.Wallet.createRandom().address
+          );
+          await Orchestrator.addBalancerPool(
+            1,
+            ethers.Wallet.createRandom().address
+          );
+          await Orchestrator.addBalancerPool(
+            2,
+            ethers.Wallet.createRandom().address
+          );
           await Orchestrator.addBalancerPool(
             0,
             ethers.Wallet.createRandom().address
@@ -903,6 +955,7 @@ developmentChains.includes(network.name)
           //rebalance and resync
           const encodedEarlyRebalance1 = await signRebalance(
             tokenFactory.signer,
+
             {
               ...defaultRebalanceData,
               sequenceNumber: 1,
@@ -941,6 +994,7 @@ developmentChains.includes(network.name)
           //rebalance and resync
           const encodedEarlyRebalance1 = await signRebalance(
             tokenFactory.signer,
+
             {
               ...defaultRebalanceData,
               sequenceNumber: 1,
