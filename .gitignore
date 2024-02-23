@@ -13,3 +13,4 @@ out
 deployments/
 
 remix-compiler.config.js
+scripts/deploymentScript_test.ts

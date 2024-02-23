@@ -29,7 +29,8 @@ async function main() {
       wallet.address,
     ],
     vanityConfig.factoryAddress,
-    false
+    false,
+    "contracts/vaults/TokenFactory.sol:TokenFactory"
   );
   console.log(`Token Factory deployed at ProxyAddress:${TokenFactoryComplete}`);
   //deploying SmartX
@@ -45,7 +46,8 @@ async function main() {
       wallet.address,
     ],
     vanityConfig.factoryAddress,
-    false
+    false,
+    "contracts/vaults/SmartToken.sol:SmartToken"
   );
   console.log(`Smart X deployed at ProxyAddress:${SmartXComplete}`);
 
@@ -62,7 +64,8 @@ async function main() {
       wallet.address,
     ],
     vanityConfig.factoryAddress,
-    false
+    false,
+    "contracts/vaults/SmartToken.sol:SmartToken"
   );
   console.log(`Smart Y deployed at ProxyAddress:${SmartYComplete}`);
 
@@ -82,7 +85,8 @@ async function main() {
     pxSalt.Orchestator.saltStr, //salt
     [TokenFactoryComplete, wallet.address],
     vanityConfig.factoryAddress,
-    false
+    false,
+    "contracts/orchestrator/Orchestrator.sol:Orchestrator"
   );
 
   await tokenFactoryInstance.initializeOrchestrator(Orchestator);

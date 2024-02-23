@@ -13,7 +13,7 @@ export async function get(
     let saltEncoded = ethers.utils.formatBytes32String(`${salt}`);
 
     const instanceOfFactory = await ethers.getContractAt(
-      "SKYBITCREATE3Factory",
+      "TRPCREATE3Factory",
       factoryaddress
     );
 

@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.17;
 
-import {CREATE3} from "@Vectorized/solady/src/utils/CREATE3.sol";
+import {CREATE3} from "@trp/solady/src/utils/CREATE3.sol";
 
 /// @title Factory for deploying contracts to deterministic addresses via CREATE3
-/// @author zefram.eth, SKYBIT, haidarally
+/// @author zefram.eth, trp, haidarally
 /// @notice Enables deploying contracts using CREATE3. Each deployer (msg.sender) has
 /// its own namespace for deployed addresses.
 // @note :copied from https://github.com/SKYBITDev3/SKYBIT-Keyless-Deployment
-contract SKYBITCREATE3Factory {
+contract TRPCREATE3Factory {
     function deploy(
         bytes32 salt,
         bytes memory creationCode

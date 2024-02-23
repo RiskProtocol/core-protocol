@@ -2,15 +2,25 @@ import { ethers } from "ethers-v6";
 
 export const verifyContract = async (
   address: any,
-  constructorArguments: any
+  constructorArguments: any,
+  contract: any = null
 ) => {
   console.log(`Verifying contract...`);
   try {
-    //@ts-ignore
-    await run(`verify:verify`, {
-      address,
-      constructorArguments,
-    });
+    if (contract !== null) {
+      //@ts-ignore
+      await run(`verify:verify`, {
+        address,
+        constructorArguments,
+        contract: `${contract}`,
+      });
+    } else {
+      //@ts-ignore
+      await run(`verify:verify`, {
+        address,
+        constructorArguments,
+      });
+    }
 
     console.log(`Contract verified!`);
   } catch (err) {
@@ -43,7 +53,7 @@ export const CREATE3Deploy2 = async (
   ).data;
 
   const instanceOfFactory = await ethers.getContractAt(
-    "SKYBITCREATE3Factory",
+    "TRPCREATE3Factory",
     addressOfFactory
   );
 
@@ -68,8 +78,8 @@ export const CREATE3Deploy2 = async (
   // Call DEPLOY
   console.log(`now calling deploy() in the CREATE3 factory...`);
   const txResponse = await deploy2(instanceOfFactory, bytecodeWithArgs, salt);
-
-  console.log(JSON.stringify(await txResponse.wait()));
+  let tx = await txResponse.wait();
+  console.log("transaction hash ::" + JSON.stringify(tx.transactionHash));
 
   const instanceOfDeployedContract = contractFactory.attach(addressExpected);
   console.log(

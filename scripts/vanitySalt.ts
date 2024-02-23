@@ -3,7 +3,7 @@ import { get } from "./utils/getVanityAddressSalt";
 import { ethers } from "hardhat";
 import fs from "fs";
 
-async function run(prefix: string) {
+async function run() {
   //getting vanity address for tokenFactory, using privatekey in hardhat
   //config
   //run using hardhat
@@ -63,4 +63,4 @@ async function run(prefix: string) {
     console.log(`JSON file has been saved as ${filename}`);
   });
 }
-run("d3");
+run();
