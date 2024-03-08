@@ -365,7 +365,6 @@ contract TokenFactory is
             uint256 fees = calculateManagementFee(shares, 0);
             shares -= fees;
             // Mint the fees to the Vault(TokenFcatory/This) --
-            //@note This is deprecated and will be replaced in upcoming commits
             factoryMint(0, address(this), fees);
             factoryMint(1, address(this), fees);
             emit Deposit(caller, address(this), fees, fees);
@@ -714,7 +713,6 @@ contract TokenFactory is
     /// @dev This function processes up to 5 scheduled rebalances per call.
     /// Different factors that will help calculating user balances are calculated here
     /// using the rebalance params.
-    //@note This is deprecated and will be replaced in upcoming commits
     function rebalance() private {
         uint256 i = 0;
         while (i < 5) {
@@ -893,7 +891,6 @@ contract TokenFactory is
     /// @notice Applies rebalance to an account
     /// @dev This function adjusts the balance of smart tokens(RiskON/RiskOFF) according to the rollOverValue.
     /// This function can only be called when rebalance is stopped. It also calculates and applies management fees.
-    //@note This is deprecated and will be replaced in upcoming commits
     /// @param owner_ The address of the account to which the rebalance will be applied.
     function applyRebalance(address owner_) public stopRebalance {
         //normal rebalance operations
@@ -907,7 +904,6 @@ contract TokenFactory is
     /// @notice Calculates the rollover value(Units of RiskON/OFF) for an account
     /// @dev This function calculates the net balance(Units of RiskON/OFF) of a user after rebalance and
     /// management fees are applied.
-    //@note This is deprecated and will be replaced in upcoming commits
     /// @param owner_ The address of the owner
     /// @return The calculated roll over value.
     function calculateRollOverValue(
@@ -1029,9 +1025,8 @@ contract TokenFactory is
     /// @dev It updates the `managementFeesRate` state variable with the provided `rate` value,
     /// if the rate is within a valid range, otherwise, it reverts the transaction.
     /// The rate is in terms of percentage per day
-    ///    scaling factor is 100000
-    ///    Example 5% per day = 5000
-    //@note This is deprecated and will be replaced in upcoming commits
+    ///    scaling factor is 10E18
+    ///    Example 5% per day = 0.05*10E18
     /// @param rate The new rate of management fees.
     /// @return A boolean value
     function setManagementFeeRate(
@@ -1080,8 +1075,8 @@ contract TokenFactory is
     ) public view returns (uint256) {
         uint256 internalManagementFeesRate;
         //note:: we check if we are default or not
-
-        mgmtFee>0 ? internalManagementFeesRate = mgmtFee : internalManagementFeesRate =managementFeesRate;
+        mgmtFee>0 ? internalManagementFeesRate = mgmtFee : 
+            internalManagementFeesRate =managementFeesRate;
         //estimate the nextRebalance Timestamp
         //estimate the next FF timestamp
         uint256 nextRebalanceTimeStamp = FFLastTimeStamp+FFinterval;
@@ -1090,7 +1085,7 @@ contract TokenFactory is
         //The management fee rate is in terms of points per day, please checkout 'setManagementFee' Method
         // for more info
         uint256 mgmtFeesPerInterval = internalManagementFeesRate
-            .mul(FFinterval)// .mul(interval)
+            .mul(FFinterval)
             .div(1 days);// if the interval is one day, then this is useless
 
         //User deposit or Withdrawal timestamp

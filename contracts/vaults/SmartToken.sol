@@ -574,7 +574,6 @@ contract SmartToken is
         returns (uint256)
     {
         // checks for any pending rebalances for the receiver and applies them if necessary
-        //@note This is deprecated and will be replaced in upcoming commits
         if (
             tokenFactory.getUserLastRebalanceCount(receiver) !=
             tokenFactory.getRebalanceNumber()
@@ -640,7 +639,6 @@ contract SmartToken is
         returns (uint256)
     {
         // checks for any pending rebalances for the receiver and applies them if necessary
-        //@note This is deprecated and will be replaced in upcoming commits
         if (
             tokenFactory.getUserLastRebalanceCount(receiver) !=
             tokenFactory.getRebalanceNumber()
