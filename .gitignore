@@ -13,3 +13,5 @@ out
 deployments/
 
 remix-compiler.config.js
+artifacts/contracts/vaults/SmartToken.sol/SmartToken.dbg.json
+artifacts/contracts/vaults/SmartToken.sol/SmartToken.json
