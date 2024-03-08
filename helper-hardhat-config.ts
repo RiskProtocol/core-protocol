@@ -12,7 +12,8 @@ export const TOKEN1_NAME = "RistP One";
 export const TOKEN1_SYMBOL = "R1";
 export const TOKEN2_NAME = "RistP Two";
 export const TOKEN2_SYMBOL = "R2";
-export const REBALANCE_INTERVAL = 1800; // 30 minutes
+export const REBALANCE_INTERVAL = 7776000; // 90 days
+export const FF_INTERVAL = 86400;
 export const defaultOperators: string[] = [];
 export const rateLimitsDefault = {
   deposit: ethers.constants.MaxUint256,
@@ -51,17 +52,25 @@ export const signRebalance = async (
 
 export const feeCalculator = (assetBal1: bigint, mgmtFee: bigint) => {
   const depositCycle = REBALANCE_INTERVAL;
-  const oneDay: bigint = BigInt(86400);
-  const mgmtFeePerInterval: bigint =
-    (BigInt(mgmtFee) * BigInt(REBALANCE_INTERVAL)) / oneDay;
   const scallingFactorMgmtFee = MULTIPLIER;
   return (
-    (BigInt(depositCycle) * BigInt(mgmtFeePerInterval) * BigInt(assetBal1)) /
+    (BigInt(depositCycle) * BigInt(mgmtFee) * BigInt(assetBal1)) /
     BigInt(REBALANCE_INTERVAL) /
     BigInt(scallingFactorMgmtFee)
   );
 };
 
+export const feeCalculator2 = (assetBal1: bigint, mgmtFee: bigint) => {
+  return (BigInt(mgmtFee) * BigInt(assetBal1)) / BigInt(MULTIPLIER);
+};
+
+export const feeScalar = (mgmtFee: number, daysInRebalanceInterval: number) => {
+  const dailyFee = 1 - (1 - mgmtFee) ** (1 / daysInRebalanceInterval);
+  return {
+    dailyFee: Math.round(dailyFee * MULTIPLIER).toString(),
+    RebaseFee: Math.round(mgmtFee * MULTIPLIER).toString(),
+  };
+};
 export type RebalanceElements = {
   BalanceFactorXY: BigInt;
   BalanceFactorUx: BigInt;

@@ -99,6 +99,11 @@ contract SmartToken is
         _;
     }
 
+    modifier dailyFFUpdate() {
+        tokenFactory.dailyFeeFactorsUpdate(0);
+        _;
+    }
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
@@ -175,8 +180,10 @@ contract SmartToken is
         insufficientUnderlying
         onlyNotSanctioned(recipient)
         onlyNotSanctioned(_msgSender())
+        dailyFFUpdate
         returns (bool)
-    {
+    {   
+        handlePendingFF(_msgSender(), recipient);
         handlePendingRebalance(_msgSender(), recipient);
 
         uint256[4] memory bals = tokenFactory.getUserRecords(
@@ -234,7 +241,7 @@ contract SmartToken is
         override(ERC20Upgradeable, IERC20Upgradeable)
         returns (uint256)
     {
-        if (hasPendingRebalance(account)) {
+        if (hasPendingRebalance(account)||hasPendingFF(account)) {
             (uint256 asset1Units, uint256 asset2Units) = tokenFactory
                 .calculateRollOverValue(account);
 
@@ -293,10 +300,12 @@ contract SmartToken is
         override(ERC20Upgradeable, IERC20Upgradeable)
         stopTransfer
         insufficientUnderlying
+        dailyFFUpdate
         onlyNotSanctioned(recipient)
         onlyNotSanctioned(sender)
         returns (bool)
-    {
+    {   
+        handlePendingFF(sender, recipient);
         handlePendingRebalance(sender, recipient);
         uint256[4] memory bals = tokenFactory.getUserRecords(sender, recipient);
         bool result = super.transferFrom(sender, recipient, amount);
@@ -407,6 +416,7 @@ contract SmartToken is
         override
         stopDeposit
         insufficientUnderlying
+        dailyFFUpdate
         depositLimitHit(assets)
         validateDepositAmount(assets, receiver)
         returns (uint256)
@@ -443,6 +453,7 @@ contract SmartToken is
         public
         stopDeposit
         insufficientUnderlying
+        dailyFFUpdate
         depositLimitHit(assets)
         validateDepositAmount(assets, receiver)
         returns (uint256)
@@ -503,6 +514,7 @@ contract SmartToken is
         override
         stopDeposit
         insufficientUnderlying
+        dailyFFUpdate
         depositLimitHit(shares)
         returns (uint256)
     {
@@ -555,6 +567,7 @@ contract SmartToken is
         override
         stopWithdraw
         insufficientUnderlying
+        dailyFFUpdate
         withdrawLimitHit(assets)
         onlyAssetOwner(owner_)
         nonReentrant
@@ -620,6 +633,7 @@ contract SmartToken is
         override
         stopWithdraw
         insufficientUnderlying
+        dailyFFUpdate
         withdrawLimitHit(shares)
         onlyAssetOwner(owner_)
         nonReentrant
@@ -673,5 +687,25 @@ contract SmartToken is
         if (assets == 0) revert SmartToken__ZeroDeposit();
         if (assets > maxDeposit(receiver))
             revert SmartToken__DepositMoreThanMax();
+    }
+
+    function hasPendingFF(address account) public view returns (bool) {
+        return
+            //'getUserLastFFCount' returns the amount of FF applied to account
+            tokenFactory.getUserLastFFCount(account) !=
+            tokenFactory.getDailyFeeFactorNumber();
+    }  
+    function handlePendingFF(address sender, address receiver) public {
+        if (hasPendingFF(sender)) {
+            //The 'applyFF' method on the Vault(TokenFactory) is called
+            tokenFactory.applyFF(sender);
+        }
+        //if the receiver is a new user to the system, we update his FF count
+        //before proceeding
+        tokenFactory.updateUserLastFFCount(receiver);
+        if (hasPendingFF(receiver)) {
+            //The 'applyFF' method on the Vault(TokenFactory) is called
+            tokenFactory.applyFF(receiver);
+        }
     }
 }

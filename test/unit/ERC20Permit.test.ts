@@ -2,6 +2,7 @@ import { assert, expect } from "chai";
 import { ethers, network, upgrades } from "hardhat";
 import {
   developmentChains,
+  FF_INTERVAL,
   rateLimitsDefault,
   REBALANCE_INTERVAL,
   TOKEN1_NAME,
@@ -42,6 +43,7 @@ developmentChains.includes(network.name)
         const tokenFactory = await upgrades.deployProxy(TokenFactory, [
           underlyingToken.address,
           REBALANCE_INTERVAL,
+          FF_INTERVAL,
           sanctionsContract.address,
           deployer.address,
           rateLimitsDefault.withdraw,
@@ -67,6 +69,7 @@ developmentChains.includes(network.name)
         const tokenFactory1 = await upgrades.deployProxy(TokenFactory1Factory, [
           underlyingTokenWithoutPermit.address,
           REBALANCE_INTERVAL,
+          FF_INTERVAL,
           sanctionsContract.address,
           deployer.address,
           rateLimitsDefault.withdraw,
