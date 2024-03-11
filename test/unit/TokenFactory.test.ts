@@ -1142,9 +1142,10 @@ developmentChains.includes(network.name)
             feeDetails.dailyFee,
             feeDetails.RebaseFee
           );
-          expect(await tokenFactory.getManagementFeeRate()).to.equal(
-            feeDetails.dailyFee
-          );
+          const [dailyFee, rebaseFee] =
+            await tokenFactory.getManagementFeeRate();
+          expect(dailyFee).to.equal(feeDetails.dailyFee);
+          expect(rebaseFee).to.equal(feeDetails.RebaseFee);
         });
 
         it(`Should allow not allow other users to set the management fee rate`, async () => {
@@ -1173,9 +1174,10 @@ developmentChains.includes(network.name)
             feeDetails.RebaseFee
           );
 
-          expect(await tokenFactory.getManagementFeeRate()).to.equal(
-            utils.parseEther("1")
-          );
+          const [dailyFee, rebaseFee] =
+            await tokenFactory.getManagementFeeRate();
+          expect(dailyFee).to.equal(feeDetails.dailyFee);
+          expect(rebaseFee).to.equal(feeDetails.RebaseFee);
         });
 
         it(`Should allow management fee rate to be 0(0%)`, async () => {
@@ -1188,7 +1190,10 @@ developmentChains.includes(network.name)
           await tokenFactory
             .connect(deployer)
             .setManagementFeeRate(feeDetails.dailyFee, feeDetails.RebaseFee);
-          expect(await tokenFactory.getManagementFeeRate()).to.equal(0);
+          const [dailyFee, rebaseFee] =
+            await tokenFactory.getManagementFeeRate();
+          expect(dailyFee).to.equal(feeDetails.dailyFee);
+          expect(rebaseFee).to.equal(feeDetails.RebaseFee);
         });
 
         it(`Should allow not allow management fee rate to be more than 1e18(100%)`, async () => {
