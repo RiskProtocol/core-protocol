@@ -824,8 +824,9 @@ contract TokenFactory is
                     REBALANCE_INT_MULTIPLIER -
                         (
                             managementFeeEnabled
-                                ? managementFeesRate.mul(FFinterval).div(1 days)
-                                : //assuming 1 interval is one day, then we can use 1 days/1days = 1
+                                ? managementFeesRate.mul(FFinterval).div(1 days) //assuming 1 interval is one day,
+                                //otherwise useful when doing hourly
+                                : //then we can use 1 days/1days = 1
                                 0
                         )
                 )
@@ -835,7 +836,7 @@ contract TokenFactory is
 
     function dailyFeeFactorsUpdate(uint256 rebalanceFF) public {
         if (block.timestamp >= FFLastTimeStamp + FFinterval) {
-            FFLastTimeStamp = block.timestamp;
+            FFLastTimeStamp += FFinterval;
             rebalanceFF > 0
                 ? dailyFeeFactors.push(rebalanceFF)
                 : updateFeeFactor();
@@ -1021,11 +1022,12 @@ contract TokenFactory is
     /// The rate is in terms of percentage per day
     ///    scaling factor is 10E18
     ///    Example 5% per day = 0.05*10E18
-    /// @param rate The new rate of management fees.
+    /// @param rate The new rate of management fees. It is DAILY RATE
+    /// @param rateRebalance The new rate of management fees for rebalance.(REBALANCE RATE)
     /// @return A boolean value
     function setManagementFeeRate(
-        uint256 rate,
-        uint256 rateRebalance
+        uint256 rate, //Daily Rate
+        uint256 rateRebalance //Rebalance Rate(example Quaterly rate)
     ) external onlyOwner returns (bool) {
         if (!(rate <= REBALANCE_INT_MULTIPLIER)) {
             revert TokenFactory__InvalidManagementFees();
@@ -1081,7 +1083,7 @@ contract TokenFactory is
         // for more info
         uint256 mgmtFeesPerInterval = internalManagementFeesRate
             .mul(FFinterval)
-            .div(1 days); // if the interval is one day, then this is useless
+            .div(1 days); // if the interval is one hour,then this is useful
 
         //User deposit or Withdrawal timestamp
         uint256 userTransacTimeStamp = block.timestamp;

@@ -60,7 +60,15 @@ export const feeCalculator = (assetBal1: bigint, mgmtFee: bigint) => {
   );
 };
 
-export const feeCalculator2 = (assetBal1: bigint, mgmtFee: bigint) => {
+export const feeCalculator2 = (
+  assetBal1: bigint,
+  mgmtFee: bigint,
+  hourly = false
+) => {
+  if (hourly)
+    return (
+      (BigInt(mgmtFee / BigInt(24)) * BigInt(assetBal1)) / BigInt(MULTIPLIER)
+    );
   return (BigInt(mgmtFee) * BigInt(assetBal1)) / BigInt(MULTIPLIER);
 };
 

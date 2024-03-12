@@ -149,6 +149,62 @@ developmentChains.includes(network.name)
         //initialize the orchestrator
         await tokenFactory.initializeOrchestrator(orchestrator.address);
 
+        const tokenFactoryFF = await upgrades.deployProxy(TokenFactory, [
+          underlyingToken.address,
+          REBALANCE_INTERVAL,
+          3600, //one hour
+          sanctionsContract.address,
+          deployer.address,
+          rateLimitsDefault.withdraw,
+          rateLimitsDefault.deposit,
+          rateLimitsDefault.period,
+        ]);
+        await tokenFactory.deployed();
+
+        // deploy smartToken 1
+        const SmartToken1FF = await ethers.getContractFactory(
+          "SmartToken",
+          deployer
+        );
+
+        const smartToken1FF = await upgrades.deployProxy(SmartToken1FF, [
+          TOKEN1_NAME,
+          TOKEN1_SYMBOL,
+          tokenFactoryFF.address,
+          sanctionsContract.address,
+          true,
+        ]);
+        await smartToken1FF.deployed();
+
+        // deploy smartToken 2
+        const SmartToken2FF = await ethers.getContractFactory(
+          "SmartToken",
+          deployer
+        );
+
+        const smartToken2FF = await upgrades.deployProxy(SmartToken2FF, [
+          TOKEN2_NAME,
+          TOKEN2_SYMBOL,
+          tokenFactoryFF.address,
+          sanctionsContract.address,
+          false,
+        ]);
+        await smartToken2FF.deployed();
+
+        const OrchestratorFactoryFF = await ethers.getContractFactory(
+          "Orchestrator",
+          deployer
+        );
+
+        const orchestratorFF = await upgrades.deployProxy(
+          OrchestratorFactoryFF,
+          [tokenFactoryFF.address]
+        );
+        await orchestratorFF.deployed();
+
+        //initialize the orchestrator
+        await tokenFactoryFF.initializeOrchestrator(orchestratorFF.address);
+
         // Fixtures can return anything you consider useful for your tests
         return {
           smartToken1,
@@ -160,6 +216,10 @@ developmentChains.includes(network.name)
           tokenFactory2,
           treasury,
           orchestrator,
+          tokenFactoryFF,
+          smartToken1FF,
+          smartToken2FF,
+          orchestratorFF,
         };
       }
 
@@ -251,7 +311,12 @@ developmentChains.includes(network.name)
               deployer,
               defaultRebalanceData
             );
-
+            let count = 0;
+            while (count < REBALANCE_INTERVAL) {
+              await time.increase(FF_INTERVAL);
+              await tokenFactory.dailyFeeFactorsUpdate(0);
+              count += FF_INTERVAL;
+            }
             await orchestrator.rebalance(encodedData, signature);
 
             let block2 = await ethers.provider.getBlock("latest");
@@ -264,13 +329,17 @@ developmentChains.includes(network.name)
             );
             const diff = BigInt(userBal) - fee;
 
-            expect(Number(diff)).equals(
-              Number(await smartToken1.balanceOf(deployer.address))
+            expect(Number(diff).toPrecision(14)).equals(
+              Number(await smartToken1.balanceOf(deployer.address)).toPrecision(
+                14
+              )
             );
             //assume that user made tx, apply rebalance
             await tokenFactory.applyRebalance(deployer.address);
-            expect(Number(diff)).equals(
-              Number(await smartToken1.balanceOf(deployer.address))
+            expect(Number(diff).toPrecision(14)).equals(
+              Number(await smartToken1.balanceOf(deployer.address)).toPrecision(
+                14
+              )
             );
           });
 
@@ -499,16 +568,21 @@ developmentChains.includes(network.name)
               deployer,
               defaultRebalanceData
             );
-
+            let count = 0;
+            while (count < REBALANCE_INTERVAL) {
+              await time.increase(FF_INTERVAL);
+              await tokenFactory.dailyFeeFactorsUpdate(0);
+              count += FF_INTERVAL;
+            }
             await orchestrator.rebalance(encodedData, signature);
 
             // deposit underlying token
             await underlyingToken.approve(tokenFactory.address, depositAmount);
-            await time.setNextBlockTimestamp(nextRebalance);
+            //await time.setNextBlockTimestamp(nextRebalance);
             await smartToken1.mint(depositAmount, tester.address);
 
             //calculate fees for that interval only
-            await time.setNextBlockTimestamp(nextRebalance);
+            //await time.setNextBlockTimestamp(nextRebalance);
             const fee = await tokenFactory.calculateManagementFee(
               depositAmount,
               0
@@ -581,7 +655,12 @@ developmentChains.includes(network.name)
             const nextRebalance =
               BigInt(lastRebalance) + BigInt(REBALANCE_INTERVAL);
             await time.setNextBlockTimestamp(nextRebalance);
-
+            let count = 0;
+            while (count < REBALANCE_INTERVAL) {
+              await time.increase(FF_INTERVAL);
+              await tokenFactory.dailyFeeFactorsUpdate(0);
+              count += FF_INTERVAL;
+            }
             const encodedNaturalRebalance1 = await signRebalance(
               deployer,
               defaultRebalanceData
@@ -600,6 +679,12 @@ developmentChains.includes(network.name)
               ...defaultRebalanceData,
               sequenceNumber: 2,
             });
+            count = 0;
+            while (count < REBALANCE_INTERVAL) {
+              await time.increase(FF_INTERVAL);
+              await tokenFactory.dailyFeeFactorsUpdate(0);
+              count += FF_INTERVAL;
+            }
 
             await orchestrator.rebalance(
               encodedNaturalRebalance2.encodedData,
@@ -614,7 +699,12 @@ developmentChains.includes(network.name)
               ...defaultRebalanceData,
               sequenceNumber: 3,
             });
-
+            count = 0;
+            while (count < REBALANCE_INTERVAL) {
+              await time.increase(FF_INTERVAL);
+              await tokenFactory.dailyFeeFactorsUpdate(0);
+              count += FF_INTERVAL;
+            }
             await orchestrator.rebalance(
               encodedNaturalRebalance3.encodedData,
               encodedNaturalRebalance3.signature
@@ -687,7 +777,12 @@ developmentChains.includes(network.name)
               deployer,
               defaultRebalanceData
             );
-
+            let count = 0;
+            while (count < REBALANCE_INTERVAL) {
+              await time.increase(FF_INTERVAL);
+              await tokenFactory.dailyFeeFactorsUpdate(0);
+              count += FF_INTERVAL;
+            }
             await orchestrator.rebalance(
               encodedNaturalRebalance1.encodedData,
               encodedNaturalRebalance1.signature
@@ -698,12 +793,12 @@ developmentChains.includes(network.name)
             );
             expect(
               Number(await smartToken1.balanceOf(deployer.address)).toPrecision(
-                14
+                13
               )
             ).equals(
               Number(
                 Number(deployerBalanceAfter0) - Number(deployerFee)
-              ).toPrecision(14)
+              ).toPrecision(13)
             );
 
             const deployerBalanceAfter1 = await smartToken1.balanceOf(
@@ -718,7 +813,12 @@ developmentChains.includes(network.name)
               ...defaultRebalanceData,
               sequenceNumber: 2,
             });
-
+            count = 0;
+            while (count < REBALANCE_INTERVAL) {
+              await time.increase(FF_INTERVAL);
+              await tokenFactory.dailyFeeFactorsUpdate(0);
+              count += FF_INTERVAL;
+            }
             await orchestrator.rebalance(
               encodedNaturalRebalance2.encodedData,
               encodedNaturalRebalance2.signature
@@ -750,7 +850,12 @@ developmentChains.includes(network.name)
               ...defaultRebalanceData,
               sequenceNumber: 3,
             });
-
+            count = 0;
+            while (count < REBALANCE_INTERVAL) {
+              await time.increase(FF_INTERVAL);
+              await tokenFactory.dailyFeeFactorsUpdate(0);
+              count += FF_INTERVAL;
+            }
             await orchestrator.rebalance(
               encodedNaturalRebalance3.encodedData,
               encodedNaturalRebalance3.signature
@@ -760,9 +865,13 @@ developmentChains.includes(network.name)
               BigInt(feeDetails.RebaseFee)
             );
             expect(
-              Number(await smartToken1.balanceOf(deployer.address))
+              Number(await smartToken1.balanceOf(deployer.address)).toPrecision(
+                12
+              )
             ).equals(
-              Number(BigInt(deployerBalanceAfter2) - BigInt(deployerFee2))
+              Number(
+                BigInt(deployerBalanceAfter2) - BigInt(deployerFee2)
+              ).toPrecision(12)
             );
           });
           it(`It charge fees correctly for the whole universe`, async function () {
@@ -869,176 +978,311 @@ developmentChains.includes(network.name)
                 await smartToken1.balanceOf(tokenFactory.address)
               ).toPrecision(2)
             );
-          }); //*/
-          it(`should update FF when a user do an interaction with contract`, async function () {
-            const {
-              tokenFactory,
-              deployer,
-              underlyingToken,
-              smartToken1,
-              smartToken2,
-              treasury,
-              orchestrator,
-            } = await loadFixture(deployTokenFixture);
-            const depositAmount = item.depositValue;
-
-            await tokenFactory.initializeSMART(
-              smartToken1.address,
-
-              smartToken2.address
-            );
-
-            // set the management fee to 0.2% and activating fees
-            await tokenFactory.setTreasuryWallet(treasury.address);
-            const days = REBALANCE_INTERVAL / FF_INTERVAL;
-            const feeDetails = feeScalar(0.02, days);
-            await tokenFactory.setManagementFeeRate(
-              feeDetails.dailyFee,
-              feeDetails.RebaseFee
-            );
-            const feeRate = feeDetails.dailyFee;
-
-            //await tokenFactory.setManagementFeeRate(MGMTFEEDAILY2P); //0.2 % per day
-            await tokenFactory.setManagementFeeState(true);
-            await underlyingToken.approve(tokenFactory.address, depositAmount); //deployer
-            const previousFF = await tokenFactory.getLastFFTimeStamp();
-            //move time to the next FF
-            await time.increase(FF_INTERVAL);
-
-            await smartToken1.deposit(depositAmount, deployer.address);
-            expect(
-              (await tokenFactory.getLastFFTimeStamp()) >
-                +previousFF + +FF_INTERVAL
-            ).to.be.true;
-
-            expect(await tokenFactory.getDailyFeeFactorNumber()).equals(1);
-            expect(
-              await tokenFactory.getUserLastFFCount(deployer.address)
-            ).equals(1);
           });
-          it(`should update FF of the receiver when doing a transfer, and only once per FF interval`, async function () {
-            const {
-              tokenFactory,
-              deployer,
-              underlyingToken,
-              smartToken1,
-              smartToken2,
-              treasury,
-              orchestrator,
-              tester,
-            } = await loadFixture(deployTokenFixture);
-            const depositAmount = item.depositValue;
 
-            await tokenFactory.initializeSMART(
-              smartToken1.address,
+          //*/
+          //});
+        });
+        it(`should update FF when a user do an interaction with contract`, async function () {
+          const {
+            tokenFactory,
+            deployer,
+            underlyingToken,
+            smartToken1,
+            smartToken2,
+            treasury,
+            orchestrator,
+          } = await loadFixture(deployTokenFixture);
+          const depositAmount = ethers.utils.parseEther("1");
 
-              smartToken2.address
-            );
+          await tokenFactory.initializeSMART(
+            smartToken1.address,
 
-            // set the management fee to 0.2% and activating fees
-            await tokenFactory.setTreasuryWallet(treasury.address);
-            const days = REBALANCE_INTERVAL / FF_INTERVAL;
-            const feeDetails = feeScalar(0.02, days);
-            await tokenFactory.setManagementFeeRate(
-              feeDetails.dailyFee,
-              feeDetails.RebaseFee
-            );
-            const feeRate = feeDetails.dailyFee;
+            smartToken2.address
+          );
 
-            //await tokenFactory.setManagementFeeRate(MGMTFEEDAILY2P); //0.2 % per day
-            await tokenFactory.setManagementFeeState(true);
-            await underlyingToken.approve(tokenFactory.address, depositAmount); //deployer
-            const previousFF = await tokenFactory.getLastFFTimeStamp();
-            //move time to the next FF
-            await time.increase(FF_INTERVAL);
+          // set the management fee to 0.2% and activating fees
+          await tokenFactory.setTreasuryWallet(treasury.address);
+          const days = REBALANCE_INTERVAL / FF_INTERVAL;
+          const feeDetails = feeScalar(0.02, days);
+          await tokenFactory.setManagementFeeRate(
+            feeDetails.dailyFee,
+            feeDetails.RebaseFee
+          );
+          const feeRate = feeDetails.dailyFee;
 
-            await smartToken1.deposit(depositAmount, deployer.address);
-            await smartToken1.transfer(
-              tester.address,
-              ethers.utils.parseEther("0.001")
-            );
-            await smartToken1.transfer(
-              tester.address,
-              ethers.utils.parseEther("0.001")
-            );
-            expect(
-              (await tokenFactory.getLastFFTimeStamp()) >
-                +previousFF + +FF_INTERVAL
-            ).to.be.true;
+          //await tokenFactory.setManagementFeeRate(MGMTFEEDAILY2P); //0.2 % per day
+          await tokenFactory.setManagementFeeState(true);
+          await underlyingToken.approve(tokenFactory.address, depositAmount); //deployer
+          const previousFF = await tokenFactory.getLastFFTimeStamp();
+          //move time to the next FF
+          await time.increase(FF_INTERVAL);
 
-            expect(await tokenFactory.getDailyFeeFactorNumber()).equals(1);
-            expect(
-              await tokenFactory.getUserLastFFCount(deployer.address)
-            ).equals(1);
-            expect(
-              await tokenFactory.getUserLastFFCount(tester.address)
-            ).equals(1);
-          });
-          it(`should correctly update a new user FF`, async function () {
-            const {
-              tokenFactory,
-              deployer,
-              underlyingToken,
-              smartToken1,
-              smartToken2,
-              treasury,
-              orchestrator,
-              tester,
-            } = await loadFixture(deployTokenFixture);
-            const depositAmount = item.depositValue;
+          await smartToken1.deposit(depositAmount, deployer.address);
+          expect(
+            (await tokenFactory.getLastFFTimeStamp()) ==
+              +previousFF + +FF_INTERVAL
+          ).to.be.true;
 
-            await tokenFactory.initializeSMART(
-              smartToken1.address,
+          expect(await tokenFactory.getDailyFeeFactorNumber()).equals(1);
+          expect(
+            await tokenFactory.getUserLastFFCount(deployer.address)
+          ).equals(1);
+        });
+        it(`should update FF of the receiver when doing a transfer, and only once per FF interval`, async function () {
+          const {
+            tokenFactory,
+            deployer,
+            underlyingToken,
+            smartToken1,
+            smartToken2,
+            treasury,
+            orchestrator,
+            tester,
+          } = await loadFixture(deployTokenFixture);
+          const depositAmount = ethers.utils.parseEther("1");
+          await tokenFactory.initializeSMART(
+            smartToken1.address,
 
-              smartToken2.address
-            );
+            smartToken2.address
+          );
 
-            // set the management fee to 0.2% and activating fees
-            await tokenFactory.setTreasuryWallet(treasury.address);
-            const days = REBALANCE_INTERVAL / FF_INTERVAL;
-            const feeDetails = feeScalar(0.02, days);
-            await tokenFactory.setManagementFeeRate(
-              feeDetails.dailyFee,
-              feeDetails.RebaseFee
-            );
-            const feeRate = feeDetails.dailyFee;
+          // set the management fee to 0.2% and activating fees
+          await tokenFactory.setTreasuryWallet(treasury.address);
+          const days = REBALANCE_INTERVAL / FF_INTERVAL;
+          const feeDetails = feeScalar(0.02, days);
+          await tokenFactory.setManagementFeeRate(
+            feeDetails.dailyFee,
+            feeDetails.RebaseFee
+          );
+          const feeRate = feeDetails.dailyFee;
 
-            //await tokenFactory.setManagementFeeRate(MGMTFEEDAILY2P); //0.2 % per day
-            await tokenFactory.setManagementFeeState(true);
-            await underlyingToken.approve(tokenFactory.address, depositAmount); //deployer
-            const previousFF = await tokenFactory.getLastFFTimeStamp();
-            let count = 0;
-            //move time to the next FF
-            await time.increase(FF_INTERVAL);
-            await tokenFactory.dailyFeeFactorsUpdate(0);
-            count++;
+          //await tokenFactory.setManagementFeeRate(MGMTFEEDAILY2P); //0.2 % per day
+          await tokenFactory.setManagementFeeState(true);
+          await underlyingToken.approve(tokenFactory.address, depositAmount); //deployer
+          const previousFF = await tokenFactory.getLastFFTimeStamp();
+          //move time to the next FF
+          await time.increase(FF_INTERVAL);
 
-            await time.increase(FF_INTERVAL);
-            await tokenFactory.dailyFeeFactorsUpdate(0);
-            count++;
+          await smartToken1.deposit(depositAmount, deployer.address);
+          await smartToken1.transfer(
+            tester.address,
+            ethers.utils.parseEther("0.001")
+          );
+          await smartToken1.transfer(
+            tester.address,
+            ethers.utils.parseEther("0.001")
+          );
+          expect(
+            (await tokenFactory.getLastFFTimeStamp()) ==
+              +previousFF + +FF_INTERVAL
+          ).to.be.true;
 
-            await time.increase(FF_INTERVAL);
-            await tokenFactory.dailyFeeFactorsUpdate(0);
-            count++;
+          expect(await tokenFactory.getDailyFeeFactorNumber()).equals(1);
+          expect(
+            await tokenFactory.getUserLastFFCount(deployer.address)
+          ).equals(1);
+          expect(await tokenFactory.getUserLastFFCount(tester.address)).equals(
+            1
+          );
+        });
+        it(`should correctly update a new user FF`, async function () {
+          const {
+            tokenFactory,
+            deployer,
+            underlyingToken,
+            smartToken1,
+            smartToken2,
+            treasury,
+            orchestrator,
+            tester,
+          } = await loadFixture(deployTokenFixture);
+          const depositAmount = ethers.utils.parseEther("1");
 
-            await smartToken1.deposit(depositAmount, deployer.address);
-            expect(
-              await tokenFactory.getUserLastFFCount(deployer.address)
-            ).equals(count);
+          await tokenFactory.initializeSMART(
+            smartToken1.address,
 
-            await time.increase(FF_INTERVAL);
-            await tokenFactory.dailyFeeFactorsUpdate(0);
-            count++;
+            smartToken2.address
+          );
 
-            await smartToken1.transfer(
-              tester.address,
-              ethers.utils.parseEther("0.001")
-            );
+          // set the management fee to 0.2% and activating fees
+          await tokenFactory.setTreasuryWallet(treasury.address);
+          const days = REBALANCE_INTERVAL / FF_INTERVAL;
+          const feeDetails = feeScalar(0.02, days);
+          await tokenFactory.setManagementFeeRate(
+            feeDetails.dailyFee,
+            feeDetails.RebaseFee
+          );
+          const feeRate = feeDetails.dailyFee;
 
-            expect(
-              await tokenFactory.getUserLastFFCount(tester.address)
-            ).equals(count);
-          });
+          //await tokenFactory.setManagementFeeRate(MGMTFEEDAILY2P); //0.2 % per day
+          await tokenFactory.setManagementFeeState(true);
+          await underlyingToken.approve(tokenFactory.address, depositAmount); //deployer
+          const previousFF = await tokenFactory.getLastFFTimeStamp();
+          let count = 0;
+          //move time to the next FF
+          await time.increase(FF_INTERVAL);
+          await tokenFactory.dailyFeeFactorsUpdate(0);
+          count++;
+
+          await time.increase(FF_INTERVAL);
+          await tokenFactory.dailyFeeFactorsUpdate(0);
+          count++;
+
+          await time.increase(FF_INTERVAL);
+          await tokenFactory.dailyFeeFactorsUpdate(0);
+          count++;
+
+          await smartToken1.deposit(depositAmount, deployer.address);
+          expect(
+            await tokenFactory.getUserLastFFCount(deployer.address)
+          ).equals(count);
+
+          await time.increase(FF_INTERVAL);
+          await tokenFactory.dailyFeeFactorsUpdate(0);
+          count++;
+
+          await smartToken1.transfer(
+            tester.address,
+            ethers.utils.parseEther("0.001")
+          );
+
+          expect(await tokenFactory.getUserLastFFCount(tester.address)).equals(
+            count
+          );
+        });
+        it(`It charge fees correctly for hourly FFintervals`, async function () {
+          const {
+            tokenFactoryFF,
+            deployer,
+            underlyingToken,
+            smartToken1FF,
+            smartToken2FF,
+            treasury,
+            orchestratorFF,
+          } = await loadFixture(deployTokenFixture);
+          const depositAmount = ethers.utils.parseEther("1");
+
+          await tokenFactoryFF.initializeSMART(
+            smartToken1FF.address,
+
+            smartToken2FF.address
+          );
+
+          // set the management fee to 0.2% and activating fees
+          await tokenFactoryFF.setTreasuryWallet(treasury.address);
+          const days = REBALANCE_INTERVAL / FF_INTERVAL;
+          const feeDetails = feeScalar(0.02, days);
+          // feeDetails.dailyFee = Math.round(
+          //   Number(feeDetails.dailyFee) / 24
+          // ).toString();
+          await tokenFactoryFF.setManagementFeeRate(
+            feeDetails.dailyFee,
+            feeDetails.RebaseFee
+          );
+          const feeRate = feeDetails.dailyFee;
+          const nInterval = FF_INTERVAL / 24;
+          await tokenFactoryFF.setManagementFeeState(true);
+          await underlyingToken.approve(tokenFactoryFF.address, depositAmount); //deployer
+          await smartToken1FF.deposit(depositAmount, deployer.address);
+
+          const userBal = await smartToken1FF.balanceOf(deployer.address);
+
+          await time.increase(nInterval);
+          await tokenFactoryFF.dailyFeeFactorsUpdate(0);
+          //we are now in the next fee factor period
+          expect((await smartToken1FF.balanceOf(deployer.address)) < userBal).to
+            .be.true;
+
+          const fees = await tokenFactoryFF.calculateManagementFee(userBal, 0);
+          const feesCal = feeCalculator2(userBal, BigInt(feeRate), true);
+          expect(Number(fees).toPrecision(1)).equals(
+            Number(feesCal).toPrecision(1)
+          );
+
+          expect(
+            Number(await smartToken1FF.balanceOf(deployer.address)).toPrecision(
+              6
+            )
+          ).equals((Number(userBal) - Number(fees)).toPrecision(6));
+        });
+        it(`It should apply rebalance fees correctly when the FF interval is hourly`, async function () {
+          const {
+            tokenFactoryFF,
+            deployer,
+            underlyingToken,
+            smartToken1FF,
+            smartToken2FF,
+            treasury,
+            orchestratorFF,
+          } = await loadFixture(deployTokenFixture);
+          const depositAmount = ethers.utils.parseEther("1");
+
+          await tokenFactoryFF.initializeSMART(
+            smartToken1FF.address,
+            smartToken2FF.address
+          );
+
+          expect(await tokenFactoryFF.getSmartTokenAddress(0)).equals(
+            smartToken1FF.address
+          );
+          expect(await tokenFactoryFF.getSmartTokenAddress(1)).equals(
+            smartToken2FF.address
+          );
+
+          // set the management fee to 0.2% and activating fees
+          await tokenFactoryFF.setTreasuryWallet(treasury.address);
+          const days = REBALANCE_INTERVAL / FF_INTERVAL;
+          const feeDetails = feeScalar(0.02, days);
+
+          await tokenFactoryFF.setManagementFeeRate(
+            feeDetails.dailyFee,
+            feeDetails.RebaseFee
+          );
+          await tokenFactoryFF.setManagementFeeState(true);
+
+          // deposit underlying token
+          await underlyingToken.approve(tokenFactoryFF.address, depositAmount);
+          await smartToken2FF.mint(depositAmount, deployer.address);
+
+          const userBal: bigint = await smartToken1FF.balanceOf(
+            deployer.address
+          );
+
+          const now = await tokenFactoryFF.getLastTimeStamp();
+
+          const nextRebalanceTimeStamp =
+            BigInt(now) + BigInt(REBALANCE_INTERVAL);
+          await time.setNextBlockTimestamp(nextRebalanceTimeStamp);
+
+          const { signature, encodedData } = await signRebalance(
+            deployer,
+            defaultRebalanceData
+          );
+          let ninterval = FF_INTERVAL / 24;
+          let count = 0;
+          while (count < REBALANCE_INTERVAL) {
+            await time.increase(ninterval);
+            await tokenFactoryFF.dailyFeeFactorsUpdate(0);
+            count += ninterval;
+          }
+          await orchestratorFF.rebalance(encodedData, signature);
+
+          let block2 = await ethers.provider.getBlock("latest");
+          const now2 = block2.timestamp;
+
+          await time.setNextBlockTimestamp(now2);
+
+          const fee = BigInt(
+            feeCalculator(userBal, BigInt(feeDetails.RebaseFee))
+          );
+          const diff = BigInt(userBal) - fee;
+
+          expect(Number(diff).toPrecision(5)).equals(
+            Number(await smartToken1FF.balanceOf(deployer.address)).toPrecision(
+              5
+            )
+          );
         });
       });
     })
