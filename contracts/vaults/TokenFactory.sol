@@ -874,18 +874,6 @@ contract TokenFactory is
         }
     }
 
-    function getLastFFTimeStamp() external view returns (uint256) {
-        return FFLastTimeStamp;
-    }
-    function getDailyFeeFactorNumber() public view returns (uint256) {
-        return dailyFeeFactors.length - 1; //adjusted since rebalanceElements is also filled on initialization
-    }
-    function getUserLastFFCount(
-        address userAddress
-    ) public view returns (uint256) {
-        return lastdailyFFcount[userAddress];
-    }
-
     /// @notice Applies rebalance to an account
     /// @dev This function adjusts the balance of smart tokens(RiskON/RiskOFF) according to the rollOverValue.
     /// This function can only be called when rebalance is stopped. It also calculates and applies management fees.
@@ -1074,9 +1062,8 @@ contract TokenFactory is
         mgmtFee > 0
             ? internalManagementFeesRate = mgmtFee
             : internalManagementFeesRate = managementFeesRate;
-        //estimate the nextRebalance Timestamp
         //estimate the next FF timestamp
-        uint256 nextRebalanceTimeStamp = FFLastTimeStamp + FFinterval;
+        uint256 nextFFTimeStamp = FFLastTimeStamp + FFinterval;
 
         //Estimate the mgmt fee per interval with respect to the fees per day value
         //The management fee rate is in terms of points per day, please checkout 'setManagementFee' Method
@@ -1091,8 +1078,8 @@ contract TokenFactory is
         //Calculate the amount of time that the user will be in the system before next rebalance
         //or calculate the time left before next rebalance when the user exits the system
         uint256 userDepositCycle = 0;
-        if (nextRebalanceTimeStamp > userTransacTimeStamp) {
-            userDepositCycle = nextRebalanceTimeStamp - userTransacTimeStamp;
+        if (nextFFTimeStamp > userTransacTimeStamp) {
+            userDepositCycle = nextFFTimeStamp - userTransacTimeStamp;
         }
 
         // deposit cycle should be atleast 1 second before rebalance
@@ -1331,5 +1318,18 @@ contract TokenFactory is
                 currentDepositPeriodAmount[user]
             );
         }
+    }
+
+    /// Getters for the new fees mechanisms
+    function getLastFFTimeStamp() external view returns (uint256) {
+        return FFLastTimeStamp;
+    }
+    function getDailyFeeFactorNumber() public view returns (uint256) {
+        return dailyFeeFactors.length - 1; //adjusted since rebalanceElements is also filled on initialization
+    }
+    function getUserLastFFCount(
+        address userAddress
+    ) public view returns (uint256) {
+        return lastdailyFFcount[userAddress];
     }
 }
