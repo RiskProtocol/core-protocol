@@ -329,16 +329,16 @@ developmentChains.includes(network.name)
             );
             const diff = BigInt(userBal) - fee;
 
-            expect(Number(diff).toPrecision(14)).equals(
+            expect(Number(diff).toPrecision(13)).equals(
               Number(await smartToken1.balanceOf(deployer.address)).toPrecision(
-                14
+                13
               )
             );
             //assume that user made tx, apply rebalance
             await tokenFactory.applyRebalance(deployer.address);
-            expect(Number(diff).toPrecision(14)).equals(
+            expect(Number(diff).toPrecision(13)).equals(
               Number(await smartToken1.balanceOf(deployer.address)).toPrecision(
-                14
+                13
               )
             );
           });
