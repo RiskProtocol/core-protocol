@@ -100,7 +100,7 @@ contract SmartToken is
     }
 
     modifier dailyFFUpdate() {
-        tokenFactory.dailyFeeFactorsUpdate(0);
+        tokenFactory.dailyFeeFactorsUpdate();
         _;
     }
 
@@ -182,7 +182,7 @@ contract SmartToken is
         onlyNotSanctioned(_msgSender())
         dailyFFUpdate
         returns (bool)
-    {   
+    {
         handlePendingFF(_msgSender(), recipient);
         handlePendingRebalance(_msgSender(), recipient);
 
@@ -241,7 +241,7 @@ contract SmartToken is
         override(ERC20Upgradeable, IERC20Upgradeable)
         returns (uint256)
     {
-        if (hasPendingRebalance(account)||hasPendingFF(account)) {
+        if (hasPendingRebalance(account) || hasPendingFF(account)) {
             (uint256 asset1Units, uint256 asset2Units) = tokenFactory
                 .calculateRollOverValue(account);
 
@@ -304,7 +304,7 @@ contract SmartToken is
         onlyNotSanctioned(recipient)
         onlyNotSanctioned(sender)
         returns (bool)
-    {   
+    {
         handlePendingFF(sender, recipient);
         handlePendingRebalance(sender, recipient);
         uint256[4] memory bals = tokenFactory.getUserRecords(sender, recipient);
@@ -692,7 +692,7 @@ contract SmartToken is
             //'getUserLastFFCount' returns the amount of FF applied to account
             tokenFactory.getUserLastFFCount(account) !=
             tokenFactory.getDailyFeeFactorNumber();
-    }  
+    }
     function handlePendingFF(address sender, address receiver) public {
         if (hasPendingFF(sender)) {
             //The 'applyFF' method on the Vault(TokenFactory) is called

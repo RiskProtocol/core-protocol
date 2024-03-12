@@ -314,7 +314,7 @@ developmentChains.includes(network.name)
             let count = 0;
             while (count < REBALANCE_INTERVAL) {
               await time.increase(FF_INTERVAL);
-              await tokenFactory.dailyFeeFactorsUpdate(0);
+              await tokenFactory.dailyFeeFactorsUpdate();
               count += FF_INTERVAL;
             }
             await orchestrator.rebalance(encodedData, signature);
@@ -459,7 +459,7 @@ developmentChains.includes(network.name)
             let count = 0;
             while (count < REBALANCE_INTERVAL) {
               await time.increase(FFinterval);
-              await tokenFactory.dailyFeeFactorsUpdate(0);
+              await tokenFactory.dailyFeeFactorsUpdate();
               count += FFinterval;
             }
 
@@ -571,7 +571,7 @@ developmentChains.includes(network.name)
             let count = 0;
             while (count < REBALANCE_INTERVAL) {
               await time.increase(FF_INTERVAL);
-              await tokenFactory.dailyFeeFactorsUpdate(0);
+              await tokenFactory.dailyFeeFactorsUpdate();
               count += FF_INTERVAL;
             }
             await orchestrator.rebalance(encodedData, signature);
@@ -658,7 +658,7 @@ developmentChains.includes(network.name)
             let count = 0;
             while (count < REBALANCE_INTERVAL) {
               await time.increase(FF_INTERVAL);
-              await tokenFactory.dailyFeeFactorsUpdate(0);
+              await tokenFactory.dailyFeeFactorsUpdate();
               count += FF_INTERVAL;
             }
             const encodedNaturalRebalance1 = await signRebalance(
@@ -682,7 +682,7 @@ developmentChains.includes(network.name)
             count = 0;
             while (count < REBALANCE_INTERVAL) {
               await time.increase(FF_INTERVAL);
-              await tokenFactory.dailyFeeFactorsUpdate(0);
+              await tokenFactory.dailyFeeFactorsUpdate();
               count += FF_INTERVAL;
             }
 
@@ -702,7 +702,7 @@ developmentChains.includes(network.name)
             count = 0;
             while (count < REBALANCE_INTERVAL) {
               await time.increase(FF_INTERVAL);
-              await tokenFactory.dailyFeeFactorsUpdate(0);
+              await tokenFactory.dailyFeeFactorsUpdate();
               count += FF_INTERVAL;
             }
             await orchestrator.rebalance(
@@ -780,7 +780,7 @@ developmentChains.includes(network.name)
             let count = 0;
             while (count < REBALANCE_INTERVAL) {
               await time.increase(FF_INTERVAL);
-              await tokenFactory.dailyFeeFactorsUpdate(0);
+              await tokenFactory.dailyFeeFactorsUpdate();
               count += FF_INTERVAL;
             }
             await orchestrator.rebalance(
@@ -816,7 +816,7 @@ developmentChains.includes(network.name)
             count = 0;
             while (count < REBALANCE_INTERVAL) {
               await time.increase(FF_INTERVAL);
-              await tokenFactory.dailyFeeFactorsUpdate(0);
+              await tokenFactory.dailyFeeFactorsUpdate();
               count += FF_INTERVAL;
             }
             await orchestrator.rebalance(
@@ -853,7 +853,7 @@ developmentChains.includes(network.name)
             count = 0;
             while (count < REBALANCE_INTERVAL) {
               await time.increase(FF_INTERVAL);
-              await tokenFactory.dailyFeeFactorsUpdate(0);
+              await tokenFactory.dailyFeeFactorsUpdate();
               count += FF_INTERVAL;
             }
             await orchestrator.rebalance(
@@ -918,7 +918,7 @@ developmentChains.includes(network.name)
             const LastFFTimeStamp = await tokenFactory.getLastFFTimeStamp();
             const nextFFTimeStamp = BigInt(LastFFTimeStamp) + BigInt(86400);
             await time.setNextBlockTimestamp(nextFFTimeStamp);
-            await tokenFactory.dailyFeeFactorsUpdate(0);
+            await tokenFactory.dailyFeeFactorsUpdate();
             //we are now in the next fee factor period
 
             expect((await smartToken1.balanceOf(deployer.address)) < userBal).to
@@ -954,7 +954,7 @@ developmentChains.includes(network.name)
             const LastFFTimeStamp2 = await tokenFactory.getLastFFTimeStamp();
             const nextFFTimeStamp2 = BigInt(LastFFTimeStamp2) + BigInt(86400);
             await time.setNextBlockTimestamp(nextFFTimeStamp2);
-            await tokenFactory.dailyFeeFactorsUpdate(0);
+            await tokenFactory.dailyFeeFactorsUpdate();
 
             //@note : We have to deduct the fees for the treasury wallet for the next REBALANCE
             // We also have to consider that fees we held on tokenFactory has also to pay fees for the next rebalance
@@ -1122,15 +1122,15 @@ developmentChains.includes(network.name)
           let count = 0;
           //move time to the next FF
           await time.increase(FF_INTERVAL);
-          await tokenFactory.dailyFeeFactorsUpdate(0);
+          await tokenFactory.dailyFeeFactorsUpdate();
           count++;
 
           await time.increase(FF_INTERVAL);
-          await tokenFactory.dailyFeeFactorsUpdate(0);
+          await tokenFactory.dailyFeeFactorsUpdate();
           count++;
 
           await time.increase(FF_INTERVAL);
-          await tokenFactory.dailyFeeFactorsUpdate(0);
+          await tokenFactory.dailyFeeFactorsUpdate();
           count++;
 
           await smartToken1.deposit(depositAmount, deployer.address);
@@ -1139,7 +1139,7 @@ developmentChains.includes(network.name)
           ).equals(count);
 
           await time.increase(FF_INTERVAL);
-          await tokenFactory.dailyFeeFactorsUpdate(0);
+          await tokenFactory.dailyFeeFactorsUpdate();
           count++;
 
           await smartToken1.transfer(
@@ -1189,7 +1189,7 @@ developmentChains.includes(network.name)
           const userBal = await smartToken1FF.balanceOf(deployer.address);
 
           await time.increase(nInterval);
-          await tokenFactoryFF.dailyFeeFactorsUpdate(0);
+          await tokenFactoryFF.dailyFeeFactorsUpdate();
           //we are now in the next fee factor period
           expect((await smartToken1FF.balanceOf(deployer.address)) < userBal).to
             .be.true;
@@ -1263,7 +1263,7 @@ developmentChains.includes(network.name)
           let count = 0;
           while (count < REBALANCE_INTERVAL) {
             await time.increase(ninterval);
-            await tokenFactoryFF.dailyFeeFactorsUpdate(0);
+            await tokenFactoryFF.dailyFeeFactorsUpdate();
             count += ninterval;
           }
           await orchestratorFF.rebalance(encodedData, signature);

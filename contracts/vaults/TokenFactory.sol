@@ -87,7 +87,6 @@ contract TokenFactory is
         uint256 BalanceFactorXY;
         uint256 BalanceFactorUx;
         uint256 BalanceFactorUy;
-        uint256 FeeFactor;
     }
     struct UserRebalanceElements {
         uint256 netX;
@@ -196,6 +195,7 @@ contract TokenFactory is
         interval = rebalanceInterval;
         // We assign the lastTimeStamp to the timestamp at the beginning of the system
         lastTimeStamp = block.timestamp;
+        FFLastTimeStamp = block.timestamp;
         managementFeesRate = 0;
         nextSequenceNumber = 1;
         smartTokenInitialized = false;
@@ -205,14 +205,12 @@ contract TokenFactory is
             RebalanceElements({
                 BalanceFactorXY: 1 * REBALANCE_INT_MULTIPLIER,
                 BalanceFactorUx: 0,
-                BalanceFactorUy: 0,
-                FeeFactor: 1 * REBALANCE_INT_MULTIPLIER
+                BalanceFactorUy: 0
             })
         );
         //we also update the dailyfeefactors for the contract
         dailyFeeFactors.push(1 * REBALANCE_INT_MULTIPLIER);
         FFinterval = ffInterval;
-        FFLastTimeStamp = block.timestamp;
         withdrawLimit = withdrawLimit_;
         depositLimit = depositLimit_;
         period = limitPeriod_;
@@ -778,28 +776,15 @@ contract TokenFactory is
                         .div(scheduledRebalance.price)
                 );
 
-            uint256 feeFactor = lastRebalance
-                .FeeFactor
-                .mul(
-                    REBALANCE_INT_MULTIPLIER -
-                        (
-                            scheduledRebalance.isNaturalRebalance &&
-                                managementFeeEnabled
-                                ? managementFeesRateRebalance
-                                : 0
-                        )
-                )
-                .div(REBALANCE_INT_MULTIPLIER);
-
             rebalanceElements.push(
                 RebalanceElements({
                     BalanceFactorXY: balanceFactorXY,
                     BalanceFactorUx: balanceFactorUx,
-                    BalanceFactorUy: balanceFactorUy,
-                    FeeFactor: feeFactor
+                    BalanceFactorUy: balanceFactorUy
                 })
             );
-            dailyFeeFactorsUpdate(feeFactor);
+            //We now update the FF
+            dailyFeeFactorsUpdate();
 
             emit Rebalance(getRebalanceNumber());
 
@@ -823,7 +808,7 @@ contract TokenFactory is
                 .mul(
                     REBALANCE_INT_MULTIPLIER -
                         (
-                            managementFeeEnabled
+                            managementFeeEnabled && managementFeesRate > 0
                                 ? managementFeesRate.mul(FFinterval).div(1 days) //assuming 1 interval is one day,
                                 //otherwise useful when doing hourly
                                 : //then we can use 1 days/1days = 1
@@ -834,12 +819,10 @@ contract TokenFactory is
         );
     }
 
-    function dailyFeeFactorsUpdate(uint256 rebalanceFF) public {
+    function dailyFeeFactorsUpdate() public {
         if (block.timestamp >= FFLastTimeStamp + FFinterval) {
             FFLastTimeStamp += FFinterval;
-            rebalanceFF > 0
-                ? dailyFeeFactors.push(rebalanceFF)
-                : updateFeeFactor();
+            updateFeeFactor();
             //then we check if fees should be applied
             if (managementFeeEnabled && managementFeesRate > 0) {
                 chargeFees();
