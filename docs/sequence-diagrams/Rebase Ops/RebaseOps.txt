@@ -1,6 +1,6 @@
 title The Rebalance Operation
-Engine->DB: Updates Db with proper Early/Normal rebalance info
-Engine->Defender:Calls defender's webhook with next rebalance params
+RebalanceLambda->DB: Updates Db with proper Early/Normal rebalance info
+RebalanceLambda->Defender:Calls defender's webhook with next rebalance params
 Defender->API:Update rebalance status as initiated
 API->DB:Update rebalance record
 Defender->Smart Contract: Executes rebalance operation
