@@ -1,6 +1,5 @@
 title The API Operation - Defender
-Defender->API: Calls the getNextRebalance controller with encoded params on
-API->DB:Fetches next rebalance info from the database
-API->API: Encode and Sign the data
-API->DB: Update the isInitiated status of the rebalance to true
-API-->Defender: Returns encoded rebalance parameters with signature to Defender
+Defender->API: Calls the API with rebalance transaction info once transaction is submitted
+API->DB:Update rebalance status as initiated in the Db
+Defender->API: Calls the API with rebalance transaction info once transaction is completed
+API->DB:Update rebalance status as completed in the Db
