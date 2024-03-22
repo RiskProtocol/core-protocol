@@ -1,7 +1,8 @@
 title The Rebalance Operation
-Engine->DB: Updates Db with proper Early/Normal rebalance info
-Engine->Defender:Calls defender's webhook
-Defender->API:Fetches next rebalance parameters
-API->DB: Fetches next rebalance info
-API-->Defender: Returns encoded parameters with signature
+RebalanceLambda->DB: Updates Db with proper Early/Normal rebalance info
+RebalanceLambda->Defender:Calls defender's webhook with next rebalance params
+Defender->API:Update rebalance status as initiated
+API->DB:Update rebalance record
 Defender->Smart Contract: Executes rebalance operation
+Defender->API:Update rebalance status as completed
+API->DB:Update rebalance record

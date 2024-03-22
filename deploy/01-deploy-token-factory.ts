@@ -1,6 +1,7 @@
 import { DeployFunction } from "hardhat-deploy/types";
 import {
   BASE_TOKEN_ADDRESS,
+  FF_INTERVAL,
   REBALANCE_INTERVAL,
   rateLimitsDefault,
 } from "../helper-hardhat-config";
@@ -41,6 +42,7 @@ const func: DeployFunction = async ({
     [
       baseTokenAddress,
       REBALANCE_INTERVAL,
+      FF_INTERVAL,
       sanctionsContractAddress,
       deployer,
       deployer,

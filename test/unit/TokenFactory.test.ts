@@ -14,6 +14,8 @@ import {
   signRebalance,
   defaultRebalanceData,
   rateLimitsDefault,
+  FF_INTERVAL,
+  feeScalar,
 } from "../../helper-hardhat-config";
 import { loadFixture, time } from "@nomicfoundation/hardhat-network-helpers";
 import { BigNumber, utils } from "ethers";
@@ -46,6 +48,7 @@ developmentChains.includes(network.name)
         const tokenFactory = await upgrades.deployProxy(TokenFactory, [
           underlyingToken.address,
           REBALANCE_INTERVAL,
+          FF_INTERVAL,
           sanctionsContract.address,
           deployer.address,
           deployer.address,
@@ -112,6 +115,7 @@ developmentChains.includes(network.name)
         const tokenFactory2 = await upgrades.deployProxy(TokenFactory2, [
           "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D",
           REBALANCE_INTERVAL,
+          FF_INTERVAL,
           sanctionsContract.address,
           deployer.address,
           deployer.address,
@@ -138,6 +142,7 @@ developmentChains.includes(network.name)
         const tokenFactory3 = await upgrades.deployProxy(TokenFactory3Factory, [
           underlyingTokenWithoutPermit.address,
           REBALANCE_INTERVAL,
+          FF_INTERVAL,
           sanctionsContract.address,
           deployer.address,
           deployer.address,
@@ -1139,17 +1144,29 @@ developmentChains.includes(network.name)
           const { tokenFactory, deployer } = await loadFixture(
             deployTokenFixture
           );
-          await tokenFactory.connect(deployer).setManagementFeeRate(5000);
-          expect(await tokenFactory.getManagementFeeRate()).to.equal(5000);
+          const days = REBALANCE_INTERVAL / FF_INTERVAL;
+          const feeDetails = feeScalar(0.05, days);
+          await tokenFactory.setManagementFeeRate(
+            feeDetails.dailyFee,
+            feeDetails.RebaseFee
+          );
+          const [dailyFee, rebaseFee] =
+            await tokenFactory.getManagementFeeRate();
+          expect(dailyFee).to.equal(feeDetails.dailyFee);
+          expect(rebaseFee).to.equal(feeDetails.RebaseFee);
         });
 
         it(`Should allow not allow other users to set the management fee rate`, async () => {
           const { tokenFactory, tester } = await loadFixture(
             deployTokenFixture
           );
+          const days = REBALANCE_INTERVAL / FF_INTERVAL;
+          const feeDetails = feeScalar(1, days);
 
           await expect(
-            tokenFactory.connect(tester).setManagementFeeRate(5000)
+            tokenFactory
+              .connect(tester)
+              .setManagementFeeRate(feeDetails.dailyFee, feeDetails.RebaseFee)
           ).to.be.revertedWith("Ownable: caller is not the owner");
         });
 
@@ -1158,12 +1175,17 @@ developmentChains.includes(network.name)
             deployTokenFixture
           );
 
-          await tokenFactory
-            .connect(deployer)
-            .setManagementFeeRate(BigNumber.from("1000000000000000000"));
-          expect(await tokenFactory.getManagementFeeRate()).to.equal(
-            utils.parseEther("1")
+          const days = REBALANCE_INTERVAL / FF_INTERVAL;
+          const feeDetails = feeScalar(1, days);
+          await tokenFactory.setManagementFeeRate(
+            feeDetails.dailyFee,
+            feeDetails.RebaseFee
           );
+
+          const [dailyFee, rebaseFee] =
+            await tokenFactory.getManagementFeeRate();
+          expect(dailyFee).to.equal(feeDetails.dailyFee);
+          expect(rebaseFee).to.equal(feeDetails.RebaseFee);
         });
 
         it(`Should allow management fee rate to be 0(0%)`, async () => {
@@ -1171,8 +1193,15 @@ developmentChains.includes(network.name)
             deployTokenFixture
           );
 
-          await tokenFactory.connect(deployer).setManagementFeeRate(0);
-          expect(await tokenFactory.getManagementFeeRate()).to.equal(0);
+          const days = REBALANCE_INTERVAL / FF_INTERVAL;
+          const feeDetails = feeScalar(0, days);
+          await tokenFactory
+            .connect(deployer)
+            .setManagementFeeRate(feeDetails.dailyFee, feeDetails.RebaseFee);
+          const [dailyFee, rebaseFee] =
+            await tokenFactory.getManagementFeeRate();
+          expect(dailyFee).to.equal(feeDetails.dailyFee);
+          expect(rebaseFee).to.equal(feeDetails.RebaseFee);
         });
 
         it(`Should allow not allow management fee rate to be more than 1e18(100%)`, async () => {
@@ -1180,10 +1209,16 @@ developmentChains.includes(network.name)
             deployTokenFixture
           );
 
+          const days = REBALANCE_INTERVAL / FF_INTERVAL;
+          const feeDetails = feeScalar(1, days);
+
           await expect(
             tokenFactory
               .connect(deployer)
-              .setManagementFeeRate(utils.parseEther("1.000000000000000001"))
+              .setManagementFeeRate(
+                feeDetails.dailyFee + 1,
+                feeDetails.RebaseFee + 1
+              )
           ).to.be.reverted;
         });
 
@@ -1218,13 +1253,16 @@ developmentChains.includes(network.name)
             deployTokenFixture
           );
           const mgmtFee = 200; // Assuming 0.2% fee rate per day
-          await tokenFactory.connect(deployer).setManagementFeeRate(mgmtFee);
+          const days = REBALANCE_INTERVAL / FF_INTERVAL;
+          const feeDetails = feeScalar(mgmtFee / 10e18, days);
+          await tokenFactory
+            .connect(deployer)
+            .setManagementFeeRate(feeDetails.dailyFee, feeDetails.RebaseFee);
           const amount = 1000;
           const isDefault = true;
 
           const fee = await tokenFactory.calculateManagementFee(
             amount,
-            isDefault,
             mgmtFee
           );
 
@@ -1247,7 +1285,7 @@ developmentChains.includes(network.name)
 
           expect(fee).to.equal(BigNumber.from(Math.trunc(expectFee)));
         });
-        it(`Should throw error if rebalance interval is not set`, async () => {
+        it(`Should throw error if FF interval is not set`, async () => {
           const { sanctionsContract, underlyingToken, deployer } =
             await loadFixture(deployTokenFixture);
 
@@ -1259,6 +1297,7 @@ developmentChains.includes(network.name)
           const tokenFactory = await upgrades.deployProxy(TokenFactory, [
             underlyingToken.address,
             0,
+            0,
             sanctionsContract.address,
             deployer.address,
             deployer.address,
@@ -1269,12 +1308,16 @@ developmentChains.includes(network.name)
           await tokenFactory.deployed();
 
           const mgmtFee = 200; // Assuming 0.2% fee rate per day
-          await tokenFactory.connect(deployer).setManagementFeeRate(mgmtFee);
+          const days = REBALANCE_INTERVAL / FF_INTERVAL;
+          const feeDetails = feeScalar(mgmtFee / 10e18, days);
+          await tokenFactory
+            .connect(deployer)
+            .setManagementFeeRate(feeDetails.dailyFee, feeDetails.RebaseFee);
           const amount = 1000;
           const isDefault = true;
 
           await expect(
-            tokenFactory.calculateManagementFee(amount, false, mgmtFee)
+            tokenFactory.calculateManagementFee(amount, mgmtFee)
           ).to.be.revertedWithCustomError(
             tokenFactory,
             "TokenFactory__InvalidDivision"
@@ -1286,7 +1329,11 @@ developmentChains.includes(network.name)
             deployTokenFixture
           );
           const mgmtFee = 200; // Assuming 0.2% fee rate per day
-          await tokenFactory.connect(deployer).setManagementFeeRate(mgmtFee);
+          const days = REBALANCE_INTERVAL / FF_INTERVAL;
+          const feeDetails = feeScalar(mgmtFee / 10e18, days);
+          await tokenFactory
+            .connect(deployer)
+            .setManagementFeeRate(feeDetails.dailyFee, feeDetails.RebaseFee);
           const amount = ethers.utils.parseEther("0");
           const isDefault = true;
 
@@ -1308,7 +1355,6 @@ developmentChains.includes(network.name)
           await time.setNextBlockTimestamp(now);
           const fee = await tokenFactory.calculateManagementFee(
             amount,
-            isDefault,
             mgmtFee
           );
 
@@ -1328,20 +1374,22 @@ developmentChains.includes(network.name)
           const { tokenFactory, deployer } = await loadFixture(
             deployTokenFixture
           );
-          const mgmtFee = 200; // Assuming 0.2% fee rate per day
-          await tokenFactory.connect(deployer).setManagementFeeRate(mgmtFee);
+          const MGMTFEEDAILY2P = 0.00022449 * 10 ** 18;
+          const FFinterval = 86400;
+          const days = REBALANCE_INTERVAL / FF_INTERVAL;
+          const feeDetails = feeScalar(0.02, days);
+          const mgmtFee = feeDetails.dailyFee;
+          await tokenFactory
+            .connect(deployer)
+            .setManagementFeeRate(feeDetails.dailyFee, feeDetails.RebaseFee);
           const amount = ethers.utils.parseEther("1");
           const isDefault = true;
 
           const lastTimeStamp = await tokenFactory.getLastTimeStamp();
 
-          const nextRebalanceTimeStamp: bigint = BigInt(
-            Number(lastTimeStamp) + Number(REBALANCE_INTERVAL)
+          const nextFFTimeStamp: bigint = BigInt(
+            Number(lastTimeStamp) + Number(FFinterval)
           );
-
-          const oneDay: bigint = BigInt(86400);
-          const mgmtFeePerInterval: bigint =
-            (BigInt(mgmtFee) * BigInt(REBALANCE_INTERVAL)) / oneDay;
 
           let block = await ethers.provider.getBlock("latest");
           const now: bigint = BigInt(block.timestamp);
@@ -1349,17 +1397,14 @@ developmentChains.includes(network.name)
           await time.setNextBlockTimestamp(now);
           const fee = await tokenFactory.calculateManagementFee(
             amount,
-            isDefault,
             mgmtFee
           );
 
-          const userDepositCycle: bigint = nextRebalanceTimeStamp - now;
+          const userDepositCycle: bigint = nextFFTimeStamp - now;
 
           const expectedFeeUnscaled2: bigint =
-            (userDepositCycle *
-              mgmtFeePerInterval *
-              BigInt(amount.toString())) /
-            BigInt(REBALANCE_INTERVAL);
+            (userDepositCycle * BigInt(mgmtFee) * BigInt(amount.toString())) /
+            BigInt(FFinterval);
 
           const expectedFee: bigint = expectedFeeUnscaled2 / BigInt(MULTIPLIER);
           expect(fee).to.equal(expectedFee);

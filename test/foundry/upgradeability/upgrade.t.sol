@@ -25,6 +25,7 @@ contract _Test is Test, TestHelper {
         factoryWrapper.initialize(
             underlying,
             REBALANCE_INTERVAL,
+            FF_INTERVAL,
             sanctionsContract,
             signersAddress,
             owner,

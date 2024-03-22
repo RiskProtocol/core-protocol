@@ -82,6 +82,7 @@ developmentChains.includes(network.name)
             [
               BASE_TOKEN_ADDRESS, //Base Token
               REBALANCE_INTERVAL,
+              3600, //one hour
               sanctionsContractAddress, //sanctions but just testing
               wallet.address,
               wallet.address,

@@ -48,12 +48,14 @@ contract TokenFactory is
     // State variables
 
     RebalanceElements[] private rebalanceElements;
+    uint256[] private dailyFeeFactors;
     mapping(address => UserRebalanceElements) private userRebalanceElements;
     uint256 private constant REBALANCE_INT_MULTIPLIER = 10 ** 18;
 
     SmartToken[] private smartTokenArray;
     /// @notice This mapping keeps track of the last rebalance applied to a user/address
     mapping(address => uint256) private lastRebalanceCount;
+    mapping(address => uint256) private lastdailyFFcount;
     /// @notice This is the instance of the underlying Token
     IERC20Update private baseToken;
     /// @notice The number of decimals of the underlying Asset/Token
@@ -66,11 +68,15 @@ contract TokenFactory is
     bool private smartTokenInitialized;
     /// @notice This is the signers address of RP api's that generate encoded params for rebalance
     address private signersAddress;
+    /// @notice This is used by the feefactors method to calculate the fees
+    uint256 private FFinterval;
+    uint256 private FFLastTimeStamp;
     /// @notice This keeps track of the 'sequenceNumber' of a rebalance which helps
     //  guarding against the same rebalance being applied twice in the system
     mapping(uint256 => bool) private sequenceNumberApplied;
     //management fees
     uint256 private managementFeesRate; //Mgmt fee is per day & scalin Factor is now 10E18
+    uint256 private managementFeesRateRebalance;
     bool private managementFeeEnabled;
     uint256 private lastRebalanceFees;
     address private treasuryWallet;
@@ -81,7 +87,6 @@ contract TokenFactory is
         uint256 BalanceFactorXY;
         uint256 BalanceFactorUx;
         uint256 BalanceFactorUy;
-        uint256 FeeFactor;
     }
     struct UserRebalanceElements {
         uint256 netX;
@@ -171,6 +176,7 @@ contract TokenFactory is
     function initialize(
         IERC20Update baseTokenAddress,
         uint256 rebalanceInterval, // in seconds
+        uint256 ffInterval, // in seconds
         address sanctionsContract_,
         address signersAddress_,
         address owner_,
@@ -191,6 +197,7 @@ contract TokenFactory is
         interval = rebalanceInterval;
         // We assign the lastTimeStamp to the timestamp at the beginning of the system
         lastTimeStamp = block.timestamp;
+        FFLastTimeStamp = block.timestamp;
         managementFeesRate = 0;
         nextSequenceNumber = 1;
         smartTokenInitialized = false;
@@ -200,10 +207,12 @@ contract TokenFactory is
             RebalanceElements({
                 BalanceFactorXY: 1 * REBALANCE_INT_MULTIPLIER,
                 BalanceFactorUx: 0,
-                BalanceFactorUy: 0,
-                FeeFactor: 1 * REBALANCE_INT_MULTIPLIER
+                BalanceFactorUy: 0
             })
         );
+        //we also update the dailyfeefactors for the contract
+        dailyFeeFactors.push(1 * REBALANCE_INT_MULTIPLIER);
+        FFinterval = ffInterval;
         withdrawLimit = withdrawLimit_;
         depositLimit = depositLimit_;
         period = limitPeriod_;
@@ -342,18 +351,19 @@ contract TokenFactory is
         onlySmartTokens
     {
         //Verify if receiver has any pending rebalance and apply his pending ones if any
+        FFCheck(receiver);
         rebalanceCheck(receiver);
         // Transfer the underlying token from the caller to the Vault(tokenFactory/ THIS)
         SafeERC20.safeTransferFrom(baseToken, caller, address(this), assets);
         // If the user is new to the system, we update his last rebalance count to the latest
+        updateUserLastFFCount(receiver);
         updateUserLastRebalanceCount(receiver);
         //mgmtFeeslogic
         if (managementFeeEnabled) {
             //Calculate the management fees owed for the remaining period of the current rebalance
-            uint256 fees = calculateManagementFee(shares, true, 0);
+            uint256 fees = calculateManagementFee(shares, 0);
             shares -= fees;
             // Mint the fees to the Vault(TokenFcatory/This) --
-            //@note This is deprecated and will be replaced in upcoming commits
             factoryMint(0, address(this), fees);
             factoryMint(1, address(this), fees);
             emit Deposit(caller, address(this), fees, fees);
@@ -389,13 +399,14 @@ contract TokenFactory is
         onlySmartTokens
     {
         //Verify if receiver has any pending rebalance and apply his pending ones if any
+        FFCheck(receiver);
         rebalanceCheck(receiver);
         //mgmt fees logic, initialize the feesRefund to 0
         uint256 feesRefund = 0;
 
         if (managementFeeEnabled) {
             //Calculate the management fees refund for the remaining period of the current rebalance
-            feesRefund = calculateManagementFee(assets, true, 0);
+            feesRefund = calculateManagementFee(assets, 0);
             //Burn the refunded fees from the Vault(TokenFactory/This)
             factoryBurn(0, address(this), feesRefund);
             factoryBurn(1, address(this), feesRefund);
@@ -651,21 +662,20 @@ contract TokenFactory is
     ///@notice Charges the management fees
     ///@dev This function is responsible for charging the fees of the whole universe
     /// and related functionalities.
+    /// We charge the fees on a daily Basis/ each FFinterval
     function chargeFees() private {
         if (
             lastRebalanceFees != 0 ||
             smartTokenArray[0].balanceOf(address(this)) > 0
         ) {
             //We check and apply rebalance to the contract and treasury address
+            FFCheck(address(this));
+            FFCheck(treasuryWallet);
             rebalanceCheck(address(this));
             rebalanceCheck(treasuryWallet);
 
             //We charge the fees due by the contract as well
-            lastRebalanceFees -= calculateManagementFee(
-                lastRebalanceFees,
-                true,
-                0
-            );
+            lastRebalanceFees -= calculateManagementFee(lastRebalanceFees, 0);
 
             uint256 fee = (smartTokenArray[0].balanceOf(address(this)) >=
                 lastRebalanceFees &&
@@ -687,7 +697,7 @@ contract TokenFactory is
         //totalSupply for X ===Y hence we care for only 1
         uint256 totalSupplyX = smartTokenArray[0].totalSupply();
         //total user fees
-        uint256 fees = calculateManagementFee(totalSupplyX, true, 0);
+        uint256 fees = calculateManagementFee(totalSupplyX, 0);
 
         //here we create and hold
         factoryTreasuryTransfer(fees);
@@ -699,7 +709,6 @@ contract TokenFactory is
     /// @dev This function processes up to 5 scheduled rebalances per call.
     /// Different factors that will help calculating user balances are calculated here
     /// using the rebalance params.
-    //@note This is deprecated and will be replaced in upcoming commits
     function rebalance() private {
         uint256 i = 0;
         while (i < 5) {
@@ -768,31 +777,16 @@ contract TokenFactory is
                         )
                         .div(scheduledRebalance.price)
                 );
-            uint256 feeFactor = lastRebalance
-                .FeeFactor
-                .mul(
-                    REBALANCE_INT_MULTIPLIER -
-                        (
-                            scheduledRebalance.isNaturalRebalance
-                                ? managementFeesRate.mul(interval).div(1 days)
-                                : 0
-                        )
-                )
-                .div(REBALANCE_INT_MULTIPLIER);
 
             rebalanceElements.push(
                 RebalanceElements({
                     BalanceFactorXY: balanceFactorXY,
                     BalanceFactorUx: balanceFactorUx,
-                    BalanceFactorUy: balanceFactorUy,
-                    FeeFactor: feeFactor
+                    BalanceFactorUy: balanceFactorUy
                 })
             );
-
-            if (managementFeeEnabled && scheduledRebalance.isNaturalRebalance) {
-                //we transfer fees that we had for last rebalance to our wallet
-                chargeFees();
-            }
+            //We now update the FF
+            dailyFeeFactorsUpdate();
 
             emit Rebalance(getRebalanceNumber());
 
@@ -800,22 +794,80 @@ contract TokenFactory is
             removeRebalance(nextSequenceNumber);
 
             // Increment the sequence number for the next rebalance to be processed
-            // this must be done after removing the previous rebalance from the queue to avoid removing the wrong rebalance
+            // this must be done after removing the previous rebalance from the queue to
+            // avoid removing the wrong rebalance
             nextSequenceNumber++;
             // Increment the counter
             i++;
         }
     }
 
+    function updateFeeFactor() private {
+        //get previous FF info
+        uint256 lastFF = dailyFeeFactors[dailyFeeFactors.length - 1];
+        dailyFeeFactors.push(
+            lastFF
+                .mul(
+                    REBALANCE_INT_MULTIPLIER -
+                        (
+                            managementFeeEnabled && managementFeesRate > 0
+                                ? managementFeesRate.mul(FFinterval).div(1 days) //assuming 1 interval is one day,
+                                //otherwise useful when doing hourly
+                                : //then we can use 1 days/1days = 1
+                                0
+                        )
+                )
+                .div(REBALANCE_INT_MULTIPLIER)
+        );
+    }
+
+    function dailyFeeFactorsUpdate() public {
+        if (block.timestamp >= FFLastTimeStamp + FFinterval) {
+            FFLastTimeStamp += FFinterval;
+            updateFeeFactor();
+            //then we check if fees should be applied
+            if (managementFeeEnabled && managementFeesRate > 0) {
+                chargeFees();
+            }
+        }
+    }
+
+    /// @notice should apply this to users before any interaction with the contracts
+    function applyFF(address owner) public {
+        if (lastdailyFFcount[owner] != getDailyFeeFactorNumber()) {
+            lastdailyFFcount[owner] = getDailyFeeFactorNumber();
+        }
+    }
+
+    function updateUserLastFFCount(address owner_) public {
+        if (
+            smartTokenArray[0].unScaledbalanceOf(owner_) == 0 &&
+            smartTokenArray[1].unScaledbalanceOf(owner_) == 0
+        ) {
+            lastdailyFFcount[owner_] = getDailyFeeFactorNumber();
+        }
+    }
+
+    function FFCheck(address user) private {
+        if (
+            // Verify if the user is an existing user and if they have missed any FF operations.
+            lastdailyFFcount[user] != 0 &&
+            lastdailyFFcount[user] != getDailyFeeFactorNumber()
+        ) {
+            // Apply FF
+            applyFF(user);
+        }
+    }
+
     /// @notice Applies rebalance to an account
     /// @dev This function adjusts the balance of smart tokens(RiskON/RiskOFF) according to the rollOverValue.
     /// This function can only be called when rebalance is stopped. It also calculates and applies management fees.
-    //@note This is deprecated and will be replaced in upcoming commits
     /// @param owner_ The address of the account to which the rebalance will be applied.
     function applyRebalance(address owner_) public stopRebalance {
         //normal rebalance operations
         (uint256 assetX, uint256 assetY) = calculateRollOverValue(owner_);
         lastRebalanceCount[owner_] = getRebalanceNumber();
+        lastdailyFFcount[owner_] = getDailyFeeFactorNumber();
         factoryBalanceAdjust(owner_, assetX, assetY);
         emit RebalanceApplied(owner_, getRebalanceNumber());
     }
@@ -823,7 +875,6 @@ contract TokenFactory is
     /// @notice Calculates the rollover value(Units of RiskON/OFF) for an account
     /// @dev This function calculates the net balance(Units of RiskON/OFF) of a user after rebalance and
     /// management fees are applied.
-    //@note This is deprecated and will be replaced in upcoming commits
     /// @param owner_ The address of the owner
     /// @return The calculated roll over value.
     function calculateRollOverValue(
@@ -861,13 +912,11 @@ contract TokenFactory is
                 .div(lastUserRebalance.BalanceFactorXY)
         ) + userLastRebalanceInfo.Uy;
 
+        uint256 lastGlobalFF = dailyFeeFactors[getDailyFeeFactorNumber()];
+        uint256 lastUserFF = dailyFeeFactors[lastdailyFFcount[owner_]];
         return (
-            (netX + uX + uY).mul(lastRebalance.FeeFactor).div(
-                lastUserRebalance.FeeFactor
-            ),
-            (netY + uY + uX).mul(lastRebalance.FeeFactor).div(
-                lastUserRebalance.FeeFactor
-            )
+            (netX + uX + uY).mul(lastGlobalFF).div(lastUserFF),
+            (netY + uY + uX).mul(lastGlobalFF).div(lastUserFF)
         ); //X,Y
     }
 
@@ -944,18 +993,21 @@ contract TokenFactory is
     /// @dev It updates the `managementFeesRate` state variable with the provided `rate` value,
     /// if the rate is within a valid range, otherwise, it reverts the transaction.
     /// The rate is in terms of percentage per day
-    ///    scaling factor is 100000
-    ///    Example 5% per day = 5000
-    //@note This is deprecated and will be replaced in upcoming commits
-    /// @param rate The new rate of management fees.
+    ///    scaling factor is 10E18
+    ///    Example 5% per day = 0.05*10E18
+    /// @param rate The new rate of management fees. It is DAILY RATE
+    /// @param rateRebalance The new rate of management fees for rebalance.(REBALANCE RATE)
     /// @return A boolean value
     function setManagementFeeRate(
-        uint256 rate
+        uint256 rate, //Daily Rate
+        uint256 rateRebalance //Rebalance Rate(example Quaterly rate)
     ) external onlyOwner returns (bool) {
         if (!(rate <= REBALANCE_INT_MULTIPLIER)) {
             revert TokenFactory__InvalidManagementFees();
         }
         managementFeesRate = rate;
+        managementFeesRateRebalance = rateRebalance;
+
         return true;
     }
 
@@ -988,26 +1040,22 @@ contract TokenFactory is
     /// @return userFees The calculated management fee
     function calculateManagementFee(
         uint256 amount,
-        bool isDefault,
         uint256 mgmtFee
     ) public view returns (uint256) {
         uint256 internalManagementFeesRate;
-        if (isDefault) {
-            // Use the default management fee rate if `isDefault` is true.
-            internalManagementFeesRate = managementFeesRate;
-        } else {
-            // Otherwise, use the provided `mgmtFee`.
-            internalManagementFeesRate = mgmtFee;
-        }
-        //estimate the nextRebalance Timestamp
-        uint256 nextRebalanceTimeStamp = lastTimeStamp + interval;
+        //note:: we check if we are default or not
+        mgmtFee > 0
+            ? internalManagementFeesRate = mgmtFee
+            : internalManagementFeesRate = managementFeesRate;
+        //estimate the next FF timestamp
+        uint256 nextFFTimeStamp = FFLastTimeStamp + FFinterval;
 
         //Estimate the mgmt fee per interval with respect to the fees per day value
         //The management fee rate is in terms of points per day, please checkout 'setManagementFee' Method
         // for more info
         uint256 mgmtFeesPerInterval = internalManagementFeesRate
-            .mul(interval)
-            .div(1 days);
+            .mul(FFinterval)
+            .div(1 days); // if the interval is one hour,then this is useful
 
         //User deposit or Withdrawal timestamp
         uint256 userTransacTimeStamp = block.timestamp;
@@ -1015,20 +1063,19 @@ contract TokenFactory is
         //Calculate the amount of time that the user will be in the system before next rebalance
         //or calculate the time left before next rebalance when the user exits the system
         uint256 userDepositCycle = 0;
-        if (nextRebalanceTimeStamp > userTransacTimeStamp) {
-            userDepositCycle = nextRebalanceTimeStamp - userTransacTimeStamp;
-        } else {
-            userDepositCycle = 0;
+        if (nextFFTimeStamp > userTransacTimeStamp) {
+            userDepositCycle = nextFFTimeStamp - userTransacTimeStamp;
         }
+
         // deposit cycle should be atleast 1 second before rebalance
-        if (userDepositCycle == 0 || interval == 0) {
+        if (userDepositCycle == 0 || FFinterval == 0) {
             revert TokenFactory__InvalidDivision();
         }
         //calculate user fees (Pro-rata)
         uint256 userFees = userDepositCycle
             .mul(mgmtFeesPerInterval)
             .mul(amount)
-            .div(interval)
+            .div(FFinterval)
             .div(REBALANCE_INT_MULTIPLIER);
 
         return userFees;
@@ -1164,8 +1211,8 @@ contract TokenFactory is
         return lastTimeStamp;
     }
 
-    function getManagementFeeRate() public view returns (uint256) {
-        return managementFeesRate;
+    function getManagementFeeRate() public view returns (uint256, uint256) {
+        return (managementFeesRate, managementFeesRateRebalance);
     }
 
     /// @notice Retrieves the managementFeeEnabled
@@ -1256,5 +1303,18 @@ contract TokenFactory is
                 currentDepositPeriodAmount[user]
             );
         }
+    }
+
+    /// Getters for the new fees mechanisms
+    function getLastFFTimeStamp() external view returns (uint256) {
+        return FFLastTimeStamp;
+    }
+    function getDailyFeeFactorNumber() public view returns (uint256) {
+        return dailyFeeFactors.length - 1; //adjusted since rebalanceElements is also filled on initialization
+    }
+    function getUserLastFFCount(
+        address userAddress
+    ) public view returns (uint256) {
+        return lastdailyFFcount[userAddress];
     }
 }

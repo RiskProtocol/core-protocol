@@ -10,6 +10,7 @@ import {
   signRebalance,
   defaultRebalanceData,
   rateLimitsDefault,
+  FF_INTERVAL,
 } from "../../helper-hardhat-config";
 import { loadFixture, time } from "@nomicfoundation/hardhat-network-helpers";
 
@@ -77,6 +78,7 @@ developmentChains.includes(network.name)
         const tokenFactory = await upgrades.deployProxy(TokenFactory, [
           underlyingToken.address,
           REBALANCE_INTERVAL,
+          FF_INTERVAL,
           sanctionsContract.address,
           deployer.address,
           deployer.address,
@@ -127,6 +129,7 @@ developmentChains.includes(network.name)
         const tokenFactory2 = await upgrades.deployProxy(TokenFactory2, [
           "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D",
           REBALANCE_INTERVAL,
+          FF_INTERVAL,
           sanctionsContract.address,
           deployer.address,
           deployer.address,

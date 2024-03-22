@@ -1,4 +1,3 @@
-//import { ethers } from "ethers-v6";
 import { ethers } from "hardhat";
 import { getDeployedAddress2 } from "../lib/utils";
 
