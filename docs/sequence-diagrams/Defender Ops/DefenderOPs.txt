@@ -1,5 +1,6 @@
 title The Defender Ops
-Defender->API: Fetches next rebalance params
+RebalanceLambda->Defender:Calls defender's webhook with next rebalance params
 Defender-> Smart Contract: Executes rebalance operation
+Defender->API: Updates the rebalance status as initiated
 Smart Contract-->Defender: Returns transaction info
-Defender->API: Calls the update rebalance transaction endpoint
+Defender->API: Update rebalance status as completed
