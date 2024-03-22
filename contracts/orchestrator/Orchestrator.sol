@@ -46,8 +46,12 @@ contract Orchestrator is UUPSUpgradeable, OwnableUpgradeable {
         _disableInitializers();
     }
 
-    function initialize(address _tokenFactory) public initializer {
+    function initialize(
+        address _tokenFactory,
+        address owner_
+    ) public initializer {
         __Ownable_init();
+        transferOwnership(owner_);
         __UUPSUpgradeable_init();
         tokenFactory = ITokenFactory(_tokenFactory);
     }

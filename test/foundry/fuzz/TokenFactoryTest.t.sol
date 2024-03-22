@@ -9,12 +9,14 @@ contract TokenFactoryTest is Test, TestHelper {
     SmartToken smartTokenYWrapper;
 
     function setUp() public {
+        address deployer = address(1);
         vm.createSelectFork(vm.rpcUrl("mainnet"), 17268750);
 
         // deploy underlying asset
         mockERC20Token = new MockERC20Token();
+        vm.startPrank(deployer);
         tokenFactory = new TokenFactory();
-        factoryProxy = new UUPSProxy(address(tokenFactory), "");
+        factoryProxy = new ERC1967Proxy(address(tokenFactory), "");
         factoryWrapper = TokenFactory(address(factoryProxy));
         factoryWrapper.initialize(
             mockERC20Token,
@@ -22,6 +24,7 @@ contract TokenFactoryTest is Test, TestHelper {
             FF_INTERVAL,
             sanctionsContract,
             signersAddress,
+            deployer,
             WITHDRAW,
             DEPOSIT,
             PERIOD
@@ -30,29 +33,32 @@ contract TokenFactoryTest is Test, TestHelper {
         // deploy token X
         smartTokenX = new SmartToken();
 
-        vaultProxy = new UUPSProxy(address(smartTokenX), "");
+        vaultProxy = new ERC1967Proxy(address(smartTokenX), "");
         smartTokenXWrapper = SmartToken(address(vaultProxy));
         smartTokenXWrapper.initialize(
             TOKEN1_NAME,
             TOKEN1_SYMBOL,
             address(factoryWrapper),
             sanctionsContract,
-            true
+            true,
+            deployer
         );
         // deploy token Y
         smartTokenY = new SmartToken();
-        vault2Proxy = new UUPSProxy(address(smartTokenY), "");
+        vault2Proxy = new ERC1967Proxy(address(smartTokenY), "");
         smartTokenYWrapper = SmartToken(address(vault2Proxy));
         smartTokenYWrapper.initialize(
             TOKEN2_NAME,
             TOKEN2_SYMBOL,
             address(factoryWrapper),
             sanctionsContract,
-            false
+            false,
+            deployer
         );
 
         // initialize dev tokens in token factory
         factoryWrapper.initializeSMART(smartTokenXWrapper, smartTokenYWrapper);
+        vm.stopPrank();
     }
 
     function testFuzz_ConvertToShares(uint256 amount) public {

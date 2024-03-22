@@ -10,11 +10,13 @@ contract TokenFactoryTest is Test, TestHelper {
 
     function setUp() public {
         vm.createSelectFork(vm.rpcUrl("mainnet"), 17268750);
+        address deployer = address(1);
 
         // deploy underlying asset
         mockERC20Token = new MockERC20Token();
+        vm.startPrank(deployer);
         tokenFactory = new TokenFactory();
-        factoryProxy = new UUPSProxy(address(tokenFactory), "");
+        factoryProxy = new ERC1967Proxy(address(tokenFactory), "");
         factoryWrapper = TokenFactory(address(factoryProxy));
         factoryWrapper.initialize(
             mockERC20Token,
@@ -22,6 +24,7 @@ contract TokenFactoryTest is Test, TestHelper {
             FF_INTERVAL,
             sanctionsContract,
             signersAddress,
+            address(msg.sender),
             WITHDRAW,
             DEPOSIT,
             PERIOD
@@ -30,29 +33,32 @@ contract TokenFactoryTest is Test, TestHelper {
         // deploy token X
         smartTokenX = new SmartToken();
 
-        vaultProxy = new UUPSProxy(address(smartTokenX), "");
+        vaultProxy = new ERC1967Proxy(address(smartTokenX), "");
         smartTokenXWrapper = SmartToken(address(vaultProxy));
         smartTokenXWrapper.initialize(
             TOKEN1_NAME,
             TOKEN1_SYMBOL,
             address(factoryWrapper),
             sanctionsContract,
-            true
+            true,
+            address(msg.sender)
         );
         // deploy token Y
         smartTokenY = new SmartToken();
-        vault2Proxy = new UUPSProxy(address(smartTokenY), "");
+        vault2Proxy = new ERC1967Proxy(address(smartTokenY), "");
         smartTokenYWrapper = SmartToken(address(vault2Proxy));
         smartTokenYWrapper.initialize(
             TOKEN2_NAME,
             TOKEN2_SYMBOL,
             address(factoryWrapper),
             sanctionsContract,
-            false
+            false,
+            address(msg.sender)
         );
 
         // initialize dev tokens in token factory
         factoryWrapper.initializeSMART(smartTokenXWrapper, smartTokenYWrapper);
+        vm.stopPrank();
     }
 
     function invariant_RebalanceInterval() public {

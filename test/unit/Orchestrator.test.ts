@@ -45,6 +45,7 @@ developmentChains.includes(network.name)
           FF_INTERVAL,
           sanctionsContract.address,
           deployer.address,
+          deployer.address,
           rateLimitsDefault.withdraw,
           rateLimitsDefault.deposit,
           rateLimitsDefault.period,
@@ -63,6 +64,7 @@ developmentChains.includes(network.name)
           tokenFactory.address,
           sanctionsContract.address,
           true,
+          deployer.address,
         ]);
         await SmartToken1.deployed();
 
@@ -78,6 +80,7 @@ developmentChains.includes(network.name)
           tokenFactory.address,
           sanctionsContract.address,
           false,
+          deployer.address,
         ]);
         await SmartToken2.deployed();
 
@@ -89,6 +92,7 @@ developmentChains.includes(network.name)
 
         const Orchestrator = await upgrades.deployProxy(OrchestratorFactory, [
           tokenFactory.address,
+          deployer.address,
         ]);
         await Orchestrator.deployed();
 
@@ -355,6 +359,7 @@ developmentChains.includes(network.name)
 
           const encodedEarlyRebalance2 = await signRebalance(
             tokenFactory.signer,
+
             {
               ...defaultRebalanceData,
               sequenceNumber: 2,
@@ -416,6 +421,7 @@ developmentChains.includes(network.name)
 
           const encodedEarlyRebalance2 = await signRebalance(
             tokenFactory.signer,
+
             {
               ...defaultRebalanceData,
               sequenceNumber: 2,
@@ -425,6 +431,7 @@ developmentChains.includes(network.name)
 
           const encodedEarlyRebalance1 = await signRebalance(
             tokenFactory.signer,
+
             {
               ...defaultRebalanceData,
               isNaturalRebalance: false,
@@ -435,6 +442,7 @@ developmentChains.includes(network.name)
             "executeRebalance",
             [
               encodedEarlyRebalance2.encodedData,
+
               encodedEarlyRebalance1.signature,
             ]
           );
@@ -462,6 +470,7 @@ developmentChains.includes(network.name)
 
           const encodedEarlyRebalance1 = await signRebalance(
             tokenFactory.signer,
+
             {
               ...defaultRebalanceData,
               isNaturalRebalance: false,
@@ -472,6 +481,7 @@ developmentChains.includes(network.name)
             "executeRebalance",
             [
               encodedEarlyRebalance1.encodedData,
+
               encodedEarlyRebalance1.signature,
             ]
           );
@@ -507,6 +517,7 @@ developmentChains.includes(network.name)
 
           const encodedEarlyRebalance1 = await signRebalance(
             tokenFactory.signer,
+
             {
               ...defaultRebalanceData,
               isNaturalRebalance: false,
@@ -531,6 +542,7 @@ developmentChains.includes(network.name)
 
           const encodedEarlyRebalance2 = await signRebalance(
             tokenFactory.signer,
+
             {
               ...defaultRebalanceData,
               sequenceNumber: 2,
@@ -542,6 +554,7 @@ developmentChains.includes(network.name)
             "executeRebalance",
             [
               encodedEarlyRebalance2.encodedData,
+
               encodedEarlyRebalance2.signature,
             ]
           );
@@ -556,6 +569,7 @@ developmentChains.includes(network.name)
 
           const encodedEarlyRebalance3 = await signRebalance(
             tokenFactory.signer,
+
             {
               ...defaultRebalanceData,
               sequenceNumber: 2,
@@ -567,6 +581,7 @@ developmentChains.includes(network.name)
             "executeRebalance",
             [
               encodedEarlyRebalance3.encodedData,
+
               encodedEarlyRebalance3.signature,
             ]
           );
@@ -587,6 +602,7 @@ developmentChains.includes(network.name)
 
           const encodedEarlyRebalance1 = await signRebalance(
             tokenFactory.signer,
+
             {
               ...defaultRebalanceData,
               isNaturalRebalance: false,
@@ -597,6 +613,7 @@ developmentChains.includes(network.name)
             "executeRebalance",
             [
               encodedEarlyRebalance1.encodedData,
+
               encodedEarlyRebalance1.signature,
             ]
           );
@@ -616,6 +633,7 @@ developmentChains.includes(network.name)
             "executeRebalance",
             [
               encodedEarlyRebalance2.encodedData,
+
               encodedEarlyRebalance2.signature,
             ]
           );
@@ -635,6 +653,7 @@ developmentChains.includes(network.name)
             "executeRebalance",
             [
               encodedEarlyRebalance3.encodedData,
+
               encodedEarlyRebalance3.signature,
             ]
           );
@@ -646,6 +665,7 @@ developmentChains.includes(network.name)
             "executeRebalance",
             [
               encodedEarlyRebalance3.encodedData,
+
               encodedEarlyRebalance3.signature,
             ]
           );
@@ -676,6 +696,7 @@ developmentChains.includes(network.name)
 
           const encodedEarlyRebalance1 = await signRebalance(
             tokenFactory.signer,
+
             {
               ...defaultRebalanceData,
               isNaturalRebalance: false,
@@ -686,6 +707,7 @@ developmentChains.includes(network.name)
             "executeRebalance",
             [
               encodedEarlyRebalance1.encodedData,
+
               encodedEarlyRebalance1.signature,
             ]
           );
@@ -694,6 +716,7 @@ developmentChains.includes(network.name)
 
           const encodedEarlyRebalance2 = await signRebalance(
             tokenFactory.signer,
+
             {
               ...defaultRebalanceData,
               sequenceNumber: 2,
@@ -705,6 +728,7 @@ developmentChains.includes(network.name)
             "executeRebalance",
             [
               encodedEarlyRebalance2.encodedData,
+
               encodedEarlyRebalance2.signature,
             ]
           );
@@ -713,6 +737,7 @@ developmentChains.includes(network.name)
 
           const encodedEarlyRebalance3 = await signRebalance(
             tokenFactory.signer,
+
             {
               ...defaultRebalanceData,
               sequenceNumber: 2,
@@ -724,6 +749,7 @@ developmentChains.includes(network.name)
             "executeRebalance",
             [
               encodedEarlyRebalance3.encodedData,
+
               encodedEarlyRebalance3.signature,
             ]
           );
@@ -774,6 +800,7 @@ developmentChains.includes(network.name)
           for (let i = 1; i < 10; i++) {
             const encodedEarlyRebalance = await signRebalance(
               tokenFactory.signer,
+
               {
                 ...defaultRebalanceData,
                 sequenceNumber: i + 1,
@@ -854,12 +881,14 @@ developmentChains.includes(network.name)
           balancerPools = await Orchestrator.getBalancerPools();
 
           expect(balancerPools[1]).to.equal(ethers.constants.AddressZero);
+          expect(balancerPools[1]).to.equal(ethers.constants.AddressZero);
 
           const thirdAdd = ethers.Wallet.createRandom(["15661"]);
           await Orchestrator.addBalancerPool(0, thirdAdd.address);
 
           balancerPools = await Orchestrator.getBalancerPools();
 
+          expect(balancerPools[0]).to.equal(thirdAdd.address);
           expect(balancerPools[0]).to.equal(thirdAdd.address);
           expect(balancerPools[1]).to.equal(poolAddress);
         });
@@ -879,7 +908,7 @@ developmentChains.includes(network.name)
             ethers.Wallet.createRandom().address
           );
 
-          await Orchestrator.removeBalancerPool(1);
+          await Orchestrator.removeBalancerPool(2);
           await Orchestrator.removeBalancerPool(1);
           await Orchestrator.removeBalancerPool(0);
 
@@ -905,6 +934,7 @@ developmentChains.includes(network.name)
           //rebalance and resync
           const encodedEarlyRebalance1 = await signRebalance(
             tokenFactory.signer,
+
             {
               ...defaultRebalanceData,
               sequenceNumber: 1,
@@ -943,6 +973,7 @@ developmentChains.includes(network.name)
           //rebalance and resync
           const encodedEarlyRebalance1 = await signRebalance(
             tokenFactory.signer,
+
             {
               ...defaultRebalanceData,
               sequenceNumber: 1,

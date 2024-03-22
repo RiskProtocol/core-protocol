@@ -1,0 +1,18 @@
+{
+  "tokenFactory": {
+    "proxyAddress": "0xC0d3f973CbBf0e9A1Db9178E4DCbDbA5c51202c4",
+    "saltStr": "162855"
+  },
+  "SmartTokenX": {
+    "proxyAddress": "0xc0d3e9Ba087238bBE1E5a35d2cB84F81caDF1D63",
+    "saltStr": "192259"
+  },
+  "SmartTokenY": {
+    "proxyAddress": "0xC0D399Ce586652964F8E1dbB304Cd9d7a120968f",
+    "saltStr": "279430"
+  },
+  "Orchestator": {
+    "proxyAddress": "0xc0d3C5484379e9397E9d7473Cb225C64c6Eb3845",
+    "saltStr": "331226"
+  }
+}

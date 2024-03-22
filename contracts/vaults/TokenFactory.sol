@@ -179,6 +179,7 @@ contract TokenFactory is
         uint256 ffInterval, // in seconds
         address sanctionsContract_,
         address signersAddress_,
+        address owner_,
         uint256 withdrawLimit_,
         uint256 depositLimit_,
         uint256 limitPeriod_
@@ -187,6 +188,7 @@ contract TokenFactory is
 
         __BaseContract_init(sanctionsContract_);
         __Ownable_init();
+        transferOwnership(owner_);
         __UUPSUpgradeable_init();
 
         baseToken = IERC20Update(baseTokenAddress);

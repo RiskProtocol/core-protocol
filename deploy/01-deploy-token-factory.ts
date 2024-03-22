@@ -45,6 +45,7 @@ const func: DeployFunction = async ({
       FF_INTERVAL,
       sanctionsContractAddress,
       deployer,
+      deployer,
       rateLimitsDefault.withdraw,
       rateLimitsDefault.deposit,
       rateLimitsDefault.period,
@@ -63,5 +64,6 @@ const func: DeployFunction = async ({
   log("TokenFactory Deployed!");
   log("----------------------------------");
 };
+
 export default func;
 func.tags = ["all"];

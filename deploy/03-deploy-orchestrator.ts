@@ -23,7 +23,7 @@ const func: DeployFunction = async ({
   const OrchestratorContract = await ethers.getContractFactory("Orchestrator");
   const Orchestrator = await upgrades.deployProxy(
     OrchestratorContract,
-    [tokenFactory.address],
+    [tokenFactory.address, deployer],
     { initializer: "initialize", kind: "uups" }
   );
 

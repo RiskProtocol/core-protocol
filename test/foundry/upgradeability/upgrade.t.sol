@@ -20,7 +20,7 @@ contract _Test is Test, TestHelper {
         // deploy underlying asset
         underlying = new MockERC20Token();
         tokenFactory = new TokenFactory();
-        factoryProxy = new UUPSProxy(address(tokenFactory), "");
+        factoryProxy = new ERC1967Proxy(address(tokenFactory), "");
         factoryWrapper = TokenFactory(address(factoryProxy));
         factoryWrapper.initialize(
             underlying,
@@ -28,6 +28,7 @@ contract _Test is Test, TestHelper {
             FF_INTERVAL,
             sanctionsContract,
             signersAddress,
+            owner,
             WITHDRAW,
             DEPOSIT,
             PERIOD
@@ -36,25 +37,27 @@ contract _Test is Test, TestHelper {
         // deploy token X
         smartTokenX = new SmartToken();
 
-        vaultProxy = new UUPSProxy(address(smartTokenX), "");
+        vaultProxy = new ERC1967Proxy(address(smartTokenX), "");
         smartTokenXWrapper = SmartToken(address(vaultProxy));
         smartTokenXWrapper.initialize(
             TOKEN1_NAME,
             TOKEN1_SYMBOL,
             address(factoryWrapper),
             sanctionsContract,
-            true
+            true,
+            owner
         );
         // deploy token Y
         smartTokenY = new SmartToken();
-        vault2Proxy = new UUPSProxy(address(smartTokenY), "");
+        vault2Proxy = new ERC1967Proxy(address(smartTokenY), "");
         smartTokenYWrapper = SmartToken(address(vault2Proxy));
         smartTokenYWrapper.initialize(
             TOKEN2_NAME,
             TOKEN2_SYMBOL,
             address(factoryWrapper),
             sanctionsContract,
-            false
+            false,
+            owner
         );
 
         // initialize dev tokens in token factory

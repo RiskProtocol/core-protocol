@@ -46,6 +46,7 @@ developmentChains.includes(network.name)
           FF_INTERVAL,
           sanctionsContract.address,
           deployer.address,
+          deployer.address,
           rateLimitsDefault.withdraw,
           rateLimitsDefault.deposit,
           rateLimitsDefault.period,
@@ -64,6 +65,7 @@ developmentChains.includes(network.name)
           tokenFactory.address,
           sanctionsContract.address,
           true,
+          deployer.address,
         ]);
         await SmartToken1.deployed();
 
@@ -79,6 +81,7 @@ developmentChains.includes(network.name)
           tokenFactory.address,
           sanctionsContract.address,
           false,
+          deployer.address,
         ]);
         await SmartToken2.deployed();
 
@@ -93,6 +96,7 @@ developmentChains.includes(network.name)
           REBALANCE_INTERVAL,
           FF_INTERVAL,
           sanctionsContract.address,
+          deployer.address,
           deployer.address,
           rateLimitsDefault.withdraw,
           rateLimitsDefault.deposit,
@@ -120,6 +124,7 @@ developmentChains.includes(network.name)
           FF_INTERVAL,
           sanctionsContract.address,
           deployer.address,
+          deployer.address,
           rateLimitsDefault.withdraw,
           rateLimitsDefault.deposit,
           rateLimitsDefault.period,
@@ -138,6 +143,7 @@ developmentChains.includes(network.name)
           tokenFactory3.address,
           sanctionsContract.address,
           true,
+          deployer.address,
         ]);
         await SmartTokenX.deployed();
 
@@ -153,6 +159,7 @@ developmentChains.includes(network.name)
           tokenFactory3.address,
           sanctionsContract.address,
           false,
+          deployer.address,
         ]);
         await SmartTokenY.deployed();
 

@@ -14,14 +14,16 @@ contract ERC4626Test is Test, TestHelper {
 
     function setUp() public {
         vm.createSelectFork(vm.rpcUrl("mainnet"), 17268750);
+        address deployer = address(1);
 
         // deploy chainlink mock
 
         // deploy underlying asset
         underlying = new MockERC20Token();
-        tokenFactory = new TokenFactory();
+        vm.startPrank(deployer);
 
-        factoryProxy = new UUPSProxy(address(tokenFactory), "");
+        tokenFactory = new TokenFactory();
+        factoryProxy = new ERC1967Proxy(address(tokenFactory), "");
         factoryWrapper = TokenFactory(address(factoryProxy));
         factoryWrapper.initialize(
             underlying,
@@ -29,47 +31,52 @@ contract ERC4626Test is Test, TestHelper {
             FF_INTERVAL,
             sanctionsContract,
             signersAddress,
+            deployer,
             WITHDRAW,
             DEPOSIT,
             PERIOD
         );
 
         vault = new SmartToken();
-        vaultProxy = new UUPSProxy(address(vault), "");
+        vaultProxy = new ERC1967Proxy(address(vault), "");
         vaultWrapper1 = SmartToken(address(vaultProxy));
         vaultWrapper1.initialize(
             TOKEN1_NAME,
             TOKEN1_SYMBOL,
             address(factoryWrapper),
             sanctionsContract,
-            true
+            true,
+            deployer
         );
 
         vault2 = new SmartToken();
-        vault2Proxy = new UUPSProxy(address(vault2), "");
+        vault2Proxy = new ERC1967Proxy(address(vault2), "");
         vaultWrapper2 = SmartToken(address(vault2Proxy));
         vaultWrapper2.initialize(
             TOKEN2_NAME,
             TOKEN2_SYMBOL,
             address(factoryWrapper),
             sanctionsContract,
-            false
+            false,
+            deployer
         );
 
         // initialize dev tokens in token factory
         factoryWrapper.initializeSMART(vaultWrapper1, vaultWrapper2);
+        vm.stopPrank();
     }
 
     function testMetadata() public {
         SmartToken vlt = new SmartToken();
-        UUPSProxy vltProxy = new UUPSProxy(address(vlt), "");
+        ERC1967Proxy vltProxy = new ERC1967Proxy(address(vlt), "");
         SmartToken vltWrapper = SmartToken(address(vltProxy));
         vltWrapper.initialize(
             TOKEN1_NAME,
             TOKEN1_SYMBOL,
             address(factoryWrapper),
             sanctionsContract,
-            true
+            true,
+            signersAddress
         );
 
         assertEq(vltWrapper.name(), TOKEN1_NAME);

@@ -53,8 +53,10 @@
     "@openzeppelin/hardhat-upgrades": "^1.27.0",
     "@remix-project/remixd": "^0.6.18",
     "@tenderly/hardhat-tenderly": "^1.7.7",
+    "@trp/solady": "git+https://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@github.com/RiskProtocol/solady.git#03f3fd05fb1da76edc4df83ae6bf32a842c15f12",
     "ethereum-interface-generator": "^1.2.1",
     "ethers": "5.4",
+    "ethers-v6": "npm:ethers@^6.7.1",
     "global": "^4.4.0",
     "hardhat-erc1820": "^0.1.0",
     "node-forge": "^1.3.1"
