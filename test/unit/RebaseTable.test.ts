@@ -574,6 +574,120 @@ developmentChains.includes(network.name)
             "TokenFactory__InvalidSequenceNumber"
           );
         });
+        it(`it should handle invalid rebase params with correct error`, async function () {
+          const {
+            tokenFactory,
+            deployer,
+            underlyingToken,
+            smartToken1,
+            smartToken2,
+            orchestrator,
+          } = await loadFixture(deployTokenFixture);
+
+          const depositAmount = ethers.utils.parseEther("1");
+
+          await tokenFactory.initializeSMART(
+            smartToken1.address,
+
+            smartToken2.address
+          );
+
+          // deposit underlying token
+          await underlyingToken.approve(tokenFactory.address, depositAmount);
+          await smartToken1.deposit(depositAmount, deployer.address);
+          interface data {
+            sequenceNumber: number;
+            isNaturalRebalance: boolean;
+            underlyingValue: string;
+            smartTokenXValue: string;
+          }
+          let rebalanceParams: data = {
+            sequenceNumber: 1,
+            isNaturalRebalance: false,
+            underlyingValue: "0",
+            smartTokenXValue: "10",
+          };
+          let encodedEarlyRebalance1 = await signRebalance(
+            tokenFactory.signer,
+            {
+              ...rebalanceParams,
+              isNaturalRebalance: false,
+            }
+          );
+          // trigger a rebalance
+          await expect(
+            orchestrator.rebalance(
+              encodedEarlyRebalance1.encodedData,
+              encodedEarlyRebalance1.signature
+            )
+          ).to.be.revertedWithCustomError(
+            tokenFactory,
+            "TokenFactory__InvalidRebalanceParams"
+          );
+          //Now price of X = 0
+          rebalanceParams = {
+            sequenceNumber: 1,
+            isNaturalRebalance: false,
+            underlyingValue: "10",
+            smartTokenXValue: "0",
+          };
+          encodedEarlyRebalance1 = await signRebalance(tokenFactory.signer, {
+            ...rebalanceParams,
+            isNaturalRebalance: false,
+          });
+          // trigger a rebalance
+          await expect(
+            orchestrator.rebalance(
+              encodedEarlyRebalance1.encodedData,
+              encodedEarlyRebalance1.signature
+            )
+          ).to.be.revertedWithCustomError(
+            tokenFactory,
+            "TokenFactory__InvalidRebalanceParams"
+          );
+          //now price of x ==underlying
+          rebalanceParams = {
+            sequenceNumber: 1,
+            isNaturalRebalance: false,
+            underlyingValue: "10",
+            smartTokenXValue: "10",
+          };
+          encodedEarlyRebalance1 = await signRebalance(tokenFactory.signer, {
+            ...rebalanceParams,
+            isNaturalRebalance: false,
+          });
+          // trigger a rebalance
+          await expect(
+            orchestrator.rebalance(
+              encodedEarlyRebalance1.encodedData,
+              encodedEarlyRebalance1.signature
+            )
+          ).to.be.revertedWithCustomError(
+            tokenFactory,
+            "TokenFactory__InvalidRebalanceParams"
+          );
+          //now both 0
+          rebalanceParams = {
+            sequenceNumber: 1,
+            isNaturalRebalance: false,
+            underlyingValue: "0",
+            smartTokenXValue: "0",
+          };
+          encodedEarlyRebalance1 = await signRebalance(tokenFactory.signer, {
+            ...rebalanceParams,
+            isNaturalRebalance: false,
+          });
+          // trigger a rebalance
+          await expect(
+            orchestrator.rebalance(
+              encodedEarlyRebalance1.encodedData,
+              encodedEarlyRebalance1.signature
+            )
+          ).to.be.revertedWithCustomError(
+            tokenFactory,
+            "TokenFactory__InvalidRebalanceParams"
+          );
+        });
       });
 
       it(`it should revert if rebalance signature is not signed by API wallet`, async function () {
