@@ -66,15 +66,9 @@ contract Orchestrator is UUPSUpgradeable, OwnableUpgradeable {
     ) external {
         tokenFactory.executeRebalance(encodedData, signature);
         if (balancerPools.length != 0) {
-            //get price
-            Shared.ScheduledRebalance memory rebalanceCall = tokenFactory
-                .verifyAndDecode(signature, encodedData);
             //resync
             for (uint256 i = 0; i < balancerPools.length; i++) {
-                IElasticPoolSupply(balancerPools[i]).resyncWeight(
-                    uint256(rebalanceCall.price / 2) //Since this is executed after rebase,
-                    //the price of X is now underlying/2 rather than previously priceX
-                );
+                IElasticPoolSupply(balancerPools[i]).resyncWeight(); //no params required now
                 emit BalancerResynced(balancerPools[i]);
             }
         }
