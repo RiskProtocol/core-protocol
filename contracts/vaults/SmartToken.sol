@@ -9,6 +9,7 @@ import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.
 import "@openzeppelin/contracts-upgradeable/interfaces/IERC4626Upgradeable.sol";
 
 import "./../interfaces/IERC20Update.sol";
+import "./../interfaces/IWETH.sol";
 import "./../lib/ERC20/ERC20Upgradeable.sol";
 import "./../lib/ERC20/extensions/ERC20PermitUpgradeable.sol";
 import "./TokenFactory.sol";
@@ -43,12 +44,15 @@ contract SmartToken is
     error SmartToken__InsufficientUnderlying();
     error SmartToken__DepositLimitHit();
     error SmartToken__WithdrawLimitHit();
+    error SmartToken__WithdrawNativeFailed();
 
     /// @notice The tokenFactory instance
     TokenFactory private tokenFactory;
     /// @notice The underlyingToken instance
     IERC20Update private underlyingToken;
     bool private isX;
+    bool private isNativeToken;
+    IWETH private weth;
 
     /// @dev Ensures that the function is only callable by the TokenFactory contract.
     /// Calls the helper function `_onlyTokenFactory` to check the caller.
@@ -135,8 +139,27 @@ contract SmartToken is
         tokenFactory = TokenFactory(factoryAddress);
         underlyingToken = tokenFactory.getBaseToken();
         isX = isX_;
+        isNativeToken = tokenFactory.getIsNativeToken();
+        if (isNativeToken) {
+            weth = IWETH(address(underlyingToken));
+        }
+    }
+    //since we now handle native tokens
+    receive() external payable {
+        if (tokenFactory.getIsNativeToken() == false) {
+            revert SmartToken__MethodNotAllowed();
+        }
     }
 
+    /// @notice method to drain contracts of any ethers
+    /// @dev This function can only be called by the contract owner.
+    /// @param receiver The address of the account that will receive the ethers.
+    function drain(address receiver) external onlyOwner {
+        if (tokenFactory.getIsNativeToken() == false) {
+            revert SmartToken__MethodNotAllowed();
+        }
+        payable(receiver).transfer(address(this).balance);
+    }
     /// @notice Authorizes an upgrade to a new contract implementation.
     /// @dev This function can only be called by the contract owner.
     /// It overrides the `_authorizeUpgrade` function from the `UUPSUpgradeable`
@@ -476,7 +499,42 @@ contract SmartToken is
 
         return shares;
     }
+    /// @notice Deposits an amount of underlying (NATIVE) assets, crediting the shares(RiskON/OFF) to the receiver.
+    /// @dev It uses msg.value as the deposit amount.
+    /// The `stopDeposit` circuit breaker can be used to freeze deposits and `validateDepositAmount` modifier to
+    /// validate the deposit amount
+    /// @param receiver The receiver address.
+    /// @return The amount of shares(RiskOn/Off) the receiver will get.
+    function depositWithNative(
+        address receiver
+    )
+        public
+        payable
+        virtual
+        nonReentrant
+        stopDeposit
+        insufficientUnderlying
+        dailyFFUpdate
+        depositLimitHit(msg.value)
+        validateDepositAmount(msg.value, receiver)
+        returns (uint256)
+    {
+        if (tokenFactory.getIsNativeToken() == false)
+            revert SmartToken__MethodNotAllowed();
 
+        if (msg.value == 0) revert SmartToken__ZeroDeposit();
+        uint256 assets = msg.value;
+        weth.deposit{value: assets}();
+
+        //Use 'previewDeposit' method to get the converted amount of underlying assets to shares
+        uint256 shares = previewDeposit(assets);
+        //calls the '_deposit' method of Vault(tokenFactory) to deposit the underlying. For more info please checkout
+        // the tokenFactory contract
+        weth.approve(address(tokenFactory), assets);
+        tokenFactory._deposit(address(this), receiver, assets, shares);
+
+        return shares;
+    }
     /// @notice Calculates the maximum amount of shares(RiskOn/Off) that can be minted for a user.
     /// @dev It overrides the `maxMint` function from the `IERC4626Upgradeable` interface.
     /// @param account The address of user for which to calculate the maximum mintable shares(RiskOn/Off).
@@ -589,6 +647,61 @@ contract SmartToken is
         uint256 shares = previewWithdraw(assets);
         // calls the '_withdraw' method on the Vault(TokenFactory). For more info, check out the tokenFcatory contract
         tokenFactory._withdraw(_msgSender(), receiver, owner_, assets, shares);
+
+        return shares;
+    }
+
+    /// @notice Allows an owner to withdraw a specified amount of underlying assets, transferring them to a receiver.
+    /// @dev This function overrides the `withdraw` function from the `IERC4626Upgradeable` interface,
+    /// and is guarded by the `stopWithdraw`, `onlyAssetOwner`, and `nonReentrant` modifiers.
+    /// @param assets The amount of underlying assets to withdraw.
+    /// @param receiver The address to which the assets should be transferred.
+    /// @param owner_ The address of the owner making the withdrawal.
+    /// @return The number of shares(RiskON/OFF) corresponding to the withdrawn assets.
+    function withdrawNative(
+        uint256 assets,
+        address receiver,
+        address owner_
+    )
+        public
+        virtual
+        stopWithdraw
+        insufficientUnderlying
+        dailyFFUpdate
+        withdrawLimitHit(assets)
+        onlyAssetOwner(owner_)
+        nonReentrant
+        returns (uint256)
+    {
+        if (tokenFactory.getIsNativeToken() == false)
+            revert SmartToken__MethodNotAllowed();
+        // checks for any pending rebalances for the receiver and applies them if necessary
+        if (
+            tokenFactory.getUserLastRebalanceCount(receiver) !=
+            tokenFactory.getRebalanceNumber()
+        ) {
+            tokenFactory.applyRebalance(receiver);
+        }
+        //checks that the specified amount of underlying assets is within the maximum allowed for withdrawal
+
+        if (assets > maxWithdraw(owner_))
+            revert SmartToken__WithdrawMoreThanMax();
+
+        uint256 shares = previewWithdraw(assets);
+        // calls the '_withdraw' method on the Vault(TokenFactory). For more info, check out the tokenFcatory contract
+        tokenFactory._withdraw(
+            _msgSender(),
+            address(this),
+            owner_,
+            assets,
+            shares
+        );
+
+        weth.withdraw(assets);
+        (bool sent, ) = receiver.call{value: assets}("");
+        if (!sent) {
+            revert SmartToken__WithdrawNativeFailed();
+        }
 
         return shares;
     }
