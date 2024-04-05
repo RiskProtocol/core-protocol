@@ -523,15 +523,15 @@ contract SmartToken is
             revert SmartToken__MethodNotAllowed();
 
         if (msg.value == 0) revert SmartToken__ZeroDeposit();
-        uint256 assets = msg.value;
-        weth.deposit{value: assets}();
+
+        weth.deposit{value: msg.value}();
 
         //Use 'previewDeposit' method to get the converted amount of underlying assets to shares
-        uint256 shares = previewDeposit(assets);
+        uint256 shares = previewDeposit(msg.value);
         //calls the '_deposit' method of Vault(tokenFactory) to deposit the underlying. For more info please checkout
         // the tokenFactory contract
-        weth.approve(address(tokenFactory), assets);
-        tokenFactory._deposit(address(this), receiver, assets, shares);
+        weth.approve(address(tokenFactory), msg.value);
+        tokenFactory._deposit(address(this), receiver, msg.value, shares);
 
         return shares;
     }
@@ -647,61 +647,6 @@ contract SmartToken is
         uint256 shares = previewWithdraw(assets);
         // calls the '_withdraw' method on the Vault(TokenFactory). For more info, check out the tokenFcatory contract
         tokenFactory._withdraw(_msgSender(), receiver, owner_, assets, shares);
-
-        return shares;
-    }
-
-    /// @notice Allows an owner to withdraw a specified amount of underlying assets, transferring them to a receiver.
-    /// @dev This function overrides the `withdraw` function from the `IERC4626Upgradeable` interface,
-    /// and is guarded by the `stopWithdraw`, `onlyAssetOwner`, and `nonReentrant` modifiers.
-    /// @param assets The amount of underlying assets to withdraw.
-    /// @param receiver The address to which the assets should be transferred.
-    /// @param owner_ The address of the owner making the withdrawal.
-    /// @return The number of shares(RiskON/OFF) corresponding to the withdrawn assets.
-    function withdrawNative(
-        uint256 assets,
-        address receiver,
-        address owner_
-    )
-        public
-        virtual
-        stopWithdraw
-        insufficientUnderlying
-        dailyFFUpdate
-        withdrawLimitHit(assets)
-        onlyAssetOwner(owner_)
-        nonReentrant
-        returns (uint256)
-    {
-        if (tokenFactory.getIsNativeToken() == false)
-            revert SmartToken__MethodNotAllowed();
-        // checks for any pending rebalances for the receiver and applies them if necessary
-        if (
-            tokenFactory.getUserLastRebalanceCount(receiver) !=
-            tokenFactory.getRebalanceNumber()
-        ) {
-            tokenFactory.applyRebalance(receiver);
-        }
-        //checks that the specified amount of underlying assets is within the maximum allowed for withdrawal
-
-        if (assets > maxWithdraw(owner_))
-            revert SmartToken__WithdrawMoreThanMax();
-
-        uint256 shares = previewWithdraw(assets);
-        // calls the '_withdraw' method on the Vault(TokenFactory). For more info, check out the tokenFcatory contract
-        tokenFactory._withdraw(
-            _msgSender(),
-            address(this),
-            owner_,
-            assets,
-            shares
-        );
-
-        weth.withdraw(assets);
-        (bool sent, ) = receiver.call{value: assets}("");
-        if (!sent) {
-            revert SmartToken__WithdrawNativeFailed();
-        }
 
         return shares;
     }

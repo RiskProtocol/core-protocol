@@ -496,6 +496,7 @@ developmentChains.includes(network.name)
             await mockWETH.balanceOf(tokenFactoryETH.address)
           ).to.be.equal(amount);
         });
+
         it("Should revert if value == 0", async function () {
           const { tokenFactoryETH, smartToken1ETH, smartToken2ETH, tester } =
             await loadFixture(deployTokenFixture);
@@ -556,58 +557,7 @@ developmentChains.includes(network.name)
             amount
           );
         });
-        it("Should withdraw Native tokens correctly", async function () {
-          const {
-            tokenFactoryETH,
-            smartToken1ETH,
-            smartToken2ETH,
-            deployer,
-            mockWETH,
-            tester,
-          } = await loadFixture(deployTokenFixture);
-          await tokenFactoryETH.initializeSMART(
-            smartToken1ETH.address,
-            smartToken2ETH.address
-          );
-          const amount = ethers.utils.parseEther("1");
-          await mockWETH.approve(tokenFactoryETH.address, amount);
-          await smartToken1ETH.depositWithNative(deployer.address, {
-            value: amount,
-          });
-          const balanceTester = await tester.getBalance();
-          await smartToken1ETH.withdrawNative(
-            amount,
-            tester.address,
-            deployer.address
-          );
-          expect(await tester.getBalance()).to.be.equal(
-            BigInt(balanceTester.toString()) + BigInt(amount.toString())
-          );
-        });
-        it("Should revert if underlying is not native with the withdrawNative Method", async function () {
-          const {
-            tokenFactory,
-            smartToken1,
-            smartToken2,
-            deployer,
-            mockWETH,
-            tester,
-            underlyingToken,
-          } = await loadFixture(deployTokenFixture);
-          await tokenFactory.initializeSMART(
-            smartToken1.address,
-            smartToken2.address
-          );
-          const amount = ethers.utils.parseEther("1");
-          await underlyingToken.approve(tokenFactory.address, amount);
-          await smartToken1.deposit(amount, deployer.address);
-          await expect(
-            smartToken1.withdrawNative(amount, tester.address, deployer.address)
-          ).to.be.revertedWithCustomError(
-            smartToken1,
-            "SmartToken__MethodNotAllowed"
-          );
-        });
+
         it("Should revert if underlying is not native and trying to receieve ethers", async function () {
           const {
             tokenFactory,
