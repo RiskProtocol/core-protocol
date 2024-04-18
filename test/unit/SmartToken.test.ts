@@ -392,5 +392,156 @@ developmentChains.includes(network.name)
           );
         });
       });
+
+      describe("Deposit/Withdraw with Expiry", async function () {
+        it("Should allow user to deposit with option of using an expiry date", async function () {
+          const {
+            smartToken1,
+            deployer,
+            tester,
+            tokenFactory,
+            smartToken2,
+            underlyingToken,
+          } = await loadFixture(deployTokenFixture);
+          const amount = ethers.utils.parseEther("1");
+          await tokenFactory.initializeSMART(
+            smartToken1.address,
+
+            smartToken2.address
+          );
+
+          // deposit underlying token
+          await underlyingToken.approve(tokenFactory.address, amount);
+
+          //current blocktime
+          const blockNumber = await ethers.provider.getBlockNumber();
+          // Fetch the block using the block number
+          const block = await ethers.provider.getBlock(blockNumber);
+          const currentBlockTime = block.timestamp;
+
+          //user allows an additional 10 seconds
+          const expiry = currentBlockTime + 10;
+          await smartToken1.depositWithExpiry(amount, deployer.address, expiry);
+
+          expect(await smartToken1.balanceOf(deployer.address)).to.be.equal(
+            amount
+          );
+        });
+
+        it("Should revert if date is expired", async function () {
+          const {
+            smartToken1,
+            deployer,
+            tester,
+            tokenFactory,
+            smartToken2,
+            underlyingToken,
+          } = await loadFixture(deployTokenFixture);
+          const amount = ethers.utils.parseEther("1");
+          await tokenFactory.initializeSMART(
+            smartToken1.address,
+
+            smartToken2.address
+          );
+
+          // deposit underlying token
+          await underlyingToken.approve(tokenFactory.address, amount);
+
+          //current blocktime
+          const blockNumber = await ethers.provider.getBlockNumber();
+          // Fetch the block using the block number
+          const block = await ethers.provider.getBlock(blockNumber);
+          const currentBlockTime = block.timestamp;
+
+          //user sets an old date
+          const expiry = currentBlockTime - 10;
+          await expect(
+            smartToken1.depositWithExpiry(amount, deployer.address, expiry)
+          ).to.be.revertedWithCustomError(
+            smartToken1,
+            "SmartToken__ExpiryDateReached"
+          );
+        });
+
+        it("Should allow user to withdraw with option of using an expiry date", async function () {
+          const {
+            smartToken1,
+            deployer,
+            tester,
+            tokenFactory,
+            smartToken2,
+            underlyingToken,
+          } = await loadFixture(deployTokenFixture);
+          const amount = ethers.utils.parseEther("1");
+          await tokenFactory.initializeSMART(
+            smartToken1.address,
+
+            smartToken2.address
+          );
+
+          // deposit underlying token
+          await underlyingToken.approve(tokenFactory.address, amount);
+          await smartToken1.deposit(amount, deployer.address);
+
+          //current blocktime
+          const blockNumber = await ethers.provider.getBlockNumber();
+          // Fetch the block using the block number
+          const block = await ethers.provider.getBlock(blockNumber);
+          const currentBlockTime = block.timestamp;
+
+          //user allows an additional 10 seconds
+          const expiry = currentBlockTime + 10;
+          await smartToken1.withdrawWithExpiry(
+            amount,
+            deployer.address,
+            deployer.address,
+            expiry
+          );
+
+          expect(await smartToken1.balanceOf(deployer.address)).to.be.equal(0);
+        });
+
+        it("Should revert if withdraw date is expired", async function () {
+          const {
+            smartToken1,
+            deployer,
+            tester,
+            tokenFactory,
+            smartToken2,
+            underlyingToken,
+          } = await loadFixture(deployTokenFixture);
+          const amount = ethers.utils.parseEther("1");
+          await tokenFactory.initializeSMART(
+            smartToken1.address,
+
+            smartToken2.address
+          );
+
+          // deposit underlying token
+          await underlyingToken.approve(tokenFactory.address, amount);
+          await smartToken1.deposit(amount, deployer.address);
+          //current blocktime
+          const blockNumber = await ethers.provider.getBlockNumber();
+          // Fetch the block using the block number
+          const block = await ethers.provider.getBlock(blockNumber);
+          const currentBlockTime = block.timestamp;
+
+          //user sets an old date
+          const expiry = currentBlockTime - 10;
+          await expect(
+            smartToken1.withdrawWithExpiry(
+              amount,
+              deployer.address,
+              deployer.address,
+              expiry
+            )
+          ).to.be.revertedWithCustomError(
+            smartToken1,
+            "SmartToken__ExpiryDateReached"
+          );
+        });
+
+        /////
+      });
     })
   : describe.skip;

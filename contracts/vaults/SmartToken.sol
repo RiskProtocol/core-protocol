@@ -43,6 +43,7 @@ contract SmartToken is
     error SmartToken__InsufficientUnderlying();
     error SmartToken__DepositLimitHit();
     error SmartToken__WithdrawLimitHit();
+    error SmartToken__ExpiryDateReached();
 
     /// @notice The tokenFactory instance
     TokenFactory private tokenFactory;
@@ -101,6 +102,13 @@ contract SmartToken is
 
     modifier dailyFFUpdate() {
         tokenFactory.dailyFeeFactorsUpdate();
+        _;
+    }
+
+    modifier expiryDateCheck(uint256 expiryDate) {
+        if (expiryDate < block.timestamp) {
+            revert SmartToken__ExpiryDateReached();
+        }
         _;
     }
 
@@ -476,7 +484,37 @@ contract SmartToken is
 
         return shares;
     }
+    /// @notice Deposits an amount of underlying assets, crediting the shares(RiskON/OFF) to the receiver.
+    /// @dev It overrides the `deposit` function from the `IERC4626Upgradeable` interface.
+    /// The `stopDeposit` circuit breaker can be used to freeze deposits and `validateDepositAmount` modifier to
+    /// validate the deposit amount
+    /// @param assets The amount of assets to deposit.
+    /// @param receiver The receiver address.
+    /// @param expiryDate The expiry date for the deposit.
+    /// @return The amount of shares(RiskOn/Off) the receiver will get.
+    function depositWithExpiry(
+        uint256 assets,
+        address receiver,
+        uint256 expiryDate
+    )
+        public
+        virtual
+        expiryDateCheck(expiryDate)
+        stopDeposit
+        insufficientUnderlying
+        dailyFFUpdate
+        depositLimitHit(assets)
+        validateDepositAmount(assets, receiver)
+        returns (uint256)
+    {
+        //Use 'previewDeposit' method to get the converted amount of underlying assets to shares
+        uint256 shares = previewDeposit(assets);
+        //calls the '_deposit' method of Vault(tokenFactory) to deposit the underlying. For more info please checkout
+        // the tokenFactory contract
+        tokenFactory._deposit(_msgSender(), receiver, assets, shares);
 
+        return shares;
+    }
     /// @notice Calculates the maximum amount of shares(RiskOn/Off) that can be minted for a user.
     /// @dev It overrides the `maxMint` function from the `IERC4626Upgradeable` interface.
     /// @param account The address of user for which to calculate the maximum mintable shares(RiskOn/Off).
@@ -567,6 +605,49 @@ contract SmartToken is
         public
         virtual
         override
+        stopWithdraw
+        insufficientUnderlying
+        dailyFFUpdate
+        withdrawLimitHit(assets)
+        onlyAssetOwner(owner_)
+        nonReentrant
+        returns (uint256)
+    {
+        // checks for any pending rebalances for the receiver and applies them if necessary
+        if (
+            tokenFactory.getUserLastRebalanceCount(receiver) !=
+            tokenFactory.getRebalanceNumber()
+        ) {
+            tokenFactory.applyRebalance(receiver);
+        }
+        //checks that the specified amount of underlying assets is within the maximum allowed for withdrawal
+
+        if (assets > maxWithdraw(owner_))
+            revert SmartToken__WithdrawMoreThanMax();
+        uint256 shares = previewWithdraw(assets);
+        // calls the '_withdraw' method on the Vault(TokenFactory). For more info, check out the tokenFcatory contract
+        tokenFactory._withdraw(_msgSender(), receiver, owner_, assets, shares);
+
+        return shares;
+    }
+
+    /// @notice Allows an owner to withdraw a specified amount of underlying assets, transferring them to a receiver.
+    /// @dev This function overrides the `withdraw` function from the `IERC4626Upgradeable` interface,
+    /// and is guarded by the `stopWithdraw`, `onlyAssetOwner`, and `nonReentrant` modifiers.
+    /// @param assets The amount of underlying assets to withdraw.
+    /// @param receiver The address to which the assets should be transferred.
+    /// @param owner_ The address of the owner making the withdrawal.
+    /// @param expiryDate The expiry date for the withdrawal.
+    /// @return The number of shares(RiskON/OFF) corresponding to the withdrawn assets.
+    function withdrawWithExpiry(
+        uint256 assets,
+        address receiver,
+        address owner_,
+        uint256 expiryDate
+    )
+        public
+        virtual
+        expiryDateCheck(expiryDate)
         stopWithdraw
         insufficientUnderlying
         dailyFFUpdate
