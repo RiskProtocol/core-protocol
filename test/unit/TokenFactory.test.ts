@@ -977,7 +977,7 @@ developmentChains.includes(network.name)
             )
           ).to.be.revertedWithCustomError(
             smartToken1,
-            "SmartToken__RedeemMoreThanMax"
+            "SmartToken__WithdrawMoreThanMax"
           );
         });
 
