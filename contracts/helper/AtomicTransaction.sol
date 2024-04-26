@@ -10,7 +10,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "../interfaces/ISmartToken.sol";
 
-/**
+/*
 @note FYI:
 We make use of 0x Swap API to split and swap in one atomic tx
 
