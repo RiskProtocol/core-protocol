@@ -5,6 +5,8 @@ coverage.json
 typechain
 typechain-types
 .openzeppelin
+.deploys
+.deps
 
 # Hardhat files
 cache
