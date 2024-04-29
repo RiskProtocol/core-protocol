@@ -184,6 +184,89 @@ developmentChains.includes(network.name)
             "AtomicTransaction_SlippageError"
           );
         });
+        it(`it should revert with invalid params`, async function () {
+          let {
+            tokenFactory,
+            underlyingToken,
+            SmartToken1,
+            SmartToken2,
+            atomicTransaction,
+            swapTarget,
+          } = await loadFixture(deployTokenFixture);
+          await tokenFactory.initializeSMART(
+            SmartToken1.address,
+            SmartToken2.address
+          );
+
+          await underlyingToken.approve(
+            atomicTransaction.address,
+            ethers.utils.parseEther("1")
+          );
+
+          //selling smarttoken1 for smarttoken2
+          await SmartToken1.approve(
+            atomicTransaction.address,
+            ethers.utils.parseEther("1")
+          );
+
+          //should revert since swapTarget is dummy
+          // the sold tokens are not sold hence the buy tokens are not bought
+          // therefore slippage condition is not met
+          await expect(
+            atomicTransaction.splitAndSwap(
+              SmartToken1.address,
+              SmartToken2.address,
+              swapTarget.address,
+              swapTarget.address, //0x Contract
+              "0x", //swap data
+              ethers.utils.parseEther("0"),
+              ethers.utils.parseEther("0"),
+              ethers.utils.parseEther("0")
+            )
+          ).to.revertedWithCustomError(
+            atomicTransaction,
+            "AtomicTransaction_InvalidParams"
+          );
+        });
+        it(`it should revert if not approved`, async function () {
+          let {
+            tokenFactory,
+            underlyingToken,
+            SmartToken1,
+            SmartToken2,
+            atomicTransaction,
+            swapTarget,
+          } = await loadFixture(deployTokenFixture);
+          await tokenFactory.initializeSMART(
+            SmartToken1.address,
+            SmartToken2.address
+          );
+
+          //selling smarttoken1 for smarttoken2
+          await SmartToken1.approve(
+            atomicTransaction.address,
+            ethers.utils.parseEther("1")
+          );
+
+          //should revert since swapTarget is dummy
+          // the sold tokens are not sold hence the buy tokens are not bought
+          // therefore slippage condition is not met
+          await expect(
+            atomicTransaction.splitAndSwap(
+              SmartToken1.address,
+              SmartToken2.address,
+              swapTarget.address,
+              swapTarget.address, //0x Contract
+              "0x", //swap data
+              ethers.utils.parseEther("1"),
+              ethers.utils.parseEther("1"),
+              ethers.utils.parseEther("1")
+            )
+          ).to.revertedWithCustomError(
+            atomicTransaction,
+            "AtomicTransaction_InvalidBalance"
+          );
+        });
         it(`it should be able to receive ether`, async function () {
           let { deployer, atomicTransaction } = await loadFixture(
             deployTokenFixture
