@@ -16,7 +16,7 @@ contract MockSwapTarget {
         require(!shouldFail, "Mock: swap failed");
     }
 
-    function dummyData() public returns (bytes memory) {
+    function dummyData() public pure returns (bytes memory) {
         return abi.encodeWithSignature("dummyData()");
     }
 }
