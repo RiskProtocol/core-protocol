@@ -211,7 +211,7 @@ contract AtomicTransaction is
         }
 
         //transfer bought tokens to user
-        // @note: https://0x.canny.io/request-features/p/support-for-receiving-swapped-tokens-on-another-wallet
+        // @note : https://0x.canny.io/request-features/p/support-for-receiving-swapped-tokens-on-another-wallet
         SafeERC20.safeTransfer(buyToken, _msgSender(), boughtAmount);
 
         emit SplitAndSwap(_msgSender(), depositAmount, boughtAmount);

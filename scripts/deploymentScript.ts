@@ -3,11 +3,13 @@ import { deployUUPSviaCreate3 } from "./utils/deployer";
 import vanityConfig from "./vanityConfig.json";
 import {
   BASE_TOKEN_ADDRESS,
+  FF_INTERVAL,
   REBALANCE_INTERVAL,
   TOKEN1_NAME,
   TOKEN1_SYMBOL,
   TOKEN2_NAME,
   TOKEN2_SYMBOL,
+  rateLimitsDefault,
 } from "../helper-hardhat-config";
 import pxSalt from "../ContractSalts.json";
 import * as dotenv from "dotenv";
@@ -24,9 +26,13 @@ async function main() {
     [
       BASE_TOKEN_ADDRESS, //Base Token
       REBALANCE_INTERVAL,
+      FF_INTERVAL,
       sanctionsContractAddress, //sanctions but just testing
       wallet.address,
       wallet.address,
+      rateLimitsDefault.withdraw,
+      rateLimitsDefault.deposit,
+      rateLimitsDefault.period,
     ],
     vanityConfig.factoryAddress,
     false,
@@ -91,6 +97,20 @@ async function main() {
 
   await tokenFactoryInstance.initializeOrchestrator(Orchestator);
   console.log("Orchestrator Intializied!");
+
+  // deploy atomicSwap
+  const AtomicTransaction = await deployUUPSviaCreate3(
+    "AtomicTransaction",
+    pxSalt.AtomicTx.saltStr, //salt
+    [SmartXComplete, SmartYComplete, BASE_TOKEN_ADDRESS, wallet.address],
+    vanityConfig.factoryAddress,
+    false,
+    "contracts/helper/AtomicTransaction.sol:AtomicTransaction"
+  );
+
+  console.log(
+    `AtomicTransaction deployed at ProxyAddress:${AtomicTransaction}`
+  );
 }
 
 main();
