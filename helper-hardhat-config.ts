@@ -1,5 +1,8 @@
-import { Signer, utils } from "ethers";
+import { Signer, Wallet, utils } from "ethers";
 import { ethers } from "hardhat";
+import { KMSWallets } from "@web3-kms-signer/kms-wallets";
+import * as core from "@web3-kms-signer/core";
+import { KMSProviderAWS } from "@web3-kms-signer/kms-provider-aws";
 
 export const developmentChains = ["localhost", "hardhat"];
 export const MULTIPLIER = 1e18;
@@ -27,7 +30,7 @@ export const defaultRebalanceData = {
   smartTokenXValue: SmartTokenXValue,
 };
 export const signRebalance = async (
-  signer: Signer,
+  signer: Wallet,
   data: {
     sequenceNumber: number;
     isNaturalRebalance: boolean;
@@ -45,8 +48,11 @@ export const signRebalance = async (
   ]);
   // Hash the data
   const hashedData = utils.keccak256(encodedData);
+
+  const signKey = new ethers.utils.SigningKey(signer.privateKey);
+  const sig = signKey.signDigest(hashedData);
   // Sign the data
-  const signature = await signer.signMessage(utils.arrayify(hashedData));
+  const signature = ethers.utils.joinSignature(sig); // await signer.signMessage(utils.arrayify(hashedData));
   return { signature, encodedData };
 };
 
@@ -132,3 +138,27 @@ export const callculateRolloverAmount = (
 
   return [netX + uX + uY, netY + uY + uX, newUserRebalanceElements];
 };
+
+export async function signAwsKMS(keyId: string, data: any, awsConfig: any) {
+  const provider = new KMSProviderAWS(awsConfig);
+
+  const types = ["uint256", "bool", "uint256", "uint256"];
+
+  const encodedData = ethers.utils.defaultAbiCoder.encode(types, [
+    data.sequenceNumber,
+    data.isNaturalRebase,
+    data.underlyingValue,
+    data.smartTokenXValue,
+  ]);
+
+  const digestData = ethers.utils.keccak256(encodedData);
+  const sign = new core.Signer(new KMSWallets(provider));
+  const signature = await sign.signDigest({ keyId: keyId }, digestData);
+
+  return { signature, digestData, encodedData };
+}
+
+export async function getEthereumAddress(keyId: string, awsConfig: any) {
+  const provider = new KMSProviderAWS(awsConfig);
+  return await new KMSWallets(provider).getAddressHex(keyId);
+}

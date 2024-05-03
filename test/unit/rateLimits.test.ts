@@ -19,6 +19,7 @@ developmentChains.includes(network.name)
   ? describe("RateLimits", async function () {
       async function deployTokenFixture() {
         const [deployer, tester] = await ethers.getSigners();
+        const rebaseSigner = ethers.Wallet.createRandom();
 
         const chainId = 31337;
 

@@ -51,6 +51,7 @@ developmentChains.includes(network.name)
   ? describe("Management Fees", async function () {
       async function deployTokenFixture() {
         const [deployer, tester, treasury] = await ethers.getSigners();
+        const rebaseSigner = ethers.Wallet.createRandom();
 
         const MockERC20Token = await ethers.getContractFactory(
           "MockERC20Token",
@@ -78,7 +79,7 @@ developmentChains.includes(network.name)
           REBALANCE_INTERVAL,
           FF_INTERVAL,
           sanctionsContract.address,
-          deployer.address,
+          rebaseSigner.address,
           deployer.address,
           rateLimitsDefault.withdraw,
           rateLimitsDefault.deposit,
@@ -129,7 +130,7 @@ developmentChains.includes(network.name)
           REBALANCE_INTERVAL,
           FF_INTERVAL,
           sanctionsContract.address,
-          deployer.address,
+          rebaseSigner.address,
           deployer.address,
           rateLimitsDefault.withdraw,
           rateLimitsDefault.deposit,
@@ -159,7 +160,7 @@ developmentChains.includes(network.name)
           REBALANCE_INTERVAL,
           3600, //one hour
           sanctionsContract.address,
-          deployer.address,
+          rebaseSigner.address,
           deployer.address,
           rateLimitsDefault.withdraw,
           rateLimitsDefault.deposit,
@@ -228,6 +229,7 @@ developmentChains.includes(network.name)
           smartToken1FF,
           smartToken2FF,
           orchestratorFF,
+          rebaseSigner,
         };
       }
 
@@ -282,6 +284,7 @@ developmentChains.includes(network.name)
               smartToken2,
               treasury,
               orchestrator,
+              rebaseSigner,
             } = await loadFixture(deployTokenFixture);
             const depositAmount = item.depositValue;
 
@@ -316,7 +319,7 @@ developmentChains.includes(network.name)
             await time.setNextBlockTimestamp(nextRebalanceTimeStamp);
 
             const { signature, encodedData } = await signRebalance(
-              deployer,
+              rebaseSigner,
               defaultRebalanceData
             );
             let count = 0;
@@ -498,6 +501,7 @@ developmentChains.includes(network.name)
               smartToken1,
               smartToken2,
               orchestrator,
+              rebaseSigner,
             } = await loadFixture(deployTokenFixture);
             const depositAmount = item.depositValue;
             const transferAmount = ethers.utils.parseEther("1");
@@ -523,7 +527,7 @@ developmentChains.includes(network.name)
               deployer.address
             );
 
-            const encodedEarlyRebalance1 = await signRebalance(deployer, {
+            const encodedEarlyRebalance1 = await signRebalance(rebaseSigner, {
               ...defaultRebalanceData,
               sequenceNumber: 1,
               isNaturalRebalance: false,
@@ -548,6 +552,7 @@ developmentChains.includes(network.name)
               smartToken2,
               tester,
               orchestrator,
+              rebaseSigner,
             } = await loadFixture(deployTokenFixture);
             const depositAmount = item.depositValue;
 
@@ -573,7 +578,7 @@ developmentChains.includes(network.name)
             await time.setNextBlockTimestamp(nextRebalance);
 
             const { signature, encodedData } = await signRebalance(
-              deployer,
+              rebaseSigner,
               defaultRebalanceData
             );
             let count = 0;
@@ -625,6 +630,7 @@ developmentChains.includes(network.name)
               tester,
               treasury,
               orchestrator,
+              rebaseSigner,
             } = await loadFixture(deployTokenFixture);
             const depositAmount = item.depositValue;
 
@@ -670,7 +676,7 @@ developmentChains.includes(network.name)
               count += FF_INTERVAL;
             }
             const encodedNaturalRebalance1 = await signRebalance(
-              deployer,
+              rebaseSigner,
               defaultRebalanceData
             );
 
@@ -683,7 +689,7 @@ developmentChains.includes(network.name)
               BigInt(nextRebalance) + BigInt(REBALANCE_INTERVAL);
             await time.setNextBlockTimestamp(secondRebalance);
 
-            const encodedNaturalRebalance2 = await signRebalance(deployer, {
+            const encodedNaturalRebalance2 = await signRebalance(rebaseSigner, {
               ...defaultRebalanceData,
               sequenceNumber: 2,
             });
@@ -703,7 +709,7 @@ developmentChains.includes(network.name)
               BigInt(secondRebalance) + BigInt(REBALANCE_INTERVAL);
             await time.setNextBlockTimestamp(thirdRebalance);
 
-            const encodedNaturalRebalance3 = await signRebalance(deployer, {
+            const encodedNaturalRebalance3 = await signRebalance(rebaseSigner, {
               ...defaultRebalanceData,
               sequenceNumber: 3,
             });
@@ -737,6 +743,7 @@ developmentChains.includes(network.name)
               tester,
               treasury,
               orchestrator,
+              rebaseSigner,
             } = await loadFixture(deployTokenFixture);
             const depositAmount = item.depositValue;
 
@@ -782,7 +789,7 @@ developmentChains.includes(network.name)
             await time.setNextBlockTimestamp(nextRebalance);
 
             const encodedNaturalRebalance1 = await signRebalance(
-              deployer,
+              rebaseSigner,
               defaultRebalanceData
             );
             let count = 0;
@@ -817,7 +824,7 @@ developmentChains.includes(network.name)
               BigInt(nextRebalance) + BigInt(REBALANCE_INTERVAL);
             await time.setNextBlockTimestamp(secondRebalance);
 
-            const encodedNaturalRebalance2 = await signRebalance(deployer, {
+            const encodedNaturalRebalance2 = await signRebalance(rebaseSigner, {
               ...defaultRebalanceData,
               sequenceNumber: 2,
             });
@@ -854,7 +861,7 @@ developmentChains.includes(network.name)
               BigInt(secondRebalance) + BigInt(REBALANCE_INTERVAL);
             await time.setNextBlockTimestamp(thirdRebalance);
 
-            const encodedNaturalRebalance3 = await signRebalance(deployer, {
+            const encodedNaturalRebalance3 = await signRebalance(rebaseSigner, {
               ...defaultRebalanceData,
               sequenceNumber: 3,
             });
@@ -1223,6 +1230,7 @@ developmentChains.includes(network.name)
             smartToken2FF,
             treasury,
             orchestratorFF,
+            rebaseSigner,
           } = await loadFixture(deployTokenFixture);
           const depositAmount = ethers.utils.parseEther("1");
 
@@ -1264,7 +1272,7 @@ developmentChains.includes(network.name)
           await time.setNextBlockTimestamp(nextRebalanceTimeStamp);
 
           const { signature, encodedData } = await signRebalance(
-            deployer,
+            rebaseSigner,
             defaultRebalanceData
           );
           let ninterval = FF_INTERVAL / 24;

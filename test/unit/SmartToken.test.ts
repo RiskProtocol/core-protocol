@@ -21,7 +21,7 @@ developmentChains.includes(network.name)
   ? describe("SmartToken", async function () {
       async function deployTokenFixture() {
         const [deployer, tester] = await ethers.getSigners();
-
+        const rebaseSigner = ethers.Wallet.createRandom();
         const MockERC20TokenWithPermit = await ethers.getContractFactory(
           "MockERC20TokenWithPermit",
           deployer
@@ -46,7 +46,7 @@ developmentChains.includes(network.name)
           REBALANCE_INTERVAL,
           FF_INTERVAL,
           sanctionsContract.address,
-          deployer.address,
+          rebaseSigner.address,
           deployer.address,
           rateLimitsDefault.withdraw,
           rateLimitsDefault.deposit,
@@ -108,6 +108,7 @@ developmentChains.includes(network.name)
           tester,
           sanctionsContract,
           orchestrator,
+          rebaseSigner,
         };
       }
 
@@ -191,6 +192,7 @@ developmentChains.includes(network.name)
             deployer,
             tester,
             orchestrator,
+            rebaseSigner,
           } = await loadFixture(deployTokenFixture);
           await tokenFactory.initializeSMART(
             smartToken1.address,
@@ -275,14 +277,11 @@ developmentChains.includes(network.name)
             lastUserRebalanceElementsDeployer
           );
 
-          const encodedEarlyRebalance1 = await signRebalance(
-            tokenFactory.signer,
-            {
-              ...defaultRebalanceData,
-              isNaturalRebalance: false,
-              smartTokenXValue: priceX.toString(),
-            }
-          );
+          const encodedEarlyRebalance1 = await signRebalance(rebaseSigner, {
+            ...defaultRebalanceData,
+            isNaturalRebalance: false,
+            smartTokenXValue: priceX.toString(),
+          });
 
           //apply rebalance
           await orchestrator.rebalance(

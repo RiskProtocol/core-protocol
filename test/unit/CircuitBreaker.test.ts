@@ -19,6 +19,7 @@ developmentChains.includes(network.name)
   ? describe("Circuit Breaker", async function () {
       async function deployTokenFixture() {
         const [deployer, tester] = await ethers.getSigners();
+        const rebaseSigner = ethers.Wallet.createRandom();
 
         const chainId = 31337;
 
@@ -48,7 +49,7 @@ developmentChains.includes(network.name)
           REBALANCE_INTERVAL,
           FF_INTERVAL,
           sanctionsContract.address,
-          deployer.address,
+          rebaseSigner.address,
           deployer.address,
           rateLimitsDefault.withdraw,
           rateLimitsDefault.deposit,
@@ -97,6 +98,7 @@ developmentChains.includes(network.name)
           deployer,
           tester,
           chainId,
+          rebaseSigner,
         };
       }
 
@@ -420,6 +422,7 @@ developmentChains.includes(network.name)
             underlyingToken,
             smartToken1,
             smartToken2,
+            rebaseSigner,
           } = await loadFixture(deployTokenFixture);
           const depositAmount = ethers.constants.MaxUint256.div(2);
 
@@ -444,7 +447,7 @@ developmentChains.includes(network.name)
           await tokenFactory.toggleRebalanceCircuitBreaker();
 
           const { signature, encodedData } = await signRebalance(
-            deployer,
+            rebaseSigner,
             defaultRebalanceData
           );
           await expect(
