@@ -16,6 +16,7 @@ import {
   FF_INTERVAL,
 } from "../../helper-hardhat-config";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
+import { send } from "process";
 
 developmentChains.includes(network.name)
   ? describe("SmartToken", async function () {
@@ -26,6 +27,10 @@ developmentChains.includes(network.name)
           "MockERC20TokenWithPermit",
           deployer
         );
+
+        const MockWETH = await ethers.getContractFactory("WETH9", deployer);
+        const mockWETH = await MockWETH.deploy();
+        await mockWETH.deployed();
         const underlyingToken = await MockERC20TokenWithPermit.deploy();
         await underlyingToken.deployed();
 
@@ -51,6 +56,7 @@ developmentChains.includes(network.name)
           rateLimitsDefault.withdraw,
           rateLimitsDefault.deposit,
           rateLimitsDefault.period,
+          false,
         ]);
         await tokenFactory.deployed();
 
@@ -98,6 +104,69 @@ developmentChains.includes(network.name)
 
         await tokenFactory.initializeOrchestrator(orchestrator.address);
 
+        //For Native Tokens as Underlying
+        const TokenFactoryETH = await ethers.getContractFactory(
+          "TokenFactory",
+          deployer
+        );
+        const tokenFactoryETH = await upgrades.deployProxy(TokenFactoryETH, [
+          mockWETH.address,
+          REBALANCE_INTERVAL,
+          FF_INTERVAL,
+          sanctionsContract.address,
+          deployer.address,
+          deployer.address,
+          rateLimitsDefault.withdraw,
+          rateLimitsDefault.deposit,
+          rateLimitsDefault.period,
+          true,
+        ]);
+        await tokenFactoryETH.deployed();
+
+        // deploy smartToken 1
+        const SmartToken1ETH = await ethers.getContractFactory(
+          "SmartToken",
+          deployer
+        );
+
+        const smartToken1ETH = await upgrades.deployProxy(SmartToken1ETH, [
+          TOKEN1_NAME,
+          TOKEN1_SYMBOL,
+          tokenFactoryETH.address,
+          sanctionsContract.address,
+          true,
+          deployer.address,
+        ]);
+        await smartToken1ETH.deployed();
+
+        // deploy smartToken 2
+        const SmartToken2ETH = await ethers.getContractFactory(
+          "SmartToken",
+          deployer
+        );
+
+        const smartToken2ETH = await upgrades.deployProxy(SmartToken2ETH, [
+          TOKEN2_NAME,
+          TOKEN2_SYMBOL,
+          tokenFactoryETH.address,
+          sanctionsContract.address,
+          false,
+          deployer.address,
+        ]);
+        await smartToken2ETH.deployed();
+        const OrchestratorFactoryETH = await ethers.getContractFactory(
+          "Orchestrator",
+          deployer
+        );
+
+        const orchestratorETH = await upgrades.deployProxy(
+          OrchestratorFactoryETH,
+          [tokenFactoryETH.address, deployer.address]
+        );
+        await orchestratorETH.deployed();
+
+        await tokenFactoryETH.initializeOrchestrator(orchestratorETH.address);
+
         // Fixtures can return anything you consider useful for your tests
         return {
           smartToken1,
@@ -108,6 +177,11 @@ developmentChains.includes(network.name)
           tester,
           sanctionsContract,
           orchestrator,
+          mockWETH,
+          tokenFactoryETH,
+          smartToken1ETH,
+          smartToken2ETH,
+          orchestratorETH,
         };
       }
 
@@ -389,6 +463,150 @@ developmentChains.includes(network.name)
           // because of the previous transfer, the max deposit should return balance of MaxUint256 - balanceOf(smartToken1)
           await expect(await smartToken1.maxDeposit(deployer.address)).to.gte(
             ethers.constants.MaxUint256.div(2).toString()
+          );
+        });
+      });
+      describe("Deposit Native Tokens", async function () {
+        it("Should fetch if the Native Token", async function () {
+          const { tokenFactoryETH, smartToken1ETH, smartToken2ETH, tester } =
+            await loadFixture(deployTokenFixture);
+
+          expect(await tokenFactoryETH.getIsNativeToken()).to.be.true;
+        });
+        it("Should deposit native tokens correctly", async function () {
+          const {
+            tokenFactoryETH,
+            smartToken1ETH,
+            smartToken2ETH,
+            deployer,
+            mockWETH,
+          } = await loadFixture(deployTokenFixture);
+          await tokenFactoryETH.initializeSMART(
+            smartToken1ETH.address,
+            smartToken2ETH.address
+          );
+          const amount = ethers.utils.parseEther("1");
+          await mockWETH.approve(tokenFactoryETH.address, amount);
+          await smartToken1ETH.depositWithNative(deployer.address, {
+            value: amount,
+          });
+          const balance = await smartToken1ETH.balanceOf(deployer.address);
+          await expect(balance).to.be.equal(amount);
+          await expect(
+            await mockWETH.balanceOf(tokenFactoryETH.address)
+          ).to.be.equal(amount);
+        });
+
+        it("Should revert if value == 0", async function () {
+          const { tokenFactoryETH, smartToken1ETH, smartToken2ETH, tester } =
+            await loadFixture(deployTokenFixture);
+
+          await tokenFactoryETH.initializeSMART(
+            smartToken1ETH.address,
+            smartToken2ETH.address
+          );
+          await expect(
+            smartToken1ETH.depositWithNative(tester.address, {
+              value: 0,
+            })
+          ).to.be.revertedWithCustomError(
+            smartToken1ETH,
+            "SmartToken__ZeroDeposit"
+          );
+        });
+        it("Should revert if underlying is not Native", async function () {
+          const { tokenFactory, smartToken1, smartToken2, tester } =
+            await loadFixture(deployTokenFixture);
+
+          await tokenFactory.initializeSMART(
+            smartToken1.address,
+            smartToken2.address
+          );
+          await expect(
+            smartToken1.depositWithNative(tester.address, {
+              value: 10,
+            })
+          ).to.be.revertedWithCustomError(
+            smartToken1,
+            "SmartToken__MethodNotAllowed"
+          );
+        });
+        it("Should withdraw erc20 tokens correctly", async function () {
+          const {
+            tokenFactoryETH,
+            smartToken1ETH,
+            smartToken2ETH,
+            deployer,
+            mockWETH,
+          } = await loadFixture(deployTokenFixture);
+          await tokenFactoryETH.initializeSMART(
+            smartToken1ETH.address,
+            smartToken2ETH.address
+          );
+          const amount = ethers.utils.parseEther("1");
+          await mockWETH.approve(tokenFactoryETH.address, amount);
+          await smartToken1ETH.depositWithNative(deployer.address, {
+            value: amount,
+          });
+          await smartToken1ETH.withdraw(
+            amount,
+            deployer.address,
+            deployer.address
+          );
+          expect(await mockWETH.balanceOf(deployer.address)).to.be.equal(
+            amount
+          );
+        });
+
+        it("Should revert if underlying is not native and trying to receieve ethers", async function () {
+          const {
+            tokenFactory,
+            smartToken1,
+            smartToken2,
+            deployer,
+            mockWETH,
+            tester,
+            underlyingToken,
+          } = await loadFixture(deployTokenFixture);
+          await tokenFactory.initializeSMART(
+            smartToken1.address,
+            smartToken2.address
+          );
+          const amount = ethers.utils.parseEther("1");
+
+          expect(
+            deployer.sendTransaction({
+              to: smartToken1.address,
+              value: amount,
+            })
+          ).to.be.revertedWithCustomError(
+            smartToken1,
+            "SmartToken__MethodNotAllowed"
+          );
+        });
+        it("Should drain the contracts of ethers if underlying is native", async function () {
+          const {
+            tokenFactoryETH,
+            smartToken1ETH,
+            smartToken2ETH,
+            deployer,
+            mockWETH,
+            tester,
+          } = await loadFixture(deployTokenFixture);
+          await tokenFactoryETH.initializeSMART(
+            smartToken1ETH.address,
+            smartToken2ETH.address
+          );
+          const amount = ethers.utils.parseEther("1");
+
+          await deployer.sendTransaction({
+            to: smartToken1ETH.address,
+            value: amount,
+          });
+          const balanceTester = await tester.getBalance();
+          await smartToken1ETH.drain(tester.address);
+          expect(await tester.getBalance()).to.be.equal(
+            BigInt(balanceTester.toString()) + BigInt(amount.toString())
           );
         });
       });

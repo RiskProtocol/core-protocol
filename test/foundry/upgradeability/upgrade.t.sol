@@ -31,14 +31,15 @@ contract _Test is Test, TestHelper {
             owner,
             WITHDRAW,
             DEPOSIT,
-            PERIOD
+            PERIOD,
+            false
         );
 
         // deploy token X
         smartTokenX = new SmartToken();
 
         vaultProxy = new ERC1967Proxy(address(smartTokenX), "");
-        smartTokenXWrapper = SmartToken(address(vaultProxy));
+        smartTokenXWrapper = SmartToken(payable(vaultProxy));
         smartTokenXWrapper.initialize(
             TOKEN1_NAME,
             TOKEN1_SYMBOL,
@@ -50,7 +51,7 @@ contract _Test is Test, TestHelper {
         // deploy token Y
         smartTokenY = new SmartToken();
         vault2Proxy = new ERC1967Proxy(address(smartTokenY), "");
-        smartTokenYWrapper = SmartToken(address(vault2Proxy));
+        smartTokenYWrapper = SmartToken(payable(vault2Proxy));
         smartTokenYWrapper.initialize(
             TOKEN2_NAME,
             TOKEN2_SYMBOL,

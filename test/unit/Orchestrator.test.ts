@@ -49,6 +49,7 @@ developmentChains.includes(network.name)
           rateLimitsDefault.withdraw,
           rateLimitsDefault.deposit,
           rateLimitsDefault.period,
+          false,
         ]);
         await tokenFactory.deployed();
 

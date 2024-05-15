@@ -34,12 +34,13 @@ contract ERC4626Test is Test, TestHelper {
             deployer,
             WITHDRAW,
             DEPOSIT,
-            PERIOD
+            PERIOD,
+            false
         );
 
         vault = new SmartToken();
         vaultProxy = new ERC1967Proxy(address(vault), "");
-        vaultWrapper1 = SmartToken(address(vaultProxy));
+        vaultWrapper1 = SmartToken(payable(vaultProxy));
         vaultWrapper1.initialize(
             TOKEN1_NAME,
             TOKEN1_SYMBOL,
@@ -51,7 +52,7 @@ contract ERC4626Test is Test, TestHelper {
 
         vault2 = new SmartToken();
         vault2Proxy = new ERC1967Proxy(address(vault2), "");
-        vaultWrapper2 = SmartToken(address(vault2Proxy));
+        vaultWrapper2 = SmartToken(payable(vault2Proxy));
         vaultWrapper2.initialize(
             TOKEN2_NAME,
             TOKEN2_SYMBOL,
@@ -69,7 +70,7 @@ contract ERC4626Test is Test, TestHelper {
     function testMetadata() public {
         SmartToken vlt = new SmartToken();
         ERC1967Proxy vltProxy = new ERC1967Proxy(address(vlt), "");
-        SmartToken vltWrapper = SmartToken(address(vltProxy));
+        SmartToken vltWrapper = SmartToken(payable(vltProxy));
         vltWrapper.initialize(
             TOKEN1_NAME,
             TOKEN1_SYMBOL,
