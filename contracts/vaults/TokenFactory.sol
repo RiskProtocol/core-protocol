@@ -32,6 +32,7 @@ contract TokenFactory is
     //errors
     error TokenFactory__MethodNotAllowed();
     error TokenFactory__InvalidDivision();
+    error TokenFactory__InvalidRebalanceParams();
     error TokenFactory__InvalidSequenceNumber();
     error TokenFactory__InvalidNaturalRebalance();
     error TokenFactory__AlreadyInitialized();
@@ -736,7 +737,13 @@ contract TokenFactory is
             RebalanceElements memory lastRebalance = rebalanceElements[
                 rebalanceElements.length - 1
             ];
-
+            if (
+                scheduledRebalance.smartTokenXprice == 0 ||
+                scheduledRebalance.price == 0 ||
+                scheduledRebalance.smartTokenXprice == scheduledRebalance.price
+            ) {
+                revert TokenFactory__InvalidRebalanceParams();
+            }
             uint256 smartTokenYprice = scheduledRebalance.price -
                 scheduledRebalance.smartTokenXprice;
             uint256 minimumPrice = scheduledRebalance.smartTokenXprice;
@@ -817,8 +824,8 @@ contract TokenFactory is
                         (
                             managementFeeEnabled && managementFeesRate > 0
                                 ? managementFeesRate.mul(FFinterval).div(1 days) //assuming 1 interval is one day,
-                                //otherwise useful when doing hourly
-                                : //then we can use 1 days/1days = 1
+                                //then we can use 1 days/1days = 1
+                                : //otherwise useful when doing hourly
                                 0
                         )
                 )
