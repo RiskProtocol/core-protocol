@@ -44,6 +44,7 @@ contract SmartToken is
     error SmartToken__InsufficientUnderlying();
     error SmartToken__DepositLimitHit();
     error SmartToken__WithdrawLimitHit();
+    error SmartToken__ExpiryDateReached();
     error SmartToken__WithdrawNativeFailed();
 
     /// @notice The tokenFactory instance
@@ -105,6 +106,13 @@ contract SmartToken is
 
     modifier dailyFFUpdate() {
         tokenFactory.dailyFeeFactorsUpdate();
+        _;
+    }
+
+    modifier expiryDateCheck(uint256 expiryDate) {
+        if (expiryDate < block.timestamp) {
+            revert SmartToken__ExpiryDateReached();
+        }
         _;
     }
 
@@ -446,13 +454,7 @@ contract SmartToken is
         validateDepositAmount(assets, receiver)
         returns (uint256)
     {
-        //Use 'previewDeposit' method to get the converted amount of underlying assets to shares
-        uint256 shares = previewDeposit(assets);
-        //calls the '_deposit' method of Vault(tokenFactory) to deposit the underlying. For more info please checkout
-        // the tokenFactory contract
-        tokenFactory._deposit(_msgSender(), receiver, assets, shares);
-
-        return shares;
+        return _handleDeposit(assets, receiver);
     }
 
     /// @notice Deposits an amount of underlying assets, crediting the shares(RiskON/OFF) to the receiver
@@ -483,11 +485,10 @@ contract SmartToken is
         validateDepositAmount(assets, receiver)
         returns (uint256)
     {
-        uint256 shares = previewDeposit(assets);
         underlyingToken.permit(
             _msgSender(),
             address(tokenFactory),
-            shares,
+            assets, //since shares == assets Therefore we can use assets
             deadline,
             v,
             r,
@@ -495,9 +496,32 @@ contract SmartToken is
         );
         //calls the '_deposit' method of Vault(tokenFactory) to deposit the underlying. For more info please checkout
         // the tokenFactory contract
-        tokenFactory._deposit(_msgSender(), receiver, assets, shares);
-
-        return shares;
+        return _handleDeposit(assets, receiver);
+    }
+    /// @notice Deposits an amount of underlying assets, crediting the shares(RiskON/OFF) to the receiver.
+    /// @dev It overrides the `deposit` function from the `IERC4626Upgradeable` interface.
+    /// The `stopDeposit` circuit breaker can be used to freeze deposits and `validateDepositAmount` modifier to
+    /// validate the deposit amount
+    /// @param assets The amount of assets to deposit.
+    /// @param receiver The receiver address.
+    /// @param expiryDate The expiry date for the deposit.
+    /// @return The amount of shares(RiskOn/Off) the receiver will get.
+    function depositWithExpiry(
+        uint256 assets,
+        address receiver,
+        uint256 expiryDate
+    )
+        public
+        virtual
+        expiryDateCheck(expiryDate)
+        stopDeposit
+        insufficientUnderlying
+        dailyFFUpdate
+        depositLimitHit(assets)
+        validateDepositAmount(assets, receiver)
+        returns (uint256)
+    {
+        return _handleDeposit(assets, receiver);
     }
     /// @notice Deposits an amount of underlying (NATIVE) assets, crediting the shares(RiskON/OFF) to the receiver.
     /// @dev It uses msg.value as the deposit amount.
@@ -579,13 +603,7 @@ contract SmartToken is
         returns (uint256)
     {
         if (shares > maxMint(receiver)) revert SmartToken__MintMoreThanMax();
-        //Use 'previewMint' method to get the converted amount of shares to underlying
-        uint256 assets = previewMint(shares);
-        //calls the '_deposit' method of Vault(tokenFactory) to deposit the underlying. For more info please checkout
-        // the tokenFactory contract
-        tokenFactory._deposit(_msgSender(), receiver, assets, shares);
-
-        return assets;
+        return _handleDeposit(shares, receiver);
     }
 
     /// @notice Calculates the maximum amount of underlying assets that can be withdrawn by a specified owner.
@@ -633,22 +651,35 @@ contract SmartToken is
         nonReentrant
         returns (uint256)
     {
-        // checks for any pending rebalances for the receiver and applies them if necessary
-        if (
-            tokenFactory.getUserLastRebalanceCount(receiver) !=
-            tokenFactory.getRebalanceNumber()
-        ) {
-            tokenFactory.applyRebalance(receiver);
-        }
-        //checks that the specified amount of underlying assets is within the maximum allowed for withdrawal
+        return _handleWithdraw(assets, receiver, owner_);
+    }
 
-        if (assets > maxWithdraw(owner_))
-            revert SmartToken__WithdrawMoreThanMax();
-        uint256 shares = previewWithdraw(assets);
-        // calls the '_withdraw' method on the Vault(TokenFactory). For more info, check out the tokenFcatory contract
-        tokenFactory._withdraw(_msgSender(), receiver, owner_, assets, shares);
-
-        return shares;
+    /// @notice Allows an owner to withdraw a specified amount of underlying assets, transferring them to a receiver.
+    /// @dev This function overrides the `withdraw` function from the `IERC4626Upgradeable` interface,
+    /// and is guarded by the `stopWithdraw`, `onlyAssetOwner`, and `nonReentrant` modifiers.
+    /// @param assets The amount of underlying assets to withdraw.
+    /// @param receiver The address to which the assets should be transferred.
+    /// @param owner_ The address of the owner making the withdrawal.
+    /// @param expiryDate The expiry date for the withdrawal.
+    /// @return The number of shares(RiskON/OFF) corresponding to the withdrawn assets.
+    function withdrawWithExpiry(
+        uint256 assets,
+        address receiver,
+        address owner_,
+        uint256 expiryDate
+    )
+        public
+        virtual
+        expiryDateCheck(expiryDate)
+        stopWithdraw
+        insufficientUnderlying
+        dailyFFUpdate
+        withdrawLimitHit(assets)
+        onlyAssetOwner(owner_)
+        nonReentrant
+        returns (uint256)
+    {
+        return _handleWithdraw(assets, receiver, owner_);
     }
 
     /// @notice Computes the maximum amount of underlying assets that can be redeemed by owner.
@@ -698,21 +729,7 @@ contract SmartToken is
         nonReentrant
         returns (uint256)
     {
-        // checks for any pending rebalances for the receiver and applies them if necessary
-        if (
-            tokenFactory.getUserLastRebalanceCount(receiver) !=
-            tokenFactory.getRebalanceNumber()
-        ) {
-            tokenFactory.applyRebalance(receiver);
-        }
-        //checks that the specified amount of underlying assets is within the maximum allowed for withdrawal
-        if (shares > maxRedeem(owner_)) revert SmartToken__RedeemMoreThanMax();
-
-        uint256 assets = previewRedeem(shares);
-        // calls the '_withdraw' method on the Vault(TokenFactory). For more info, check out the tokenFcatory contract
-        tokenFactory._withdraw(_msgSender(), receiver, owner_, assets, shares);
-
-        return assets;
+        return _handleWithdraw(shares, receiver, owner_);
     }
 
     /**
@@ -765,5 +782,52 @@ contract SmartToken is
             //The 'applyFF' method on the Vault(TokenFactory) is called
             tokenFactory.applyFF(receiver);
         }
+    }
+
+    // Helper function to handle the deposit logic
+    /// @param assets The amount of underlying assets to deposit.@note WE can use SHARES as well
+    /// since it's a 1:1 conversion
+    /// @param receiver The address to which the assets should be transferred.
+    function _handleDeposit(
+        uint256 assets,
+        address receiver
+    ) private returns (uint256) {
+        //Use 'previewDeposit' method to get the converted amount of underlying assets to shares
+        uint256 shares = previewDeposit(assets);
+        //@note since previewDeposit and previewMint are the same, we can use the same logic
+        //calls the '_deposit' method of Vault(tokenFactory) to deposit the underlying. For more info please checkout
+        // the tokenFactory contract
+        tokenFactory._deposit(_msgSender(), receiver, assets, shares);
+
+        return shares;
+    }
+
+    // Helper function to handle the withdrawal logic
+    /// @param assets The amount of underlying assets to withdraw. @note WE can use SHARES as well
+    /// since it's a 1:1 conversion
+    /// @param receiver The address to which the assets should be transferred.
+    /// @param owner_ The address of the owner making the withdrawal.
+    function _handleWithdraw(
+        uint256 assets,
+        address receiver,
+        address owner_
+    ) private returns (uint256) {
+        // checks for any pending rebalances for the receiver and applies them if necessary
+        if (
+            tokenFactory.getUserLastRebalanceCount(receiver) !=
+            tokenFactory.getRebalanceNumber()
+        ) {
+            tokenFactory.applyRebalance(receiver);
+        }
+        //checks that the specified amount of underlying assets is within the maximum allowed for withdrawal
+        // @note Since maxWithdraw and maxRedeem are the same, we can use the same logic
+        // @note Since previewWithdraw and previewRedeem are the same, we can use the same logic
+        if (assets > maxWithdraw(owner_))
+            revert SmartToken__WithdrawMoreThanMax();
+        uint256 shares = previewWithdraw(assets);
+        // calls the '_withdraw' method on the Vault(TokenFactory). For more info, check out the tokenFcatory contract
+        tokenFactory._withdraw(_msgSender(), receiver, owner_, assets, shares);
+
+        return shares;
     }
 }
