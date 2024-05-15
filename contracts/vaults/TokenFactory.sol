@@ -32,6 +32,7 @@ contract TokenFactory is
     //errors
     error TokenFactory__MethodNotAllowed();
     error TokenFactory__InvalidDivision();
+    error TokenFactory__InvalidRebalanceParams();
     error TokenFactory__InvalidSequenceNumber();
     error TokenFactory__InvalidNaturalRebalance();
     error TokenFactory__AlreadyInitialized();
@@ -81,6 +82,9 @@ contract TokenFactory is
     uint256 private lastRebalanceFees;
     address private treasuryWallet;
     address private orchestrator;
+
+    //Native token
+    bool private isNativeToken;
 
     //Factors to be calculated at rebalance
     struct RebalanceElements {
@@ -182,7 +186,8 @@ contract TokenFactory is
         address owner_,
         uint256 withdrawLimit_,
         uint256 depositLimit_,
-        uint256 limitPeriod_
+        uint256 limitPeriod_,
+        bool isNativeToken_
     ) public initializer {
         //initialize deriving contracts
 
@@ -192,6 +197,7 @@ contract TokenFactory is
         __UUPSUpgradeable_init();
 
         baseToken = IERC20Update(baseTokenAddress);
+        isNativeToken = isNativeToken_;
         (bool success, uint8 assetDecimals) = _tryGetAssetDecimals(baseToken);
         baseTokenDecimals = success ? assetDecimals : 18;
         interval = rebalanceInterval;
@@ -731,7 +737,13 @@ contract TokenFactory is
             RebalanceElements memory lastRebalance = rebalanceElements[
                 rebalanceElements.length - 1
             ];
-
+            if (
+                scheduledRebalance.smartTokenXprice == 0 ||
+                scheduledRebalance.price == 0 ||
+                scheduledRebalance.smartTokenXprice == scheduledRebalance.price
+            ) {
+                revert TokenFactory__InvalidRebalanceParams();
+            }
             uint256 smartTokenYprice = scheduledRebalance.price -
                 scheduledRebalance.smartTokenXprice;
             uint256 minimumPrice = scheduledRebalance.smartTokenXprice;
@@ -812,8 +824,8 @@ contract TokenFactory is
                         (
                             managementFeeEnabled && managementFeesRate > 0
                                 ? managementFeesRate.mul(FFinterval).div(1 days) //assuming 1 interval is one day,
-                                //otherwise useful when doing hourly
-                                : //then we can use 1 days/1days = 1
+                                //then we can use 1 days/1days = 1
+                                : //otherwise useful when doing hourly
                                 0
                         )
                 )
@@ -1316,5 +1328,9 @@ contract TokenFactory is
         address userAddress
     ) public view returns (uint256) {
         return lastdailyFFcount[userAddress];
+    }
+
+    function getIsNativeToken() public view returns (bool) {
+        return isNativeToken;
     }
 }

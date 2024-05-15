@@ -9,6 +9,7 @@ import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.
 import "@openzeppelin/contracts-upgradeable/interfaces/IERC4626Upgradeable.sol";
 
 import "./../interfaces/IERC20Update.sol";
+import "./../interfaces/IWETH.sol";
 import "./../lib/ERC20/ERC20Upgradeable.sol";
 import "./../lib/ERC20/extensions/ERC20PermitUpgradeable.sol";
 import "./TokenFactory.sol";
@@ -44,12 +45,15 @@ contract SmartToken is
     error SmartToken__DepositLimitHit();
     error SmartToken__WithdrawLimitHit();
     error SmartToken__ExpiryDateReached();
+    error SmartToken__WithdrawNativeFailed();
 
     /// @notice The tokenFactory instance
     TokenFactory private tokenFactory;
     /// @notice The underlyingToken instance
     IERC20Update private underlyingToken;
     bool private isX;
+    bool private isNativeToken;
+    IWETH private weth;
 
     /// @dev Ensures that the function is only callable by the TokenFactory contract.
     /// Calls the helper function `_onlyTokenFactory` to check the caller.
@@ -143,8 +147,27 @@ contract SmartToken is
         tokenFactory = TokenFactory(factoryAddress);
         underlyingToken = tokenFactory.getBaseToken();
         isX = isX_;
+        isNativeToken = tokenFactory.getIsNativeToken();
+        if (isNativeToken) {
+            weth = IWETH(address(underlyingToken));
+        }
+    }
+    //since we now handle native tokens
+    receive() external payable {
+        if (tokenFactory.getIsNativeToken() == false) {
+            revert SmartToken__MethodNotAllowed();
+        }
     }
 
+    /// @notice method to drain contracts of any ethers
+    /// @dev This function can only be called by the contract owner.
+    /// @param receiver The address of the account that will receive the ethers.
+    function drain(address receiver) external onlyOwner {
+        if (tokenFactory.getIsNativeToken() == false) {
+            revert SmartToken__MethodNotAllowed();
+        }
+        payable(receiver).transfer(address(this).balance);
+    }
     /// @notice Authorizes an upgrade to a new contract implementation.
     /// @dev This function can only be called by the contract owner.
     /// It overrides the `_authorizeUpgrade` function from the `UUPSUpgradeable`
@@ -499,6 +522,42 @@ contract SmartToken is
         returns (uint256)
     {
         return _handleDeposit(assets, receiver);
+    }
+    /// @notice Deposits an amount of underlying (NATIVE) assets, crediting the shares(RiskON/OFF) to the receiver.
+    /// @dev It uses msg.value as the deposit amount.
+    /// The `stopDeposit` circuit breaker can be used to freeze deposits and `validateDepositAmount` modifier to
+    /// validate the deposit amount
+    /// @param receiver The receiver address.
+    /// @return The amount of shares(RiskOn/Off) the receiver will get.
+    function depositWithNative(
+        address receiver
+    )
+        public
+        payable
+        virtual
+        nonReentrant
+        stopDeposit
+        insufficientUnderlying
+        dailyFFUpdate
+        depositLimitHit(msg.value)
+        validateDepositAmount(msg.value, receiver)
+        returns (uint256)
+    {
+        if (tokenFactory.getIsNativeToken() == false)
+            revert SmartToken__MethodNotAllowed();
+
+        if (msg.value == 0) revert SmartToken__ZeroDeposit();
+
+        weth.deposit{value: msg.value}();
+
+        //Use 'previewDeposit' method to get the converted amount of underlying assets to shares
+        uint256 shares = previewDeposit(msg.value);
+        //calls the '_deposit' method of Vault(tokenFactory) to deposit the underlying. For more info please checkout
+        // the tokenFactory contract
+        weth.approve(address(tokenFactory), msg.value);
+        tokenFactory._deposit(address(this), receiver, msg.value, shares);
+
+        return shares;
     }
     /// @notice Calculates the maximum amount of shares(RiskOn/Off) that can be minted for a user.
     /// @dev It overrides the `maxMint` function from the `IERC4626Upgradeable` interface.

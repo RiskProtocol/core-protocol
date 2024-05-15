@@ -49,6 +49,7 @@ const func: DeployFunction = async ({
       rateLimitsDefault.withdraw,
       rateLimitsDefault.deposit,
       rateLimitsDefault.period,
+      false,
     ],
     { initializer: "initialize", kind: "uups" }
   );
