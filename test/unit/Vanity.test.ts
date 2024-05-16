@@ -67,6 +67,7 @@ developmentChains.includes(network.name)
           expect(vanity.SmartTokenX.proxyAddress.startsWith("0x66"));
           expect(vanity.SmartTokenY.proxyAddress.startsWith("0x66"));
           expect(vanity.Orchestator.proxyAddress.startsWith("0x66"));
+          expect(vanity.AtomicTx.proxyAddress.startsWith("0x66"));
         });
         it("Should deploy the factory", async function () {
           expect(factoryAddress).to.not.equal(0);
@@ -160,6 +161,24 @@ developmentChains.includes(network.name)
 
           expect(Orchestator).to.equal(vanity.Orchestator.proxyAddress);
           await tokenFactoryInstance.initializeOrchestrator(Orchestator);
+
+          //deploy AtomicTx
+
+          const AtomicTxComplete = await deployUUPSviaCreate3(
+            "AtomicTransaction",
+            vanity.AtomicTx.saltStr,
+            [
+              SmartXComplete,
+              SmartYComplete,
+              BASE_TOKEN_ADDRESS,
+              wallet.address,
+            ],
+            factoryAddress,
+            false,
+            "contracts/vaults/AtomicTransaction.sol:AtomicTransaction"
+          );
+
+          expect(AtomicTxComplete).to.equal(vanity.AtomicTx.proxyAddress);
         });
       });
     })
@@ -187,10 +206,13 @@ async function getVanityAddressSalt(
     3
   );
 
+  const AtomicTx = await get(factoryAddress, wallet, desiredPrefix, 4);
+
   return {
     tokenFactory: tokenFactoryPxAddress,
     SmartTokenX: SmartXPxAddress,
     SmartTokenY: SmartYPxAddress,
     Orchestator: OrchestratorPxAddress,
+    AtomicTx: AtomicTx,
   };
 }
