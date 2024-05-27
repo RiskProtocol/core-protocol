@@ -83,6 +83,9 @@ contract TokenFactory is
     address private treasuryWallet;
     address private orchestrator;
 
+    //Native token
+    bool private isNativeToken;
+
     //Factors to be calculated at rebalance
     struct RebalanceElements {
         uint256 BalanceFactorXY;
@@ -183,7 +186,8 @@ contract TokenFactory is
         address owner_,
         uint256 withdrawLimit_,
         uint256 depositLimit_,
-        uint256 limitPeriod_
+        uint256 limitPeriod_,
+        bool isNativeToken_
     ) public initializer {
         //initialize deriving contracts
 
@@ -193,6 +197,7 @@ contract TokenFactory is
         __UUPSUpgradeable_init();
 
         baseToken = IERC20Update(baseTokenAddress);
+        isNativeToken = isNativeToken_;
         (bool success, uint8 assetDecimals) = _tryGetAssetDecimals(baseToken);
         baseTokenDecimals = success ? assetDecimals : 18;
         interval = rebalanceInterval;
@@ -1322,5 +1327,9 @@ contract TokenFactory is
         address userAddress
     ) public view returns (uint256) {
         return lastdailyFFcount[userAddress];
+    }
+
+    function getIsNativeToken() public view returns (bool) {
+        return isNativeToken;
     }
 }

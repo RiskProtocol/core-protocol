@@ -57,6 +57,7 @@ developmentChains.includes(network.name)
           rateLimitsDefault.withdraw,
           rateLimitsDefault.deposit,
           rateLimitsDefault.period,
+          false,
         ]);
         await tokenFactory.deployed();
 
@@ -124,6 +125,7 @@ developmentChains.includes(network.name)
           rateLimitsDefault.withdraw,
           rateLimitsDefault.deposit,
           rateLimitsDefault.period,
+          false,
         ]);
         await tokenFactory2.deployed();
 
@@ -151,6 +153,7 @@ developmentChains.includes(network.name)
           rateLimitsDefault.withdraw,
           rateLimitsDefault.deposit,
           rateLimitsDefault.period,
+          false,
         ]);
         await tokenFactory3.deployed();
 
@@ -213,6 +216,7 @@ developmentChains.includes(network.name)
           rateLimitsDefault.withdraw,
           rateLimitsDefault.deposit,
           rateLimitsDefault.period,
+          false
         ]);
         await tokenFactoryKMS.deployed();
 
@@ -1071,7 +1075,7 @@ developmentChains.includes(network.name)
             )
           ).to.be.revertedWithCustomError(
             smartToken1,
-            "SmartToken__RedeemMoreThanMax"
+            "SmartToken__WithdrawMoreThanMax"
           );
         });
 
@@ -1399,6 +1403,7 @@ developmentChains.includes(network.name)
             rateLimitsDefault.withdraw,
             rateLimitsDefault.deposit,
             rateLimitsDefault.period,
+            false,
           ]);
           await tokenFactory.deployed();
 

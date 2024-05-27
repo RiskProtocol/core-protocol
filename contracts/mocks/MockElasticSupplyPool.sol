@@ -3,9 +3,9 @@
 pragma solidity ^0.8.9;
 
 contract MockElasticSupplyPool {
-    event WeightResynced(uint256 priceX);
+    event WeightResynced();
 
-    function resyncWeight(uint256 priceX) external {
+    function resyncWeight() external {
         //do nothing
     }
 }

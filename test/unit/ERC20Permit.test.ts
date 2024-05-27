@@ -51,6 +51,7 @@ developmentChains.includes(network.name)
           rateLimitsDefault.withdraw,
           rateLimitsDefault.deposit,
           rateLimitsDefault.period,
+          false,
         ]);
         await tokenFactory.deployed();
 
@@ -78,6 +79,7 @@ developmentChains.includes(network.name)
           rateLimitsDefault.withdraw,
           rateLimitsDefault.deposit,
           rateLimitsDefault.period,
+          false,
         ]);
         await tokenFactory1.deployed();
 
