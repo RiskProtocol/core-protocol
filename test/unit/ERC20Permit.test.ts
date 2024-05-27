@@ -19,6 +19,7 @@ developmentChains.includes(network.name)
       async function deployTokenFixture() {
         const chainId = 31337;
         const [deployer, tester] = await ethers.getSigners();
+        const rebaseSigner = ethers.Wallet.createRandom();
 
         const MockERC20TokenWithPermit = await ethers.getContractFactory(
           "MockERC20TokenWithPermit",
@@ -45,7 +46,7 @@ developmentChains.includes(network.name)
           REBALANCE_INTERVAL,
           FF_INTERVAL,
           sanctionsContract.address,
-          deployer.address,
+          rebaseSigner.address,
           deployer.address,
           rateLimitsDefault.withdraw,
           rateLimitsDefault.deposit,
@@ -73,7 +74,7 @@ developmentChains.includes(network.name)
           REBALANCE_INTERVAL,
           FF_INTERVAL,
           sanctionsContract.address,
-          deployer.address,
+          rebaseSigner.address,
           deployer.address,
           rateLimitsDefault.withdraw,
           rateLimitsDefault.deposit,
@@ -125,6 +126,7 @@ developmentChains.includes(network.name)
           chainId,
           tokenFactory1,
           underlyingTokenWithoutPermit,
+          rebaseSigner,
         };
       }
 

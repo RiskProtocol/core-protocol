@@ -68,7 +68,7 @@ contract TokenFactory is
     /// @notice This boolean keeps track if the smart tokens(RiskON/OFF) have already been initialized in the system
     bool private smartTokenInitialized;
     /// @notice This is the signers address of RP api's that generate encoded params for rebalance
-    address private signersAddress;
+    mapping(address => bool) private signers;
     /// @notice This is used by the feefactors method to calculate the fees
     uint256 private FFinterval;
     uint256 private FFLastTimeStamp;
@@ -207,7 +207,7 @@ contract TokenFactory is
         managementFeesRate = 0;
         nextSequenceNumber = 1;
         smartTokenInitialized = false;
-        signersAddress = signersAddress_;
+        signers[signersAddress_] = true; //setting signer as true
         lastRebalanceFees = 0;
         rebalanceElements.push(
             RebalanceElements({
@@ -962,18 +962,12 @@ contract TokenFactory is
     ) public view returns (Shared.ScheduledRebalance memory) {
         // Hash the encoded data
         bytes32 hash = keccak256(encodedData);
-        // Convert the hash to an Ethereum signed message hash
-        bytes32 ethSignedMessageHash = ECDSAUpgradeable.toEthSignedMessageHash(
-            hash
-        );
+
         // Recover the address
-        address recoveredAddress = ECDSAUpgradeable.recover(
-            ethSignedMessageHash,
-            signature
-        );
+        address recoveredAddress = ECDSAUpgradeable.recover(hash, signature);
 
         // Verify the address
-        if (recoveredAddress != signersAddress) {
+        if (signers[recoveredAddress] == false) {
             revert TokenFactory__InvalidSignature();
         }
 
@@ -997,8 +991,12 @@ contract TokenFactory is
     /// @dev This function can only be called by the owner of the contract.
     /// It updates the `signersAddress` address with the provided `addr` address.
     /// @param addr The new address
-    function setSignersAddress(address addr) public onlyOwner {
-        signersAddress = addr;
+    function setSignersAddress(address addr) external onlyOwner {
+        signers[addr] = true;
+    }
+
+    function removeSigner(address signer) external onlyOwner {
+        signers[signer] = false;
     }
 
     /// @notice Updates the rate of management fees.
@@ -1117,11 +1115,12 @@ contract TokenFactory is
         scheduledRebalancesLength--;
     }
 
-    /// @notice Retrieves the address of the signer
-    /// @dev This function is a getter for the `signersAddress` variable.
-    /// @return The address of the authorized signer.
-    function getSignersAddress() public view returns (address) {
-        return signersAddress;
+    /// @notice Verifies if a signer is valid
+    /// @dev Verifies if a signer is valid
+    /// @param addr The address of the signer
+    /// @return true if signer is valid
+    function isValidSigner(address addr) public view returns (bool) {
+        return signers[addr];
     }
 
     /// ratelimits

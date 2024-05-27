@@ -16,6 +16,8 @@ import {
   rateLimitsDefault,
   FF_INTERVAL,
   feeScalar,
+  getEthereumAddress,
+  signAwsKMS,
 } from "../../helper-hardhat-config";
 import { loadFixture, time } from "@nomicfoundation/hardhat-network-helpers";
 import { BigNumber, utils } from "ethers";
@@ -24,7 +26,7 @@ developmentChains.includes(network.name)
   ? describe("TokenFactory", async function () {
       async function deployTokenFixture() {
         const [deployer, tester] = await ethers.getSigners();
-
+        const rebaseSigner = ethers.Wallet.createRandom();
         const MockERC20TokenWithPermit = await ethers.getContractFactory(
           "MockERC20TokenWithPermit",
           deployer
@@ -50,7 +52,7 @@ developmentChains.includes(network.name)
           REBALANCE_INTERVAL,
           FF_INTERVAL,
           sanctionsContract.address,
-          deployer.address,
+          rebaseSigner.address,
           deployer.address,
           rateLimitsDefault.withdraw,
           rateLimitsDefault.deposit,
@@ -118,7 +120,7 @@ developmentChains.includes(network.name)
           REBALANCE_INTERVAL,
           FF_INTERVAL,
           sanctionsContract.address,
-          deployer.address,
+          rebaseSigner.address,
           deployer.address,
           rateLimitsDefault.withdraw,
           rateLimitsDefault.deposit,
@@ -146,7 +148,7 @@ developmentChains.includes(network.name)
           REBALANCE_INTERVAL,
           FF_INTERVAL,
           sanctionsContract.address,
-          deployer.address,
+          rebaseSigner.address,
           deployer.address,
           rateLimitsDefault.withdraw,
           rateLimitsDefault.deposit,
@@ -187,6 +189,91 @@ developmentChains.includes(network.name)
         ]);
         await smartTokenY.deployed();
 
+        /////////////////////////////
+        ///KMS
+        /////////////////////////////
+        const awsConfig = {
+          region: process.env.AWS_REGION || "eu-north-1",
+          credentials: {
+            accessKeyId: process.env.AWS_ACCESS_KEY_ID || "",
+            secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || "",
+          },
+        };
+        const keyId = process.env.KMS_KEY_ID as string;
+        const kmsAddress = await getEthereumAddress(keyId, awsConfig);
+        const TokenFactoryKMS = await ethers.getContractFactory(
+          "TokenFactory",
+          deployer
+        );
+
+        const tokenFactoryKMS = await upgrades.deployProxy(TokenFactoryKMS, [
+          underlyingToken.address,
+          REBALANCE_INTERVAL,
+          FF_INTERVAL,
+          sanctionsContract.address,
+          kmsAddress,
+          deployer.address,
+          rateLimitsDefault.withdraw,
+          rateLimitsDefault.deposit,
+          rateLimitsDefault.period,
+          false
+        ]);
+        await tokenFactoryKMS.deployed();
+
+        // deploy smartToken 1
+        const SmartToken1FactoryKMS = await ethers.getContractFactory(
+          "SmartToken",
+          deployer
+        );
+
+        const smartToken1KMS = await upgrades.deployProxy(
+          SmartToken1FactoryKMS,
+          [
+            TOKEN1_NAME,
+            TOKEN1_SYMBOL,
+            tokenFactoryKMS.address,
+            sanctionsContract.address,
+            true,
+            deployer.address,
+          ]
+        );
+        await smartToken1KMS.deployed();
+
+        // deploy smartToken 2
+        const SmartToken2FactoryKMS = await ethers.getContractFactory(
+          "SmartToken",
+          deployer
+        );
+
+        const smartToken2KMS = await upgrades.deployProxy(
+          SmartToken2FactoryKMS,
+          [
+            TOKEN2_NAME,
+            TOKEN2_SYMBOL,
+            tokenFactoryKMS.address,
+            sanctionsContract.address,
+            false,
+            deployer.address,
+          ]
+        );
+        await smartToken2.deployed();
+
+        //deploy orchestrator
+
+        const OrchestratorFactoryKMS = await ethers.getContractFactory(
+          "Orchestrator",
+          deployer
+        );
+
+        const orchestratorKMS = await upgrades.deployProxy(
+          OrchestratorFactoryKMS,
+          [tokenFactoryKMS.address, deployer.address]
+        );
+        await orchestratorKMS.deployed();
+
+        //initialize the orchestrator
+        await tokenFactoryKMS.initializeOrchestrator(orchestratorKMS.address);
+
         // Fixtures can return anything you consider useful for your tests
         return {
           smartToken1,
@@ -202,6 +289,11 @@ developmentChains.includes(network.name)
           smartTokenY,
           sanctionsContract,
           orchestrator,
+          rebaseSigner,
+          tokenFactoryKMS,
+          orchestratorKMS,
+          awsConfig,
+          keyId,
         };
       }
 
@@ -307,13 +399,14 @@ developmentChains.includes(network.name)
         });
 
         it("Should set and get the signer address correctly", async function () {
-          const { tokenFactory, deployer } = await loadFixture(
+          const { tokenFactory, deployer, rebaseSigner } = await loadFixture(
             deployTokenFixture
           );
           await tokenFactory.setSignersAddress(deployer.address);
-          await expect(await tokenFactory.getSignersAddress()).to.be.equal(
-            deployer.address
-          );
+          await expect(await tokenFactory.isValidSigner(deployer.address)).to.be
+            .true;
+          await expect(await tokenFactory.isValidSigner(rebaseSigner.address))
+            .to.be.true;
         });
       });
 
@@ -611,6 +704,7 @@ developmentChains.includes(network.name)
             smartToken1,
             smartToken2,
             orchestrator,
+            rebaseSigner,
           } = await loadFixture(deployTokenFixture);
           const depositAmount = ethers.utils.parseEther("6");
 
@@ -629,7 +723,7 @@ developmentChains.includes(network.name)
           await time.setNextBlockTimestamp(nextRebalanceTimeStamp);
 
           const encodedNaturalRebalance1 = await signRebalance(
-            tokenFactory.signer,
+            rebaseSigner,
             defaultRebalanceData
           );
 
@@ -659,6 +753,7 @@ developmentChains.includes(network.name)
             smartToken1,
             smartToken2,
             orchestrator,
+            rebaseSigner,
           } = await loadFixture(deployTokenFixture);
           const depositAmount = ethers.utils.parseEther("6");
 
@@ -677,7 +772,7 @@ developmentChains.includes(network.name)
           await time.setNextBlockTimestamp(nextRebalanceTimeStamp);
 
           const encodedNaturalRebalance1 = await signRebalance(
-            tokenFactory.signer,
+            rebaseSigner,
             defaultRebalanceData
           );
 
@@ -1031,6 +1126,7 @@ developmentChains.includes(network.name)
             smartToken1,
             smartToken2,
             orchestrator,
+            rebaseSigner,
           } = await loadFixture(deployTokenFixture);
           const depositAmount = ethers.utils.parseEther("6");
 
@@ -1049,7 +1145,7 @@ developmentChains.includes(network.name)
           await time.setNextBlockTimestamp(nextRebalanceTimeStamp);
 
           const encodedNaturalRebalance1 = await signRebalance(
-            tokenFactory.signer,
+            rebaseSigner,
             defaultRebalanceData
           );
 
@@ -1465,9 +1561,8 @@ developmentChains.includes(network.name)
 
       describe("Rebalance", async function () {
         it("it can be triggered by any one apart from the deployer", async function () {
-          const { tokenFactory, tester, orchestrator } = await loadFixture(
-            deployTokenFixture
-          );
+          const { tokenFactory, tester, orchestrator, rebaseSigner } =
+            await loadFixture(deployTokenFixture);
           const now = await tokenFactory.getLastTimeStamp();
 
           const nextRebalanceTimeStamp =
@@ -1475,7 +1570,7 @@ developmentChains.includes(network.name)
           await time.setNextBlockTimestamp(nextRebalanceTimeStamp);
 
           const encodedNaturalRebalance1 = await signRebalance(
-            tokenFactory.signer,
+            rebaseSigner,
             defaultRebalanceData
           );
 
@@ -1490,16 +1585,15 @@ developmentChains.includes(network.name)
         });
 
         it("it can be triggered by the deployer", async function () {
-          const { tokenFactory, tester, orchestrator } = await loadFixture(
-            deployTokenFixture
-          );
+          const { tokenFactory, tester, orchestrator, rebaseSigner } =
+            await loadFixture(deployTokenFixture);
           const now = await tokenFactory.getLastTimeStamp();
 
           const nextRebalanceTimeStamp =
             BigInt(now) + BigInt(REBALANCE_INTERVAL);
           await time.setNextBlockTimestamp(nextRebalanceTimeStamp);
           const encodedNaturalRebalance1 = await signRebalance(
-            tokenFactory.signer,
+            rebaseSigner,
             defaultRebalanceData
           );
           await expect(
@@ -1519,6 +1613,7 @@ developmentChains.includes(network.name)
             smartToken2,
             tester,
             orchestrator,
+            rebaseSigner,
           } = await loadFixture(deployTokenFixture);
           const depositAmount = ethers.utils.parseEther("10");
           const transferAmount = ethers.utils.parseEther("1");
@@ -1546,7 +1641,7 @@ developmentChains.includes(network.name)
             BigInt(now) + BigInt(REBALANCE_INTERVAL);
           await time.setNextBlockTimestamp(nextRebalanceTimeStamp);
           const encodedNaturalRebalance1 = await signRebalance(
-            tokenFactory.signer,
+            rebaseSigner,
             defaultRebalanceData
           );
           await orchestrator.rebalance(
@@ -1587,6 +1682,7 @@ developmentChains.includes(network.name)
             smartToken2,
             tester,
             orchestrator,
+            rebaseSigner,
           } = await loadFixture(deployTokenFixture);
           const depositAmount = ethers.utils.parseEther("10");
           const transferAmount = ethers.utils.parseEther("1");
@@ -1666,7 +1762,7 @@ developmentChains.includes(network.name)
             BigInt(now) + BigInt(REBALANCE_INTERVAL);
           await time.setNextBlockTimestamp(nextRebalanceTimeStamp);
           const encodedNaturalRebalance1 = await signRebalance(
-            tokenFactory.signer,
+            rebaseSigner,
             defaultRebalanceData
           );
           await orchestrator.rebalance(
@@ -1678,14 +1774,11 @@ developmentChains.includes(network.name)
           const nextNextRebalanceTimeStamp =
             BigInt(lastTimeStamp) + BigInt(REBALANCE_INTERVAL);
           await time.setNextBlockTimestamp(nextNextRebalanceTimeStamp);
-          const encodedNaturalRebalance2 = await signRebalance(
-            tokenFactory.signer,
-            {
-              ...defaultRebalanceData,
-              sequenceNumber: 2,
-              smartTokenXValue: priceX2.toString(),
-            }
-          );
+          const encodedNaturalRebalance2 = await signRebalance(rebaseSigner, {
+            ...defaultRebalanceData,
+            sequenceNumber: 2,
+            smartTokenXValue: priceX2.toString(),
+          });
           await orchestrator.rebalance(
             encodedNaturalRebalance2.encodedData,
             encodedNaturalRebalance2.signature
@@ -1724,6 +1817,7 @@ developmentChains.includes(network.name)
             smartToken2,
             tester,
             orchestrator,
+            rebaseSigner,
           } = await loadFixture(deployTokenFixture);
           const depositAmount = ethers.utils.parseEther("10");
           const transferAmount = ethers.utils.parseEther("1");
@@ -1814,7 +1908,7 @@ developmentChains.includes(network.name)
             BigInt(now) + BigInt(REBALANCE_INTERVAL);
           await time.setNextBlockTimestamp(nextRebalanceTimeStamp);
           const encodedNaturalRebalance1 = await signRebalance(
-            tokenFactory.signer,
+            rebaseSigner,
             defaultRebalanceData
           );
 
@@ -1847,6 +1941,49 @@ developmentChains.includes(network.name)
             await smartToken2.balanceOf(tester.address),
             postRebalanceTester[1]
           );
+        });
+        it("it should rebalance when encodedData is Signed by KMS", async function () {
+          const {
+            tokenFactoryKMS,
+            tester,
+            orchestratorKMS,
+            rebaseSigner,
+            keyId,
+            awsConfig,
+            deployer,
+          } = await loadFixture(deployTokenFixture);
+          const now = await tokenFactoryKMS.getLastTimeStamp();
+
+          const nextRebalanceTimeStamp =
+            BigInt(now) + BigInt(REBALANCE_INTERVAL);
+          await time.setNextBlockTimestamp(nextRebalanceTimeStamp);
+
+          const rebalanceData = await signAwsKMS(
+            keyId,
+            defaultRebalanceData,
+            awsConfig
+          );
+
+          await expect(
+            orchestratorKMS
+              .connect(tester)
+              .rebalance(rebalanceData.encodedData, rebalanceData.signature)
+          ).to.emit(tokenFactoryKMS, "Rebalance");
+
+          // add another signer
+          await tokenFactoryKMS.setSignersAddress(rebaseSigner.address);
+
+          const rebalanceData2 = await signRebalance(rebaseSigner, {
+            ...defaultRebalanceData,
+            sequenceNumber: 2,
+            smartTokenXValue: "666666666666666666666",
+            isNaturalRebalance: false,
+          });
+          await expect(
+            orchestratorKMS
+              .connect(tester)
+              .rebalance(rebalanceData2.encodedData, rebalanceData2.signature)
+          ).to.emit(tokenFactoryKMS, "Rebalance");
         });
       });
     })
