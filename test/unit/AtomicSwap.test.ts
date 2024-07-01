@@ -50,7 +50,7 @@ developmentChains.includes(network.name)
           rateLimitsDefault.withdraw,
           rateLimitsDefault.deposit,
           rateLimitsDefault.period,
-          false
+          false,
         ]);
         await tokenFactory.deployed();
 
@@ -101,14 +101,14 @@ developmentChains.includes(network.name)
         //initialize the orchestrator
         await tokenFactory.initializeOrchestrator(Orchestrator.address);
 
-        const swapTargetFactory = await ethers.getContractFactory(
-          "MockSwapTarget",
+        const balancerPoolFactory = await ethers.getContractFactory(
+          "MockBalancerPool",
           deployer
         );
-        const swapTarget = await swapTargetFactory.deploy();
-        await swapTarget.deployed();
+        const balancerPool = await balancerPoolFactory.deploy();
+        await balancerPool.deployed();
 
-        await swapTarget.setShouldFail(false);
+        await balancerPool.testIsBound(true);
 
         const AtomicTransactionFactory = await ethers.getContractFactory(
           "AtomicTransaction",
@@ -135,20 +135,20 @@ developmentChains.includes(network.name)
           tester,
           sanctionsContract,
           Orchestrator,
-          swapTarget,
+          balancerPool,
           atomicTransaction,
         };
       }
 
       describe("Atomic Swap Tests", async function () {
-        it(`it should revert since swap target is dummy`, async function () {
+        it(`it should revert since swap slippage is faked to be less than expected value`, async function () {
           let {
             tokenFactory,
             underlyingToken,
             SmartToken1,
             SmartToken2,
             atomicTransaction,
-            swapTarget,
+            balancerPool,
           } = await loadFixture(deployTokenFixture);
           await tokenFactory.initializeSMART(
             SmartToken1.address,
@@ -164,18 +164,17 @@ developmentChains.includes(network.name)
           await SmartToken1.approve(
             atomicTransaction.address,
             ethers.utils.parseEther("1")
-          );
+          );  
 
-          //should revert since swapTarget is dummy
+          // mock will return less than allowed by slippage
+          await balancerPool.testMock(ethers.utils.parseEther("0.9"));
+          await balancerPool.testIsBound(true);
           // the sold tokens are not sold hence the buy tokens are not bought
           // therefore slippage condition is not met
           await expect(
             atomicTransaction.splitAndSwap(
               SmartToken1.address,
-              SmartToken2.address,
-              swapTarget.address,
-              swapTarget.address, //0x Contract
-              "0x", //swap data
+              balancerPool.address, //0x Contract
               ethers.utils.parseEther("1"),
               ethers.utils.parseEther("1"),
               ethers.utils.parseEther("1")
@@ -192,7 +191,7 @@ developmentChains.includes(network.name)
             SmartToken1,
             SmartToken2,
             atomicTransaction,
-            swapTarget,
+            balancerPool,
           } = await loadFixture(deployTokenFixture);
           await tokenFactory.initializeSMART(
             SmartToken1.address,
@@ -215,13 +214,50 @@ developmentChains.includes(network.name)
           // therefore slippage condition is not met
           await expect(
             atomicTransaction.splitAndSwap(
+              ethers.constants.AddressZero,
+              balancerPool.address,
+              ethers.utils.parseEther("1"),
+              ethers.utils.parseEther("1"),
+              ethers.utils.parseEther("1")
+            )
+          ).to.revertedWithCustomError(
+            atomicTransaction,
+            "AtomicTransaction_InvalidParams"
+          );
+
+          await expect(
+            atomicTransaction.splitAndSwap(
               SmartToken1.address,
-              SmartToken2.address,
-              swapTarget.address,
-              swapTarget.address, //0x Contract
-              "0x", //swap data
+              balancerPool.address,
               ethers.utils.parseEther("0"),
+              ethers.utils.parseEther("1"),
+              ethers.utils.parseEther("1")
+            )
+          ).to.revertedWithCustomError(
+            atomicTransaction,
+            "AtomicTransaction_InvalidParams"
+          );
+
+          await expect(
+            atomicTransaction.splitAndSwap(
+              SmartToken1.address,
+              balancerPool.address,
+              ethers.utils.parseEther("1"),
               ethers.utils.parseEther("0"),
+              ethers.utils.parseEther("1")
+            )
+          ).to.revertedWithCustomError(
+            atomicTransaction,
+            "AtomicTransaction_InvalidParams"
+          );
+
+
+          await expect(
+            atomicTransaction.splitAndSwap(
+              SmartToken1.address,
+              balancerPool.address,
+              ethers.utils.parseEther("1"),
+              ethers.utils.parseEther("1"),
               ethers.utils.parseEther("0")
             )
           ).to.revertedWithCustomError(
@@ -236,7 +272,7 @@ developmentChains.includes(network.name)
             SmartToken1,
             SmartToken2,
             atomicTransaction,
-            swapTarget,
+            balancerPool,
           } = await loadFixture(deployTokenFixture);
           await tokenFactory.initializeSMART(
             SmartToken1.address,
@@ -255,10 +291,7 @@ developmentChains.includes(network.name)
           await expect(
             atomicTransaction.splitAndSwap(
               SmartToken1.address,
-              SmartToken2.address,
-              swapTarget.address,
-              swapTarget.address, //0x Contract
-              "0x", //swap data
+              balancerPool.address,
               ethers.utils.parseEther("1"),
               ethers.utils.parseEther("1"),
               ethers.utils.parseEther("1")
@@ -281,6 +314,22 @@ developmentChains.includes(network.name)
           expect(
             await ethers.provider.getBalance(atomicTransaction.address)
           ).to.eq(ethers.utils.parseEther("1"));
+        });
+
+        it(`it should be able to update balancer params`, async function () {
+          let { deployer, atomicTransaction } = await loadFixture(
+            deployTokenFixture
+          );
+
+          const maxPrice = ethers.utils.parseEther("100");
+          const minimumAmoutOut = ethers.utils.parseEther("0.001");
+
+          await atomicTransaction.setBalancerVariables(minimumAmoutOut,maxPrice);
+
+          const balancerParams = await atomicTransaction.getBalancerVariables();
+
+          expect(balancerParams[0]).to.eq(minimumAmoutOut);
+          expect(balancerParams[1]).to.eq(maxPrice);
         });
 
         it(`it should be able to drain ether and other tokens`, async function () {

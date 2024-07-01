@@ -1,22 +1,38 @@
-//Mocking the swap target contract
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-contract MockSwapTarget {
-    bool public shouldFail;
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-    // Function to set the failure mode of the swap call
-    function setShouldFail(bool _shouldFail) public {
-        shouldFail = _shouldFail;
+/**
+ * @title MockBalancerPool
+ * @dev Simulates a Balancer Pool for testing purposes.
+ */
+contract MockBalancerPool {
+
+    constructor(){}
+
+    uint256 private tokenAmountOut;
+    bool private isBound_;
+
+    function swapExactAmountIn(
+        address tokenIn,
+        uint256 tokenAmountIn,
+        address tokenOut,
+        uint256 minAmountOut,
+        uint256 maxPrice
+    ) external returns (uint , uint ) {
+    
+        return (tokenAmountOut,0);
     }
 
-    // Fallback function to simulate swap call
-    // This function simulates the swap operation
-    receive() external payable {
-        require(!shouldFail, "Mock: swap failed");
-    }
+        function isBound(address token) external view returns (bool){
+            return isBound_;
+        }
 
-    function dummyData() public pure returns (bytes memory) {
-        return abi.encodeWithSignature("dummyData()");
+    function testMock(uint256 tokenAmountOut_) public {
+        tokenAmountOut = tokenAmountOut_;
+    }
+    function testIsBound(bool isBound_par) public {
+        isBound_ = isBound_par;
     }
 }
