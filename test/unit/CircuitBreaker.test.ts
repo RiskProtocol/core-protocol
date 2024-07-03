@@ -414,7 +414,36 @@ developmentChains.includes(network.name)
           await smartToken1.toggleTransferCircuitBreaker();
         });
       });
+      describe("Flashloans, test circuit breakers to stop flashloan", async function () {
+        it("should not offer flashloan when circuit breaker is on", async function () {
+          const {
+            smartToken1,
+            deployer,
+            tokenFactory,
+            smartToken2,
+            underlyingToken,
+          } = await loadFixture(deployTokenFixture);
+          const depositAmount = ethers.constants.MaxUint256.div(2).add(1);
 
+          await tokenFactory.initializeSMART(
+            smartToken1.address,
+            smartToken2.address
+          );
+
+          await underlyingToken.approve(tokenFactory.address, depositAmount);
+
+          await smartToken1.deposit(depositAmount, deployer.address);
+
+
+          await smartToken1.toggleFlashLoanCircuitBreaker();
+
+          await  expect(  smartToken1.flashLoan(smartToken2.address,ethers.utils.parseEther("10"),"0x")).to.be.revertedWithCustomError(smartToken1,"BaseContract__FlashLoanCircuitBreaker");
+
+          await smartToken1.toggleFlashLoanCircuitBreaker();
+        });
+
+
+      });
       describe("Rebalance, test circuit breakers to stop rebalance", async function () {
         it("should not rebalance tokens when circuit breaker is on", async function () {
           const {

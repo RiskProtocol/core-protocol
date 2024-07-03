@@ -86,6 +86,9 @@ contract TokenFactory is
     //Native token
     bool private isNativeToken;
 
+    //flashloan
+    uint16 private premiumPercentage;
+
     //Factors to be calculated at rebalance
     struct RebalanceElements {
         uint256 BalanceFactorXY;
@@ -222,6 +225,8 @@ contract TokenFactory is
         withdrawLimit = withdrawLimit_;
         depositLimit = depositLimit_;
         period = limitPeriod_;
+        //flashloan
+        premiumPercentage = 5;
     }
 
     /// @notice Authorizes an upgrade to a new contract implementation.
@@ -884,6 +889,16 @@ contract TokenFactory is
         emit RebalanceApplied(owner_, getRebalanceNumber());
     }
 
+    // flashloan
+    // transfer underlying token to receiver
+    function underlyingTransfer(address receiver_, uint256 amount_) external onlySmartTokens {
+        SafeERC20.safeTransfer(baseToken, receiver_, amount_);
+    }
+
+    function underlyingReturn(address sender_, uint256 amount_) external onlySmartTokens {
+        SafeERC20.safeTransferFrom(baseToken, sender_, address(this), amount_);
+    }
+
     /// @notice Calculates the rollover value(Units of RiskON/OFF) for an account
     /// @dev This function calculates the net balance(Units of RiskON/OFF) of a user after rebalance and
     /// management fees are applied.
@@ -1196,7 +1211,13 @@ contract TokenFactory is
     function toggleDepositLimit() external onlyOwner {
         hasDepositLimit = !hasDepositLimit;
         emit DepositLimitToggled(hasDepositLimit);
-    }
+    }   
+//flashloan premiums
+function setPremiumPercentage(uint16 percentage) external onlyOwner {
+    require(percentage >= 0 && percentage <= 10000, "Premium must be between 1 and 10000");
+    premiumPercentage = percentage;
+}
+
 
     /// @notice Retrieves the `scheduledRebalance` struct at the given sequence number.
     /// @dev This function is a getter for a single `scheduledRebalance` struct.
@@ -1331,5 +1352,8 @@ contract TokenFactory is
 
     function getIsNativeToken() public view returns (bool) {
         return isNativeToken;
+    }
+    function getFlashloanPremium() public view returns (uint16){
+        return premiumPercentage;
     }
 }
