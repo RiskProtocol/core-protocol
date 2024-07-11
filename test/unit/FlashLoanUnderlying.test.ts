@@ -13,11 +13,10 @@ import {
   FF_INTERVAL,
 } from "../../helper-hardhat-config";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
-import { token } from "../../typechain-types/@openzeppelin/contracts";
 import { BigNumber } from "ethers";
 
 developmentChains.includes(network.name)
-  ? describe("TokenFactory", async function () {
+  ? describe("SmartToken__FlashLoans", async function () {
       async function deployTokenFixture() {
         const [deployer, tester] = await ethers.getSigners();
 
@@ -269,7 +268,7 @@ developmentChains.includes(network.name)
             )
           ).to.be.revertedWithCustomError(
             SmartToken1,
-            "SmartToken__FlashLoanInsufficientUnderlying"
+            "FlashLoan__InsufficientUnderlying"
           );
         });
 
@@ -311,7 +310,7 @@ developmentChains.includes(network.name)
             )
           ).to.be.revertedWithCustomError(
             SmartToken1,
-            "SmartToken__FlashLoanFailedExecOps"
+            "FlashLoan__FailedExecOps"
           );
           expect(
             await underlyingToken.balanceOf(tokenFactory.address)

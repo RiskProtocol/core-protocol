@@ -13,6 +13,7 @@ import "./../interfaces/flashloan/IFlashLoanReceiver.sol";
 import "./../interfaces/IWETH.sol";
 import "./../lib/ERC20/ERC20Upgradeable.sol";
 import "./../lib/ERC20/extensions/ERC20PermitUpgradeable.sol";
+import "./../lib/FlashloanSpecifics.sol";
 import "./TokenFactory.sol";
 import "./BaseContract.sol";
 
@@ -31,7 +32,8 @@ contract SmartToken is
     ERC20PermitUpgradeable,
     BaseContract,
     IERC4626Upgradeable,
-    ReentrancyGuardUpgradeable
+    ReentrancyGuardUpgradeable,
+    FlashloanSpecifics
 {
     //errors
     error SmartToken__NotTokenFactory();
@@ -47,19 +49,7 @@ contract SmartToken is
     error SmartToken__WithdrawLimitHit();
     error SmartToken__ExpiryDateReached();
     error SmartToken__WithdrawNativeFailed();
-    error SmartToken__FlashLoanInsufficientUnderlying();
-    error SmartToken__FlashLoanFailedExecOps();
-    error SmartToken__FlashLoanFailedRepayments();
-    error SmartToken__FlashLoanInvalidReceiver();
 
-    //events
-    event FlashLoanExecuted(
-        address receiver,
-        address initiator,
-        uint256 amount,
-        uint256 premium,
-        bytes params
-    );
 
     /// @notice The tokenFactory instance
     TokenFactory private tokenFactory;
@@ -716,7 +706,7 @@ contract SmartToken is
         bytes memory params
     ) external nonReentrant stopFlashLoan {
         if (address(receiver) == address(0)) {
-            revert SmartToken__FlashLoanInvalidReceiver();
+            revert FlashLoan__InvalidReceiver();
         }
         //validate loan amount
         //verify if tokenFactory has enough assets
@@ -724,7 +714,7 @@ contract SmartToken is
             IERC20Update(underlyingToken).balanceOf(address(tokenFactory)) <
             amount
         ) {
-            revert SmartToken__FlashLoanInsufficientUnderlying();
+            revert FlashLoan__InsufficientUnderlying();
         }
 
         //transfer the amount to the receiver
@@ -758,7 +748,7 @@ contract SmartToken is
                 )
             )
         ) {
-            revert SmartToken__FlashLoanFailedExecOps();
+            revert FlashLoan__FailedExecOps();
         }
 
         uint256 tokenBalanceInitial = IERC20Update(underlyingToken).balanceOf(
@@ -771,7 +761,7 @@ contract SmartToken is
             IERC20Update(underlyingToken).balanceOf(address(tokenFactory)) !=
             tokenBalanceInitial.add(amount.add(premium))
         ) {
-            revert SmartToken__FlashLoanFailedRepayments();
+            revert FlashLoan__FailedRepayments();
         }
 
         emit FlashLoanExecuted(receiver, _msgSender(), amount, premium, params);
