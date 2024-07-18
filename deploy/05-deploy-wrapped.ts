@@ -1,6 +1,10 @@
 import { DeployFunction } from "hardhat-deploy/types";
 import { ethers, upgrades } from "hardhat";
-import { BASE_TOKEN_ADDRESS } from "../helper-hardhat-config";
+import {
+  BASE_TOKEN_ADDRESS,
+  getEthereumAddress,
+} from "../helper-hardhat-config";
+import { sign } from "crypto";
 
 const func: DeployFunction = async ({
   getNamedAccounts,
@@ -29,25 +33,6 @@ const func: DeployFunction = async ({
   log("smarttoken1Address", smarttoken1Address);
   log("smarttoken2Address", smarttoken2Address);
 
-  //deploy the oracle contract
-  log("Deploying Oracle contract...");
-  const PriceFeedOracleContract = await ethers.getContractFactory(
-    "PriceFeedOracle"
-  );
-  const PriceFeed = await upgrades.deployProxy(
-    PriceFeedOracleContract,
-    [deployer, smarttoken1Address, smarttoken2Address],
-    { initializer: "initialize", kind: "uups" }
-  );
-
-  log(`PriceFeed deployed at ${PriceFeed.address}`);
-  await PriceFeed.deployed();
-  log(
-    `PriceFeed implementation deployed at ${await upgrades.erc1967.getImplementationAddress(
-      PriceFeed.address
-    )}`
-  );
-
   //deploying the template(unbuttonToken)
   log("Deploying UnbuttonToken template...");
   const RiskWrappedTokenContract = await ethers.getContractFactory(
@@ -62,7 +47,7 @@ const func: DeployFunction = async ({
   );
   const WrapperFactory = await upgrades.deployProxy(
     WrapperFactoryContract,
-    [RiskWrappedToken.address, deployer],
+    [deployer],
     { initializer: "initialize", kind: "uups" }
   );
 
@@ -104,7 +89,27 @@ const func: DeployFunction = async ({
   log("balances of the deployer are as follows:");
   log(`smartToken1 balance: ${await smartToken1.balanceOf(deployer)}`);
   log(`smartToken2 balance: ${await smartToken2.balanceOf(deployer)}`);
+  let sanctionsContractAddress: string;
+  let signersAddress: string;
 
+  if (process.env.ENVIRONMENT === "local") {
+    const mockSanctionContract = await deployments.get("MockSanctionContract");
+    sanctionsContractAddress = mockSanctionContract.address;
+    signersAddress = deployer;
+  } else {
+    sanctionsContractAddress = process.env.SANCTIONS_CONTRACT_ADDRESS!;
+    const awsConfig = {
+      region: process.env.AWS_REGION || "eu-north-1",
+      credentials: {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID || "",
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || "",
+      },
+    };
+    signersAddress = await getEthereumAddress(
+      process.env.KMS_KEY_ID as string,
+      awsConfig
+    );
+  }
   //wrapped X
   await WrapperFactory.create(
     smartToken1.address,
@@ -114,7 +119,9 @@ const func: DeployFunction = async ({
     1,
     true,
     deployer,
-    PriceFeed.address
+    signersAddress,
+    300,
+    sanctionsContractAddress
   );
   await WrapperFactory.create(
     smartToken2.address,
@@ -124,7 +131,9 @@ const func: DeployFunction = async ({
     1,
     false,
     deployer,
-    PriceFeed.address
+    signersAddress,
+    300,
+    sanctionsContractAddress
   );
 
   log("wX deployed to:", await WrapperFactory.getWrappedSmartTokens(true));
