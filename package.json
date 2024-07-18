@@ -54,7 +54,7 @@
     "@openzeppelin/hardhat-upgrades": "^1.27.0",
     "@remix-project/remixd": "^0.6.18",
     "@tenderly/hardhat-tenderly": "^1.7.7",
-    "@trp/buttonwood-wrapper": "https://github.com/RiskProtocol/button-wrappers.git#update-sol-version",
+    "@trp/buttonwood-wrapper": "https://github.com/RiskProtocol/button-wrappers.git#e6925e53de7bf8a69e86ec8b08aba94945ed0a55",
     "@trp/solady": "git+https://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@github.com/RiskProtocol/solady.git#03f3fd05fb1da76edc4df83ae6bf32a842c15f12",
     "@web3-kms-signer/core": "^1.0.13",
     "@web3-kms-signer/kms-provider-aws": "^1.0.6",

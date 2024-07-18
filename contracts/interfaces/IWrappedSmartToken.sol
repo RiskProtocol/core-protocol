@@ -5,7 +5,6 @@ import "@trp/buttonwood-wrapper/contracts/interfaces/IUnbuttonToken.sol";
 
 // Interface definition for the UnbuttonToken ERC20 wrapper contract
 interface IWrappedSmartToken is IUnbuttonToken {
-    
     function riskInitialize(
         address underlying_,
         address sellingToken_, //alternate SMARTTOKEN
@@ -15,7 +14,8 @@ interface IWrappedSmartToken is IUnbuttonToken {
         bool isWrappedX_,
         address owner_,
         address signer_,
-        uint256 timeout_, address sanctionsContract_
+        uint256 timeout_,
+        address sanctionsContract_
     ) external;
 
     function initialize(
@@ -23,5 +23,5 @@ interface IWrappedSmartToken is IUnbuttonToken {
         string memory name_,
         string memory symbol_,
         uint256 initialRate
-    ) external ;
+    ) external;
 }
