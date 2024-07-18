@@ -50,7 +50,6 @@ contract SmartToken is
     error SmartToken__ExpiryDateReached();
     error SmartToken__WithdrawNativeFailed();
 
-
     /// @notice The tokenFactory instance
     TokenFactory private tokenFactory;
     /// @notice The underlyingToken instance
@@ -704,7 +703,13 @@ contract SmartToken is
         address receiver,
         uint256 amount,
         bytes memory params
-    ) external nonReentrant stopFlashLoan {
+    )
+        external
+        nonReentrant
+        stopFlashLoan
+        onlyNotSanctioned(receiver)
+        onlyNotSanctioned(_msgSender())
+    {
         if (address(receiver) == address(0)) {
             revert FlashLoan__InvalidReceiver();
         }

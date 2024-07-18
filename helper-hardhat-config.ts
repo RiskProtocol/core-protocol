@@ -56,6 +56,31 @@ export const signRebalance = async (
   return { signature, encodedData };
 };
 
+export const signFlashloan = async (
+  signer: Wallet,
+  data: {
+    smartTokenXValue: number;
+    smartTokenYValue: number;
+    timestamp: number;
+  }
+) => {
+  const types = ["uint256", "uint256", "uint256"];
+  // Encode the data
+  const encodedData = utils.defaultAbiCoder.encode(types, [
+    data.smartTokenXValue,
+    data.smartTokenYValue,
+    data.timestamp,
+  ]);
+  // Hash the data
+  const hashedData = utils.keccak256(encodedData);
+
+  const signKey = new ethers.utils.SigningKey(signer.privateKey);
+  const sig = signKey.signDigest(hashedData);
+  // Sign the data
+  const signature = ethers.utils.joinSignature(sig); // await signer.signMessage(utils.arrayify(hashedData));
+  return { signature, encodedData };
+};
+
 export const feeCalculator = (assetBal1: bigint, mgmtFee: bigint) => {
   const depositCycle = REBALANCE_INTERVAL;
   const scallingFactorMgmtFee = MULTIPLIER;
@@ -149,6 +174,24 @@ export async function signAwsKMS(keyId: string, data: any, awsConfig: any) {
     data.isNaturalRebase,
     data.underlyingValue,
     data.smartTokenXValue,
+  ]);
+
+  const digestData = ethers.utils.keccak256(encodedData);
+  const sign = new core.Signer(new KMSWallets(provider));
+  const signature = await sign.signDigest({ keyId: keyId }, digestData);
+
+  return { signature, digestData, encodedData };
+}
+
+export async function signFLashloanAwsKMS(keyId: string, data: any, awsConfig: any) {
+  const provider = new KMSProviderAWS(awsConfig);
+
+  const types = ["uint256", "uint256", "uint256"];
+  // Encode the data
+  const encodedData =  ethers.utils.defaultAbiCoder.encode(types, [
+    data.smartTokenXValue,
+    data.smartTokenYValue,
+    data.timestamp,
   ]);
 
   const digestData = ethers.utils.keccak256(encodedData);

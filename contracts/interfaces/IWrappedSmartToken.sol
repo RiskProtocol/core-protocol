@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+pragma solidity ^0.8.9;
 
 import "@trp/buttonwood-wrapper/contracts/interfaces/IUnbuttonToken.sol";
 
@@ -13,7 +14,8 @@ interface IWrappedSmartToken is IUnbuttonToken {
         uint256 initialRate,
         bool isWrappedX_,
         address owner_,
-        address priceFeedOracle_
+        address signer_,
+        uint256 timeout_, address sanctionsContract_
     ) external;
 
     function initialize(

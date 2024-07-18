@@ -3,7 +3,6 @@
 pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/ClonesUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
@@ -22,7 +21,7 @@ contract WrapperFactory is UUPSUpgradeable, OwnableUpgradeable {
         _disableInitializers();
     }
 
-    function initialize(address _template, address owner_) public initializer {
+    function initialize(address owner_) public initializer {
         template = address(new wrappedSmartToken());
         __Ownable_init();
         transferOwnership(owner_);
@@ -39,7 +38,9 @@ contract WrapperFactory is UUPSUpgradeable, OwnableUpgradeable {
         uint256 initialRate,
         bool isWrappedX,
         address owner_,
-        address oracle_
+        address signer_,
+        uint256 timeout_,
+        address sanctionsContract_
     ) external onlyOwner returns (address) {
         return
             _create(
@@ -50,7 +51,9 @@ contract WrapperFactory is UUPSUpgradeable, OwnableUpgradeable {
                 initialRate,
                 isWrappedX,
                 owner_,
-                oracle_
+                signer_,
+                timeout_,
+                sanctionsContract_
             );
     }
 
@@ -63,14 +66,15 @@ contract WrapperFactory is UUPSUpgradeable, OwnableUpgradeable {
         uint256 initialRate,
         bool isWrappedX,
         address owner_,
-        address oracle_
+        address signer_,
+        uint256 timeout_,
+        address sanctionsContract_
     ) private returns (address) {
         // Create instance
         // address wrappedSmartToken_ = ClonesUpgradeable.clone(template);
 
-
         ERC1967Proxy proxy = new ERC1967Proxy(template, "");
-                // Approve transfer of initial deposit to instance
+        // Approve transfer of initial deposit to instance
         uint256 inititalDeposit = IWrappedSmartToken(address(proxy))
             .INITIAL_DEPOSIT();
         IERC20Upgradeable(underlying).safeTransferFrom(
@@ -78,10 +82,7 @@ contract WrapperFactory is UUPSUpgradeable, OwnableUpgradeable {
             address(this),
             inititalDeposit
         );
-        IERC20Upgradeable(underlying).approve(
-            address(proxy),
-            inititalDeposit
-        );
+        IERC20Upgradeable(underlying).approve(address(proxy), inititalDeposit);
         // Initialize instance
         IWrappedSmartToken(address(proxy)).riskInitialize(
             underlying,
@@ -91,7 +92,9 @@ contract WrapperFactory is UUPSUpgradeable, OwnableUpgradeable {
             initialRate,
             isWrappedX,
             owner_,
-            oracle_
+            signer_,
+            timeout_,
+            sanctionsContract_
         );
 
         // Register instance
@@ -116,5 +119,9 @@ contract WrapperFactory is UUPSUpgradeable, OwnableUpgradeable {
         } else {
             return wrappedSmartTokens[1];
         }
+    }
+
+    function getTemplate() external view returns (address) {
+        return template;
     }
 }

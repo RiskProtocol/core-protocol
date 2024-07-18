@@ -11,9 +11,13 @@ import {
   defaultRebalanceData,
   rateLimitsDefault,
   FF_INTERVAL,
+  signFlashloan,
+  getEthereumAddress,
+  signFLashloanAwsKMS,
 } from "../../helper-hardhat-config";
-import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
+import { loadFixture, time } from "@nomicfoundation/hardhat-network-helpers";
 import { BigNumber } from "ethers";
+import { isAddress } from "ethers-v6";
 
 developmentChains.includes(network.name)
   ? describe("WrappedSmartTokens", async function () {
@@ -98,19 +102,6 @@ developmentChains.includes(network.name)
         ]);
         await Orchestrator.deployed();
 
-        // deploy Oracle
-        const PriceFeedOracleContract = await ethers.getContractFactory(
-          "PriceFeedOracle",
-          deployer
-        );
-        const PriceFeed = await upgrades.deployProxy(
-          PriceFeedOracleContract,
-          [deployer.address, SmartToken1.address, SmartToken2.address],
-          { initializer: "initialize", kind: "uups" }
-        );
-
-        await PriceFeed.deployed();
-
         //initialize smartz
         await tokenFactory.initializeSMART(
           SmartToken1.address,
@@ -132,7 +123,6 @@ developmentChains.includes(network.name)
           "wrappedSmartToken",
           deployer
         );
-        const RiskWrappedToken = await RiskWrappedTokenContract.deploy();
 
         //deploy the wrapper factory
         const WrapperFactoryContract = await ethers.getContractFactory(
@@ -141,7 +131,7 @@ developmentChains.includes(network.name)
         );
         const WrapperFactory = await upgrades.deployProxy(
           WrapperFactoryContract,
-          [RiskWrappedToken.address, deployer.address],
+          [deployer.address],
           { initializer: "initialize", kind: "uups" }
         );
 
@@ -158,6 +148,19 @@ developmentChains.includes(network.name)
           ethers.constants.MaxUint256
         );
 
+        /////////////////////////////
+        ///KMS
+        /////////////////////////////
+        const awsConfig = {
+          region: process.env.AWS_REGION || "eu-north-1",
+          credentials: {
+            accessKeyId: process.env.AWS_ACCESS_KEY_ID || "",
+            secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || "",
+          },
+        };
+        const keyId = process.env.KMS_KEY_ID as string;
+        const kmsAddress = await getEthereumAddress(keyId, awsConfig);
+        const timeout = 1000 * 60 * 5; // 5 minutes
         await WrapperFactory.create(
           SmartToken1.address,
           SmartToken2.address,
@@ -166,7 +169,9 @@ developmentChains.includes(network.name)
           1,
           true,
           deployer.address,
-          PriceFeed.address
+          kmsAddress,
+          timeout,
+          sanctionsContract.address
         );
         await WrapperFactory.create(
           SmartToken2.address,
@@ -176,7 +181,9 @@ developmentChains.includes(network.name)
           1,
           false,
           deployer.address,
-          PriceFeed.address
+          kmsAddress,
+          timeout,
+          sanctionsContract.address
         );
 
         const wXAddr = await WrapperFactory.getWrappedSmartTokens(true);
@@ -212,18 +219,19 @@ developmentChains.includes(network.name)
           Orchestrator,
           flashloanReceiverX,
           flashloanReceiverY,
-          PriceFeed,
           wX,
           wY,
           RiskWrappedTokenContract,
+          kmsAddress,
+          awsConfig,
+          keyId,
+          WrapperFactory,
         };
       }
 
       describe("Wrapped Flash Loans Tests", async function () {
         it(`it should properly get the flashloan`, async function () {
           let {
-            tokenFactory,
-            underlyingToken,
             SmartToken1,
             SmartToken2,
             deployer,
@@ -231,7 +239,8 @@ developmentChains.includes(network.name)
             flashloanReceiverY,
             wX,
             wY,
-            PriceFeed,
+            keyId,
+            awsConfig,
           } = await loadFixture(deployTokenFixture);
 
           // @note flash loan using wX
@@ -253,9 +262,33 @@ developmentChains.includes(network.name)
           const block = await ethers.provider.getBlock(blockNumber);
 
           //price is assumed to be 50/50 -- no discounts
-          await PriceFeed.updatePrice(10, 10, block.timestamp);
+          const signed = await signFLashloanAwsKMS(
+            keyId,
+            {
+              smartTokenXValue: 10,
+              smartTokenYValue: 10,
+              timestamp: block.timestamp,
+            },
+            awsConfig
+          );
 
-          await wX.flashLoan(flashloanReceiverX.address, loanAmt, "0x");
+          await expect(
+            wX.flashLoan(
+              flashloanReceiverX.address,
+              loanAmt,
+              signed.encodedData,
+              signed.signature,
+              "0x"
+            )
+          )
+            .to.emit(wX, "FlashLoanExecuted")
+            .withArgs(
+              flashloanReceiverX.address,
+              deployer.address,
+              loanAmt,
+              repayAmt,
+              "0x"
+            );
 
           expect(await SmartToken1.balanceOf(wX.address)).to.be.equal(
             intialWxBal.add(repayAmt)
@@ -285,10 +318,25 @@ developmentChains.includes(network.name)
           const blockNumber1 = await ethers.provider.getBlockNumber();
           const block1 = await ethers.provider.getBlock(blockNumber1);
 
-          //price is assumed to be 50/50 -- no discounts
-          await PriceFeed.updatePrice(10, 10, block1.timestamp);
+          // //price is assumed to be 50/50 -- no discounts
 
-          await wY.flashLoan(flashloanReceiverY.address, loanAmtY, "0x");
+          await expect(
+            wY.flashLoan(
+              flashloanReceiverY.address,
+              loanAmtY,
+              signed.encodedData,
+              signed.signature,
+              "0x"
+            )
+          )
+            .to.emit(wY, "FlashLoanExecuted")
+            .withArgs(
+              flashloanReceiverY.address,
+              deployer.address,
+              loanAmtY,
+              repayAmtY,
+              "0x"
+            );
 
           expect(await SmartToken2.balanceOf(wY.address)).to.be.equal(
             intialWyBal.add(repayAmtY)
@@ -301,10 +349,236 @@ developmentChains.includes(network.name)
           ).to.be.equal(loanAmtY);
         });
 
-        it(`it should revert if reciever has not approved the funds transfer`, async function () {
+        it(`it should properly get the flashloan, X is more expensive than Y- NO DISCOUNTS`, async function () {
           let {
-            tokenFactory,
-            underlyingToken,
+            SmartToken1,
+            SmartToken2,
+            flashloanReceiverX,
+            flashloanReceiverY,
+            wX,
+            wY,
+            keyId,
+            awsConfig,
+          } = await loadFixture(deployTokenFixture);
+
+          // @note flash loan using wX
+          await SmartToken1.approve(wX.address, ethers.constants.MaxUint256);
+
+          await wX.deposit(ethers.utils.parseEther("10"));
+
+          const intialWxBal = await SmartToken1.balanceOf(wX.address);
+
+          // const repayAmt = ethers.utils.parseEther("1");
+          const loanAmt = ethers.utils.parseEther("1");
+          //we assume that rebase has happened and the wX pool is gifted some unwanted smart token Y
+          await SmartToken2.transfer(wX.address, ethers.utils.parseEther("5"));
+
+          await flashloanReceiverX.isApprovedMeth(true);
+
+          const XValue = "100";
+          const YValue = "50";
+
+          const expectedRepayAmount = loanAmt
+            .mul(ethers.utils.parseEther(XValue))
+            .div(ethers.utils.parseEther(YValue));
+
+          // we simulate that  the flashloan receiver will get some wanted tokens somehow
+          await SmartToken1.transfer(
+            flashloanReceiverX.address,
+            expectedRepayAmount
+          );
+          const blockNumber = await ethers.provider.getBlockNumber();
+          const block = await ethers.provider.getBlock(blockNumber);
+
+          //price is assumed to be 50/50 -- no discounts
+          const signed = await signFLashloanAwsKMS(
+            keyId,
+            {
+              smartTokenXValue: ethers.utils.parseEther(XValue),
+              smartTokenYValue: ethers.utils.parseEther(YValue),
+              timestamp: block.timestamp,
+            },
+            awsConfig
+          );
+
+          await wX.flashLoan(
+            flashloanReceiverX.address,
+            loanAmt,
+            signed.encodedData,
+            signed.signature,
+            "0x"
+          );
+
+          expect(await SmartToken1.balanceOf(wX.address)).to.be.equal(
+            intialWxBal.add(expectedRepayAmount)
+          );
+          expect(
+            await SmartToken1.balanceOf(flashloanReceiverX.address)
+          ).to.be.equal(ethers.utils.parseEther("0"));
+          expect(
+            await SmartToken2.balanceOf(flashloanReceiverX.address)
+          ).to.be.equal(loanAmt);
+
+          // @note flash loan using wY
+          await SmartToken2.approve(wY.address, ethers.constants.MaxUint256);
+
+          await wY.deposit(ethers.utils.parseEther("10"));
+
+          const intialWyBal = await SmartToken2.balanceOf(wY.address);
+
+          const loanAmtY = ethers.utils.parseEther("7");
+          const expectedRepayAmount2 = loanAmtY
+            .mul(ethers.utils.parseEther(YValue))
+            .div(ethers.utils.parseEther(XValue));
+          //we assume that rebase has happened and the wX pool is gifted some unwanted smart token Y
+          await SmartToken1.transfer(wY.address, ethers.utils.parseEther("7"));
+
+          await flashloanReceiverY.isApprovedMeth(true);
+          // we simulate that  the flashloan receiver will get some wanted tokens somehow
+          await SmartToken2.transfer(
+            flashloanReceiverY.address,
+            expectedRepayAmount2
+          );
+          const blockNumber1 = await ethers.provider.getBlockNumber();
+          const block1 = await ethers.provider.getBlock(blockNumber1);
+
+          // //price is assumed to be 50/50 -- no discounts
+
+          await wY.flashLoan(
+            flashloanReceiverY.address,
+            loanAmtY,
+            signed.encodedData,
+            signed.signature,
+            "0x"
+          );
+
+          expect(await SmartToken2.balanceOf(wY.address)).to.be.equal(
+            intialWyBal.add(expectedRepayAmount2)
+          );
+          expect(
+            await SmartToken2.balanceOf(flashloanReceiverY.address)
+          ).to.be.equal(ethers.utils.parseEther("0"));
+          expect(
+            await SmartToken1.balanceOf(flashloanReceiverY.address)
+          ).to.be.equal(loanAmtY);
+        });
+
+        it(`it should properly get the flashloan, y is more expensive than x- NO DISCOUNTS`, async function () {
+          let {
+            SmartToken1,
+            SmartToken2,
+            flashloanReceiverX,
+            flashloanReceiverY,
+            wX,
+            wY,
+            keyId,
+            awsConfig,
+          } = await loadFixture(deployTokenFixture);
+
+          // @note flash loan using wX
+          await SmartToken1.approve(wX.address, ethers.constants.MaxUint256);
+
+          await wX.deposit(ethers.utils.parseEther("10"));
+
+          const intialWxBal = await SmartToken1.balanceOf(wX.address);
+
+          // const repayAmt = ethers.utils.parseEther("1");
+          const loanAmt = ethers.utils.parseEther("1");
+          //we assume that rebase has happened and the wX pool is gifted some unwanted smart token Y
+          await SmartToken2.transfer(wX.address, ethers.utils.parseEther("5"));
+
+          await flashloanReceiverX.isApprovedMeth(true);
+
+          const XValue = "55";
+          const YValue = "110";
+
+          const expectedRepayAmount = loanAmt
+            .mul(ethers.utils.parseEther(XValue))
+            .div(ethers.utils.parseEther(YValue));
+
+          // we simulate that  the flashloan receiver will get some wanted tokens somehow
+          await SmartToken1.transfer(
+            flashloanReceiverX.address,
+            expectedRepayAmount
+          );
+          const blockNumber = await ethers.provider.getBlockNumber();
+          const block = await ethers.provider.getBlock(blockNumber);
+
+          //price is assumed to be 50/50 -- no discounts
+          const signed = await signFLashloanAwsKMS(
+            keyId,
+            {
+              smartTokenXValue: ethers.utils.parseEther(XValue),
+              smartTokenYValue: ethers.utils.parseEther(YValue),
+              timestamp: block.timestamp,
+            },
+            awsConfig
+          );
+
+          await wX.flashLoan(
+            flashloanReceiverX.address,
+            loanAmt,
+            signed.encodedData,
+            signed.signature,
+            "0x"
+          );
+
+          expect(await SmartToken1.balanceOf(wX.address)).to.be.equal(
+            intialWxBal.add(expectedRepayAmount)
+          );
+          expect(
+            await SmartToken1.balanceOf(flashloanReceiverX.address)
+          ).to.be.equal(ethers.utils.parseEther("0"));
+          expect(
+            await SmartToken2.balanceOf(flashloanReceiverX.address)
+          ).to.be.equal(loanAmt);
+
+          // @note flash loan using wY
+          await SmartToken2.approve(wY.address, ethers.constants.MaxUint256);
+
+          await wY.deposit(ethers.utils.parseEther("10"));
+
+          const intialWyBal = await SmartToken2.balanceOf(wY.address);
+
+          const loanAmtY = ethers.utils.parseEther("7");
+          const expectedRepayAmount2 = loanAmtY
+            .mul(ethers.utils.parseEther(YValue))
+            .div(ethers.utils.parseEther(XValue));
+          //we assume that rebase has happened and the wX pool is gifted some unwanted smart token Y
+          await SmartToken1.transfer(wY.address, ethers.utils.parseEther("7"));
+
+          await flashloanReceiverY.isApprovedMeth(true);
+          // we simulate that  the flashloan receiver will get some wanted tokens somehow
+          await SmartToken2.transfer(
+            flashloanReceiverY.address,
+            expectedRepayAmount2
+          );
+          const blockNumber1 = await ethers.provider.getBlockNumber();
+          const block1 = await ethers.provider.getBlock(blockNumber1);
+
+          // //price is assumed to be 50/50 -- no discounts
+
+          await wY.flashLoan(
+            flashloanReceiverY.address,
+            loanAmtY,
+            signed.encodedData,
+            signed.signature,
+            "0x"
+          );
+
+          expect(await SmartToken2.balanceOf(wY.address)).to.be.equal(
+            intialWyBal.add(expectedRepayAmount2)
+          );
+          expect(
+            await SmartToken2.balanceOf(flashloanReceiverY.address)
+          ).to.be.equal(ethers.utils.parseEther("0"));
+          expect(
+            await SmartToken1.balanceOf(flashloanReceiverY.address)
+          ).to.be.equal(loanAmtY);
+        });
+
+        it(`it should properly get the flashloan with discounts - Y is more expensive than X`, async function () {
+          let {
             SmartToken1,
             SmartToken2,
             deployer,
@@ -312,21 +586,523 @@ developmentChains.includes(network.name)
             flashloanReceiverY,
             wX,
             wY,
-            PriceFeed,
+            keyId,
+            awsConfig,
+          } = await loadFixture(deployTokenFixture);
+
+          // @note flash loan using wX
+          await SmartToken1.approve(wX.address, ethers.constants.MaxUint256);
+
+          await wX.deposit(ethers.utils.parseEther("10"));
+
+          const intialWxBal = await SmartToken1.balanceOf(wX.address);
+
+          const loanAmt = ethers.utils.parseEther("1");
+          //we assume that rebase has happened and the wX pool is gifted some unwanted smart token Y
+          await SmartToken2.transfer(wX.address, ethers.utils.parseEther("5"));
+
+          await flashloanReceiverX.isApprovedMeth(true);
+
+          const XValue = "55";
+          const YValue = "110";
+          const scaleFactor = ethers.utils.parseEther("1");
+
+          const conversionRate = scaleFactor
+            .mul(ethers.utils.parseEther(XValue))
+            .div(ethers.utils.parseEther(YValue));
+
+          const expectedRepayAmount = loanAmt
+            .mul(conversionRate)
+            .div(scaleFactor);
+          const blockNumber = await ethers.provider.getBlockNumber();
+          const block = await ethers.provider.getBlock(blockNumber);
+
+          // discounts
+          const signed = await signFLashloanAwsKMS(
+            keyId,
+            {
+              smartTokenXValue: ethers.utils.parseEther(XValue),
+              smartTokenYValue: ethers.utils.parseEther(YValue),
+              timestamp: block.timestamp,
+            },
+            awsConfig
+          );
+          //setting the discount rate
+
+          const maxDiscountRate = ethers.utils.parseEther("0.5");
+
+          await wX.setDiscountRate(
+            block.timestamp,
+            block.timestamp + 300,
+            0,
+            maxDiscountRate
+          ); //upto 50% discount
+
+          const getDiscountRate = await wX.getDiscountRate();
+          expect(getDiscountRate.startTime).to.be.equal(block.timestamp);
+          expect(getDiscountRate.endTime).to.be.equal(block.timestamp + 300);
+          expect(getDiscountRate.discountMin).to.be.equal(0);
+          expect(getDiscountRate.discountMax).to.be.equal(maxDiscountRate);
+
+          //AT half time through the discount, the user should pay 50% of the 50% discount
+          const discountRate = maxDiscountRate.div(2);
+
+          const expectedRepayAmountWithDiscount = expectedRepayAmount
+            .mul(scaleFactor.sub(discountRate))
+            .div(ethers.utils.parseEther("1"));
+
+          // we simulate that  the flashloan receiver will get some wanted tokens somehow
+          await SmartToken1.transfer(
+            flashloanReceiverX.address,
+            expectedRepayAmountWithDiscount
+          );
+
+          //set the time to 50% discount
+          // await time.increase(147);
+          await time.setNextBlockTimestamp(block.timestamp + 150);
+
+          await wX.flashLoan(
+            flashloanReceiverX.address,
+            loanAmt,
+            signed.encodedData,
+            signed.signature,
+            "0x"
+          );
+
+          expect(await SmartToken1.balanceOf(wX.address)).to.be.equal(
+            intialWxBal.add(expectedRepayAmountWithDiscount)
+          );
+          expect(
+            await SmartToken1.balanceOf(flashloanReceiverX.address)
+          ).to.be.equal(ethers.utils.parseEther("0"));
+          expect(
+            await SmartToken2.balanceOf(flashloanReceiverX.address)
+          ).to.be.equal(loanAmt);
+
+          // @note flash loan using wY
+          await SmartToken2.approve(wY.address, ethers.constants.MaxUint256);
+
+          await wY.deposit(ethers.utils.parseEther("10"));
+
+          const intialWyBal = await SmartToken2.balanceOf(wY.address);
+
+          const loanAmtY = ethers.utils.parseEther("7");
+          //we assume that rebase has happened and the wX pool is gifted some unwanted smart token Y
+          await SmartToken1.transfer(wY.address, ethers.utils.parseEther("7"));
+
+          await flashloanReceiverY.isApprovedMeth(true);
+
+          const conversionRateY = scaleFactor
+            .mul(ethers.utils.parseEther(YValue))
+            .div(ethers.utils.parseEther(XValue));
+          const expectedRepayAmountY = loanAmtY
+            .mul(conversionRateY)
+            .div(scaleFactor);
+
+          const blockNumber1 = await ethers.provider.getBlockNumber();
+          const block1 = await ethers.provider.getBlock(blockNumber1);
+
+          //setting the discount rate
+          const maxDiscountRateY = ethers.utils.parseEther("0.3");
+          await wY.setDiscountRate(
+            block1.timestamp,
+            block1.timestamp + 300,
+            0,
+            maxDiscountRateY
+          ); //upto 30% discount
+
+          const getDiscountRateY = await wY.getDiscountRate();
+          expect(getDiscountRateY.startTime).to.be.equal(block1.timestamp);
+          expect(getDiscountRateY.endTime).to.be.equal(block1.timestamp + 300);
+          expect(getDiscountRateY.discountMin).to.be.equal(0);
+          expect(getDiscountRateY.discountMax).to.be.equal(maxDiscountRateY);
+
+          const discountRateY = maxDiscountRateY.div(3);
+          const expectedRepayAmountYWithDiscount = expectedRepayAmountY
+            .mul(scaleFactor.sub(discountRateY))
+            .div(scaleFactor);
+
+          // we simulate that  the flashloan receiver will get some wanted tokens somehow
+          await SmartToken2.transfer(
+            flashloanReceiverY.address,
+            expectedRepayAmountYWithDiscount
+          );
+
+          //set the time to 10% discount
+          await time.setNextBlockTimestamp(block1.timestamp + 100);
+          await wY.flashLoan(
+            flashloanReceiverY.address,
+            loanAmtY,
+            signed.encodedData,
+            signed.signature,
+            "0x"
+          );
+
+          expect(await SmartToken2.balanceOf(wY.address)).to.be.equal(
+            intialWyBal.add(expectedRepayAmountYWithDiscount)
+          );
+          expect(
+            await SmartToken2.balanceOf(flashloanReceiverY.address)
+          ).to.be.equal(ethers.utils.parseEther("0")); //receiever already pockets the 10% discount
+          expect(
+            await SmartToken1.balanceOf(flashloanReceiverY.address)
+          ).to.be.equal(loanAmtY);
+        });
+
+        it(`it should properly get the flashloan with discounts - X is more expensive than Y`, async function () {
+          let {
+            SmartToken1,
+            SmartToken2,
+            deployer,
+            flashloanReceiverX,
+            flashloanReceiverY,
+            wX,
+            wY,
+            keyId,
+            awsConfig,
+          } = await loadFixture(deployTokenFixture);
+
+          // @note flash loan using wX
+          await SmartToken1.approve(wX.address, ethers.constants.MaxUint256);
+
+          await wX.deposit(ethers.utils.parseEther("10"));
+
+          const intialWxBal = await SmartToken1.balanceOf(wX.address);
+
+          const loanAmt = ethers.utils.parseEther("1");
+          //we assume that rebase has happened and the wX pool is gifted some unwanted smart token Y
+          await SmartToken2.transfer(wX.address, ethers.utils.parseEther("5"));
+
+          await flashloanReceiverX.isApprovedMeth(true);
+
+          const XValue = "220";
+          const YValue = "110";
+          const scaleFactor = ethers.utils.parseEther("1");
+
+          const conversionRate = scaleFactor
+            .mul(ethers.utils.parseEther(XValue))
+            .div(ethers.utils.parseEther(YValue));
+
+          const expectedRepayAmount = loanAmt
+            .mul(conversionRate)
+            .div(scaleFactor);
+          const blockNumber = await ethers.provider.getBlockNumber();
+          const block = await ethers.provider.getBlock(blockNumber);
+
+          // discounts
+          const signed = await signFLashloanAwsKMS(
+            keyId,
+            {
+              smartTokenXValue: ethers.utils.parseEther(XValue),
+              smartTokenYValue: ethers.utils.parseEther(YValue),
+              timestamp: block.timestamp,
+            },
+            awsConfig
+          );
+          //setting the discount rate
+
+          const maxDiscountRate = ethers.utils.parseEther("0.5");
+
+          await wX.setDiscountRate(
+            block.timestamp,
+            block.timestamp + 300,
+            0,
+            maxDiscountRate
+          ); //upto 50% discount
+
+          //AT half time through the discount, the user should pay 50% of the 50% discount
+          const discountRate = maxDiscountRate.div(2);
+
+          const expectedRepayAmountWithDiscount = expectedRepayAmount
+            .mul(scaleFactor.sub(discountRate))
+            .div(ethers.utils.parseEther("1"));
+
+          // we simulate that  the flashloan receiver will get some wanted tokens somehow
+          await SmartToken1.transfer(
+            flashloanReceiverX.address,
+            expectedRepayAmountWithDiscount
+          );
+
+          //set the time to 50% discount
+          // await time.increase(147);
+          await time.setNextBlockTimestamp(block.timestamp + 150);
+
+          await wX.flashLoan(
+            flashloanReceiverX.address,
+            loanAmt,
+            signed.encodedData,
+            signed.signature,
+            "0x"
+          );
+
+          expect(await SmartToken1.balanceOf(wX.address)).to.be.equal(
+            intialWxBal.add(expectedRepayAmountWithDiscount)
+          );
+          expect(
+            await SmartToken1.balanceOf(flashloanReceiverX.address)
+          ).to.be.equal(ethers.utils.parseEther("0"));
+          expect(
+            await SmartToken2.balanceOf(flashloanReceiverX.address)
+          ).to.be.equal(loanAmt);
+
+          // @note flash loan using wY
+          await SmartToken2.approve(wY.address, ethers.constants.MaxUint256);
+
+          await wY.deposit(ethers.utils.parseEther("10"));
+
+          const intialWyBal = await SmartToken2.balanceOf(wY.address);
+
+          const loanAmtY = ethers.utils.parseEther("7");
+          //we assume that rebase has happened and the wX pool is gifted some unwanted smart token Y
+          await SmartToken1.transfer(wY.address, ethers.utils.parseEther("7"));
+
+          await flashloanReceiverY.isApprovedMeth(true);
+
+          const conversionRateY = scaleFactor
+            .mul(ethers.utils.parseEther(YValue))
+            .div(ethers.utils.parseEther(XValue));
+          const expectedRepayAmountY = loanAmtY
+            .mul(conversionRateY)
+            .div(scaleFactor);
+
+          const blockNumber1 = await ethers.provider.getBlockNumber();
+          const block1 = await ethers.provider.getBlock(blockNumber1);
+
+          //setting the discount rate
+          const maxDiscountRateY = ethers.utils.parseEther("0.3");
+          await wY.setDiscountRate(
+            block1.timestamp,
+            block1.timestamp + 300,
+            0,
+            maxDiscountRateY
+          ); //upto 30% discount
+
+          const discountRateY = maxDiscountRateY.div(3);
+          const expectedRepayAmountYWithDiscount = expectedRepayAmountY
+            .mul(scaleFactor.sub(discountRateY))
+            .div(scaleFactor);
+
+          // we simulate that  the flashloan receiver will get some wanted tokens somehow
+          await SmartToken2.transfer(
+            flashloanReceiverY.address,
+            expectedRepayAmountYWithDiscount
+          );
+
+          //set the time to 10% discount
+          await time.setNextBlockTimestamp(block1.timestamp + 100);
+          await wY.flashLoan(
+            flashloanReceiverY.address,
+            loanAmtY,
+            signed.encodedData,
+            signed.signature,
+            "0x"
+          );
+
+          expect(await SmartToken2.balanceOf(wY.address)).to.be.equal(
+            intialWyBal.add(expectedRepayAmountYWithDiscount)
+          );
+          expect(
+            await SmartToken2.balanceOf(flashloanReceiverY.address)
+          ).to.be.equal(ethers.utils.parseEther("0")); //receiever already pockets the 10% discount
+          expect(
+            await SmartToken1.balanceOf(flashloanReceiverY.address)
+          ).to.be.equal(loanAmtY);
+        });
+
+        it(`it should properly get the flashloan with discounts - Different start discounts`, async function () {
+          let {
+            SmartToken1,
+            SmartToken2,
+            deployer,
+            flashloanReceiverX,
+            flashloanReceiverY,
+            wX,
+            wY,
+            keyId,
+            awsConfig,
+          } = await loadFixture(deployTokenFixture);
+
+          // @note flash loan using wX
+          await SmartToken1.approve(wX.address, ethers.constants.MaxUint256);
+
+          await wX.deposit(ethers.utils.parseEther("10"));
+
+          const intialWxBal = await SmartToken1.balanceOf(wX.address);
+
+          const loanAmt = ethers.utils.parseEther("1");
+          //we assume that rebase has happened and the wX pool is gifted some unwanted smart token Y
+          await SmartToken2.transfer(wX.address, ethers.utils.parseEther("5"));
+
+          await flashloanReceiverX.isApprovedMeth(true);
+
+          const XValue = "220";
+          const YValue = "110";
+          const scaleFactor = ethers.utils.parseEther("1");
+
+          const conversionRate = scaleFactor
+            .mul(ethers.utils.parseEther(XValue))
+            .div(ethers.utils.parseEther(YValue));
+
+          const expectedRepayAmount = loanAmt
+            .mul(conversionRate)
+            .div(scaleFactor);
+          const blockNumber = await ethers.provider.getBlockNumber();
+          const block = await ethers.provider.getBlock(blockNumber);
+
+          // discounts
+          const signed = await signFLashloanAwsKMS(
+            keyId,
+            {
+              smartTokenXValue: ethers.utils.parseEther(XValue),
+              smartTokenYValue: ethers.utils.parseEther(YValue),
+              timestamp: block.timestamp,
+            },
+            awsConfig
+          );
+          //setting the discount rate
+
+          const maxDiscountRate = ethers.utils.parseEther("0.6");
+          const minDiscountRate = ethers.utils.parseEther("0.1");
+
+          await wX.setDiscountRate(
+            block.timestamp,
+            block.timestamp + 300,
+            minDiscountRate,
+            maxDiscountRate
+          ); //upto 50% discount
+
+          //AT half time through the discount, the user should pay 50% of the 50% discount
+          const discountRate = minDiscountRate.add(
+            maxDiscountRate.sub(minDiscountRate).div(2)
+          );
+
+          const expectedRepayAmountWithDiscount = expectedRepayAmount
+            .mul(scaleFactor.sub(discountRate))
+            .div(ethers.utils.parseEther("1"));
+
+          // we simulate that  the flashloan receiver will get some wanted tokens somehow
+          await SmartToken1.transfer(
+            flashloanReceiverX.address,
+            expectedRepayAmountWithDiscount
+          );
+
+          //set the time to 50% discount
+          await time.setNextBlockTimestamp(block.timestamp + 150);
+
+          await wX.flashLoan(
+            flashloanReceiverX.address,
+            loanAmt,
+            signed.encodedData,
+            signed.signature,
+            "0x"
+          );
+
+          expect(await SmartToken1.balanceOf(wX.address)).to.be.equal(
+            intialWxBal.add(expectedRepayAmountWithDiscount)
+          );
+          expect(
+            await SmartToken1.balanceOf(flashloanReceiverX.address)
+          ).to.be.equal(ethers.utils.parseEther("0"));
+          expect(
+            await SmartToken2.balanceOf(flashloanReceiverX.address)
+          ).to.be.equal(loanAmt);
+
+          // @note flash loan using wY
+          await SmartToken2.approve(wY.address, ethers.constants.MaxUint256);
+
+          await wY.deposit(ethers.utils.parseEther("10"));
+
+          const intialWyBal = await SmartToken2.balanceOf(wY.address);
+
+          const loanAmtY = ethers.utils.parseEther("7");
+          //we assume that rebase has happened and the wX pool is gifted some unwanted smart token Y
+          await SmartToken1.transfer(wY.address, ethers.utils.parseEther("7"));
+
+          await flashloanReceiverY.isApprovedMeth(true);
+
+          const conversionRateY = scaleFactor
+            .mul(ethers.utils.parseEther(YValue))
+            .div(ethers.utils.parseEther(XValue));
+          const expectedRepayAmountY = loanAmtY
+            .mul(conversionRateY)
+            .div(scaleFactor);
+
+          const blockNumber1 = await ethers.provider.getBlockNumber();
+          const block1 = await ethers.provider.getBlock(blockNumber1);
+          const minDiscountRateY = ethers.utils.parseEther("0.1");
+          //setting the discount rate
+          const maxDiscountRateY = ethers.utils.parseEther("0.5");
+          await wY.setDiscountRate(
+            block1.timestamp,
+            block1.timestamp + 300,
+            minDiscountRateY,
+            maxDiscountRateY
+          ); //upto 30% discount
+
+          const discountRateY = minDiscountRateY.add(
+            maxDiscountRateY.sub(minDiscountRate).div(4)
+          );
+
+          const expectedRepayAmountYWithDiscount = expectedRepayAmountY
+            .mul(scaleFactor.sub(discountRateY))
+            .div(scaleFactor);
+
+          // we simulate that  the flashloan receiver will get some wanted tokens somehow
+          await SmartToken2.transfer(
+            flashloanReceiverY.address,
+            expectedRepayAmountYWithDiscount
+          );
+
+          //set the time to 10% discount
+          await time.setNextBlockTimestamp(block1.timestamp + 75);
+          await wY.flashLoan(
+            flashloanReceiverY.address,
+            loanAmtY,
+            signed.encodedData,
+            signed.signature,
+            "0x"
+          );
+
+          expect(await SmartToken2.balanceOf(wY.address)).to.be.equal(
+            intialWyBal.add(expectedRepayAmountYWithDiscount)
+          );
+          expect(
+            await SmartToken2.balanceOf(flashloanReceiverY.address)
+          ).to.be.equal(ethers.utils.parseEther("0")); //receiever already pockets the 10% discount
+          expect(
+            await SmartToken1.balanceOf(flashloanReceiverY.address)
+          ).to.be.equal(loanAmtY);
+        });
+
+        it(`it should revert if reciever has not approved the funds transfer`, async function () {
+          let {
+            SmartToken1,
+            SmartToken2,
+            deployer,
+            flashloanReceiverX,
+            flashloanReceiverY,
+            wX,
+            wY,
+            keyId,
+            awsConfig,
           } = await loadFixture(deployTokenFixture);
 
           await SmartToken1.approve(wX.address, ethers.utils.parseEther("10"));
-          //await SmartToken2.transfer(wX.address, ethers.utils.parseEther("5"));
           await wX.deposit(ethers.utils.parseEther("10"));
 
           const blockNumber = await ethers.provider.getBlockNumber();
           const block = await ethers.provider.getBlock(blockNumber);
 
-          //price is assumed to be 50/50 -- no discounts
-          await PriceFeed.updatePrice(10, 10, block.timestamp);
-
+          const signed = await signFLashloanAwsKMS(
+            keyId,
+            {
+              smartTokenXValue: 10,
+              smartTokenYValue: 10,
+              timestamp: block.timestamp,
+            },
+            awsConfig
+          );
           await SmartToken2.approve(wY.address, ethers.utils.parseEther("10"));
-          //await SmartToken1.transfer(wY.address, ethers.utils.parseEther("5"));
           await wY.deposit(ethers.utils.parseEther("10"));
 
           await flashloanReceiverX.isApprovedMeth(false);
@@ -344,6 +1120,8 @@ developmentChains.includes(network.name)
             wX.flashLoan(
               flashloanReceiverX.address,
               ethers.utils.parseEther("10"),
+              signed.encodedData,
+              signed.signature,
               "0x"
             )
           ).to.be.revertedWithCustomError(
@@ -355,6 +1133,8 @@ developmentChains.includes(network.name)
             wY.flashLoan(
               flashloanReceiverY.address,
               ethers.utils.parseEther("10"),
+              signed.encodedData,
+              signed.signature,
               "0x"
             )
           ).to.be.revertedWithCustomError(
@@ -374,14 +1154,14 @@ developmentChains.includes(network.name)
             wX.flashLoan(
               flashloanReceiverX.address,
               ethers.utils.parseEther("15"),
+              signed.encodedData,
+              signed.signature,
               "0x"
             )
           ).to.be.revertedWith("ERC20: insufficient allowance");
         });
         it(`it should revert if reciever was  not able to get enough funds to pay back`, async function () {
           let {
-            tokenFactory,
-            underlyingToken,
             SmartToken1,
             SmartToken2,
             deployer,
@@ -389,7 +1169,8 @@ developmentChains.includes(network.name)
             flashloanReceiverY,
             wX,
             wY,
-            PriceFeed,
+            keyId,
+            awsConfig,
           } = await loadFixture(deployTokenFixture);
 
           await SmartToken1.approve(wX.address, ethers.utils.parseEther("10"));
@@ -399,8 +1180,15 @@ developmentChains.includes(network.name)
           const block = await ethers.provider.getBlock(blockNumber);
 
           //price is assumed to be 50/50 -- no discounts
-          await PriceFeed.updatePrice(10, 10, block.timestamp);
-
+          const signed = await signFLashloanAwsKMS(
+            keyId,
+            {
+              smartTokenXValue: 10,
+              smartTokenYValue: 10,
+              timestamp: block.timestamp,
+            },
+            awsConfig
+          );
           await SmartToken2.approve(wY.address, ethers.utils.parseEther("10"));
           await wY.deposit(ethers.utils.parseEther("10"));
 
@@ -415,6 +1203,8 @@ developmentChains.includes(network.name)
             wX.flashLoan(
               flashloanReceiverX.address,
               ethers.utils.parseEther("15"),
+              signed.encodedData,
+              signed.signature,
               "0x"
             )
           ).to.be.revertedWith("ERC20: transfer amount exceeds balance");
@@ -426,6 +1216,8 @@ developmentChains.includes(network.name)
             wY.flashLoan(
               flashloanReceiverY.address,
               ethers.utils.parseEther("15"),
+              signed.encodedData,
+              signed.signature,
               "0x"
             )
           ).to.be.revertedWith("ERC20: transfer amount exceeds balance");
@@ -440,21 +1232,31 @@ developmentChains.includes(network.name)
 
         it(`it should revert if POOL doesnot have enough selling token`, async function () {
           let {
-            tokenFactory,
-            underlyingToken,
-            SmartToken1,
-            SmartToken2,
-            deployer,
             flashloanReceiverX,
             flashloanReceiverY,
             wX,
             wY,
+            keyId,
+            awsConfig,
           } = await loadFixture(deployTokenFixture);
-
+          const blockNumber = await ethers.provider.getBlockNumber();
+          const block = await ethers.provider.getBlock(blockNumber);
+          //price is assumed to be 50/50 -- no discounts
+          const signed = await signFLashloanAwsKMS(
+            keyId,
+            {
+              smartTokenXValue: 10,
+              smartTokenYValue: 10,
+              timestamp: block.timestamp,
+            },
+            awsConfig
+          );
           await expect(
             wX.flashLoan(
               flashloanReceiverX.address,
               ethers.utils.parseEther("10"),
+              signed.encodedData,
+              signed.signature,
               "0x"
             )
           ).to.be.revertedWithCustomError(
@@ -465,6 +1267,8 @@ developmentChains.includes(network.name)
             wY.flashLoan(
               flashloanReceiverY.address,
               ethers.utils.parseEther("10"),
+              signed.encodedData,
+              signed.signature,
               "0x"
             )
           ).to.be.revertedWithCustomError(
@@ -475,23 +1279,28 @@ developmentChains.includes(network.name)
 
         it(`it should revert if reciever's execute operation returned false'`, async function () {
           let {
-            tokenFactory,
-            underlyingToken,
             SmartToken1,
             SmartToken2,
             deployer,
             flashloanReceiverX,
-            flashloanReceiverY,
             wX,
             wY,
-            PriceFeed,
+            keyId,
+            awsConfig,
           } = await loadFixture(deployTokenFixture);
 
           const blockNumber = await ethers.provider.getBlockNumber();
           const block = await ethers.provider.getBlock(blockNumber);
-
           //price is assumed to be 50/50 -- no discounts
-          await PriceFeed.updatePrice(10, 10, block.timestamp);
+          const signed = await signFLashloanAwsKMS(
+            keyId,
+            {
+              smartTokenXValue: 10,
+              smartTokenYValue: 10,
+              timestamp: block.timestamp,
+            },
+            awsConfig
+          );
           await SmartToken1.approve(wX.address, ethers.utils.parseEther("10"));
 
           await wX.deposit(ethers.utils.parseEther("10"));
@@ -511,6 +1320,8 @@ developmentChains.includes(network.name)
             wX.flashLoan(
               flashloanReceiverX.address,
               ethers.utils.parseEther("1"),
+              signed.encodedData,
+              signed.signature,
               "0x"
             )
           ).to.be.revertedWithCustomError(wX, "FlashLoan__FailedExecOps");
@@ -520,15 +1331,27 @@ developmentChains.includes(network.name)
         });
         it(`it should revert if reciever is EOA`, async function () {
           let {
-            tokenFactory,
             SmartToken1,
             SmartToken2,
             deployer,
             flashloanReceiverX,
             tester,
             wX,
+            keyId,
+            awsConfig,
           } = await loadFixture(deployTokenFixture);
-
+          const blockNumber = await ethers.provider.getBlockNumber();
+          const block = await ethers.provider.getBlock(blockNumber);
+          //price is assumed to be 50/50 -- no discounts
+          const signed = await signFLashloanAwsKMS(
+            keyId,
+            {
+              smartTokenXValue: 10,
+              smartTokenYValue: 10,
+              timestamp: block.timestamp,
+            },
+            awsConfig
+          );
           await SmartToken1.approve(wX.address, ethers.utils.parseEther("10"));
 
           await wX.deposit(ethers.utils.parseEther("10"));
@@ -542,9 +1365,11 @@ developmentChains.includes(network.name)
           );
 
           await expect(
-            SmartToken1.flashLoan(
+            wX.flashLoan(
               tester.address,
               ethers.utils.parseEther("10"),
+              signed.encodedData,
+              signed.signature,
               "0x"
             )
           ).to.be.reverted;
@@ -562,10 +1387,92 @@ developmentChains.includes(network.name)
           expect(await wX.getTimeout()).to.be.equal(1000);
 
           await wY.setTimeout(1000);
-          expect(await wX.getTimeout()).to.be.equal(1000);
+          expect(await wY.getTimeout()).to.be.equal(1000);
 
           await expect(wX.connect(tester).setTimeout(10000)).to.be.revertedWith(
             "Ownable: caller is not the owner"
+          );
+        });
+
+        it(`it should properly set the signers`, async function () {
+          let { wX, wY, tester } = await loadFixture(deployTokenFixture);
+
+          await wX.setSigners(tester.address, true);
+          expect(await wX.getSigners(tester.address)).to.be.equal(true);
+
+          await wY.setSigners(tester.address, true);
+          expect(await wY.getSigners(tester.address)).to.be.equal(true);
+
+          await expect(
+            wX.connect(tester).setSigners(tester.address, false)
+          ).to.be.revertedWith("Ownable: caller is not the owner");
+        });
+
+        it(`it should properly verify the signer`, async function () {
+          let { wX, wY, tester } = await loadFixture(deployTokenFixture);
+
+          const wallet = ethers.Wallet.createRandom();
+
+          const failedSigned = await signFlashloan(wallet, {
+            smartTokenXValue: 10,
+            smartTokenYValue: 10,
+            timestamp: 1000,
+          });
+
+          await expect(
+            wX.flashLoan(
+              tester.address,
+              ethers.utils.parseEther("1"),
+              failedSigned.encodedData,
+              failedSigned.signature,
+              "0x"
+            )
+          ).to.be.revertedWithCustomError(
+            wX,
+            "WrappedSmartToken__InvalidSigner"
+          );
+        });
+
+        it(`it should properly revert if discount is not proper`, async function () {
+          let { wX } = await loadFixture(deployTokenFixture);
+
+          // discount Max == discount Min
+          await expect(
+            wX.setDiscountRate(1000, 1000, 0, 50)
+          ).to.be.revertedWithCustomError(
+            wX,
+            "WrappedSmartToken__InvalidDiscount"
+          );
+
+          // discount Min > discount Max
+          await expect(
+            wX.setDiscountRate(1000, 500, 0, 50)
+          ).to.be.revertedWithCustomError(
+            wX,
+            "WrappedSmartToken__InvalidDiscount"
+          );
+
+          // discount max Scalefactor (1e18)
+          await expect(
+            wX.setDiscountRate(1000, 1500, 0, ethers.utils.parseEther("1.1"))
+          ).to.be.revertedWithCustomError(
+            wX,
+            "WrappedSmartToken__InvalidDiscount"
+          );
+          // start time > end time
+          await expect(
+            wX.setDiscountRate(1000, ethers.utils.parseEther("0.95"), 1000, 50)
+          ).to.be.revertedWithCustomError(
+            wX,
+            "WrappedSmartToken__InvalidDiscount"
+          );
+
+          // start time == end time
+          await expect(
+            wX.setDiscountRate(1000, 1000, 50, 50)
+          ).to.be.revertedWithCustomError(
+            wX,
+            "WrappedSmartToken__InvalidDiscount"
           );
         });
 
@@ -595,7 +1502,8 @@ developmentChains.includes(network.name)
             flashloanReceiverY,
             wX,
             wY,
-            PriceFeed,
+            keyId,
+            awsConfig,
           } = await loadFixture(deployTokenFixture);
 
           // @note flash loan using wX
@@ -618,17 +1526,28 @@ developmentChains.includes(network.name)
           expect(await wX.getTimeout()).to.be.equal(1000);
 
           //price is assumed to be 50/50 -- no discounts
-          await PriceFeed.updatePrice(10, 10, block.timestamp - 1001);
-
+          const signed = await signFLashloanAwsKMS(
+            keyId,
+            {
+              smartTokenXValue: 10,
+              smartTokenYValue: 10,
+              timestamp: block.timestamp - 1001,
+            },
+            awsConfig
+          );
           await expect(
-            wX.flashLoan(flashloanReceiverX.address, loanAmt, "0x")
+            wX.flashLoan(
+              flashloanReceiverX.address,
+              loanAmt,
+              signed.encodedData,
+              signed.signature,
+              "0x"
+            )
           ).to.be.revertedWithCustomError(
             wX,
             "WrappedSmartToken__PriceFeedOutdated"
           );
         });
-
-        ///
       });
 
       describe("Wrapped Token Overidden Method tests/ Refund unwanted tokens", async function () {
@@ -763,18 +1682,38 @@ developmentChains.includes(network.name)
 
           const existingProxyAddress = wX.address;
 
-
           await upgrades.forceImport(
             existingProxyAddress,
             RiskWrappedTokenContract
-          );  
-           await wX.transferOwnership(tester.address);
+          );
+          await wX.transferOwnership(tester.address);
 
-         expect( await upgrades.upgradeProxy(
-            existingProxyAddress,
-            newWrappedSmartTokenFactory
-          )).to.be.ok;
+          expect(
+            await upgrades.upgradeProxy(
+              existingProxyAddress,
+              newWrappedSmartTokenFactory
+            )
+          ).to.be.ok;
+        });
+      });
 
+      describe("Wrapper Factory", async function () {
+        it(`Should fetch tokens props properly`, async function () {
+          let {
+            wX,
+            wY,
+
+            WrapperFactory,
+          } = await loadFixture(deployTokenFixture);
+          expect(await WrapperFactory.getWrappedSmartTokens(true)).to.be.equal(
+            wX.address
+          );
+          expect(await WrapperFactory.getWrappedSmartTokens(false)).to.be.equal(
+            wY.address
+          );
+          expect(isAddress(await WrapperFactory.getTemplate())).to.be.equal(
+            true
+          );
         });
       });
       //
