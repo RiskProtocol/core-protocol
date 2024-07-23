@@ -12,7 +12,7 @@ import {
   rateLimitsDefault,
   FF_INTERVAL,
 } from "../../helper-hardhat-config";
-import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
+import { loadFixture, time } from "@nomicfoundation/hardhat-network-helpers";
 import { token } from "../../typechain-types/@openzeppelin/contracts";
 
 developmentChains.includes(network.name)
@@ -164,7 +164,9 @@ developmentChains.includes(network.name)
           await SmartToken1.approve(
             atomicTransaction.address,
             ethers.utils.parseEther("1")
-          );  
+          );
+          const timestamp = await time.latest();
+          const newTimeStamp = timestamp + 1000;
 
           // mock will return less than allowed by slippage
           await balancerPool.testMock(ethers.utils.parseEther("0.9"));
@@ -177,7 +179,8 @@ developmentChains.includes(network.name)
               balancerPool.address, //0x Contract
               ethers.utils.parseEther("1"),
               ethers.utils.parseEther("1"),
-              ethers.utils.parseEther("1")
+              ethers.utils.parseEther("1"),
+              newTimeStamp.toString()
             )
           ).to.revertedWithCustomError(
             atomicTransaction,
@@ -208,7 +211,8 @@ developmentChains.includes(network.name)
             atomicTransaction.address,
             ethers.utils.parseEther("1")
           );
-
+          const timestamp = await time.latest();
+          const newTimeStamp = timestamp + 1000;
           //should revert since swapTarget is dummy
           // the sold tokens are not sold hence the buy tokens are not bought
           // therefore slippage condition is not met
@@ -218,7 +222,8 @@ developmentChains.includes(network.name)
               balancerPool.address,
               ethers.utils.parseEther("1"),
               ethers.utils.parseEther("1"),
-              ethers.utils.parseEther("1")
+              ethers.utils.parseEther("1"),
+              newTimeStamp.toString()
             )
           ).to.revertedWithCustomError(
             atomicTransaction,
@@ -231,7 +236,8 @@ developmentChains.includes(network.name)
               balancerPool.address,
               ethers.utils.parseEther("0"),
               ethers.utils.parseEther("1"),
-              ethers.utils.parseEther("1")
+              ethers.utils.parseEther("1"),
+              newTimeStamp.toString()
             )
           ).to.revertedWithCustomError(
             atomicTransaction,
@@ -244,13 +250,13 @@ developmentChains.includes(network.name)
               balancerPool.address,
               ethers.utils.parseEther("1"),
               ethers.utils.parseEther("0"),
-              ethers.utils.parseEther("1")
+              ethers.utils.parseEther("1"),
+              newTimeStamp.toString()
             )
           ).to.revertedWithCustomError(
             atomicTransaction,
             "AtomicTransaction_InvalidParams"
           );
-
 
           await expect(
             atomicTransaction.splitAndSwap(
@@ -258,12 +264,80 @@ developmentChains.includes(network.name)
               balancerPool.address,
               ethers.utils.parseEther("1"),
               ethers.utils.parseEther("1"),
-              ethers.utils.parseEther("0")
+              ethers.utils.parseEther("0"),
+              newTimeStamp.toString()
             )
           ).to.revertedWithCustomError(
             atomicTransaction,
             "AtomicTransaction_InvalidParams"
           );
+
+          const actualTime = await time.latest();
+          const expiredTime = actualTime - 1;
+          // and older timestamp
+          await expect(
+            atomicTransaction.splitAndSwap(
+              SmartToken1.address,
+              balancerPool.address,
+              ethers.utils.parseEther("1"),
+              ethers.utils.parseEther("1"),
+              ethers.utils.parseEther("1"),
+              expiredTime.toString()
+            )
+          ).to.revertedWithCustomError(
+            atomicTransaction,
+            "AtomicTransaction_ExpiryReached"
+          );
+        });
+        it(`it should be OK in normal cases`, async function () {
+          let {
+            tokenFactory,
+            underlyingToken,
+            SmartToken1,
+            SmartToken2,
+            atomicTransaction,
+            balancerPool,
+          } = await loadFixture(deployTokenFixture);
+          await tokenFactory.initializeSMART(
+            SmartToken1.address,
+            SmartToken2.address
+          );
+
+          await underlyingToken.approve(
+            atomicTransaction.address,
+            ethers.utils.parseEther("1")
+          );
+
+          //selling smarttoken1 for smarttoken2
+          await SmartToken1.approve(
+            atomicTransaction.address,
+            ethers.utils.parseEther("1")
+          );
+
+          const actualTime = await time.latest();
+          const newTime = actualTime + 1;
+          // and older timestamp
+          await expect(
+            atomicTransaction.splitAndSwap(
+              SmartToken1.address,
+              balancerPool.address,
+              ethers.utils.parseEther("1"),
+              ethers.utils.parseEther("1"),
+              ethers.utils.parseEther("1"),
+              actualTime.toString()
+            )
+          ).to.ok;
+
+          await expect(
+            atomicTransaction.splitAndSwap(
+              SmartToken1.address,
+              balancerPool.address,
+              ethers.utils.parseEther("1"),
+              ethers.utils.parseEther("1"),
+              ethers.utils.parseEther("1"),
+              newTime.toString()
+            )
+          ).to.ok;
         });
         it(`it should revert if not approved`, async function () {
           let {
@@ -284,7 +358,8 @@ developmentChains.includes(network.name)
             atomicTransaction.address,
             ethers.utils.parseEther("1")
           );
-
+          const timestamp = await time.latest();
+          const newTimeStamp = timestamp + 1000;
           //should revert since swapTarget is dummy
           // the sold tokens are not sold hence the buy tokens are not bought
           // therefore slippage condition is not met
@@ -294,7 +369,8 @@ developmentChains.includes(network.name)
               balancerPool.address,
               ethers.utils.parseEther("1"),
               ethers.utils.parseEther("1"),
-              ethers.utils.parseEther("1")
+              ethers.utils.parseEther("1"),
+              timestamp.toString()
             )
           ).to.revertedWithCustomError(
             atomicTransaction,
@@ -324,7 +400,10 @@ developmentChains.includes(network.name)
           const maxPrice = ethers.utils.parseEther("100");
           const minimumAmoutOut = ethers.utils.parseEther("0.001");
 
-          await atomicTransaction.setBalancerVariables(minimumAmoutOut,maxPrice);
+          await atomicTransaction.setBalancerVariables(
+            minimumAmoutOut,
+            maxPrice
+          );
 
           const balancerParams = await atomicTransaction.getBalancerVariables();
 

@@ -36,6 +36,7 @@ contract AtomicTransaction is
     error AtomicTransaction_InvalidBalance();
     error AtomicTransaction_InvalidParams();
     error AtomicTransaction_BalancerError();
+    error AtomicTransaction_ExpiryReached();
 
     event ReceivedEther(address sender, uint256 amount);
     event DrainContract();
@@ -44,6 +45,13 @@ contract AtomicTransaction is
         uint256 depositAmount,
         uint256 swapAmount
     );
+
+    modifier expiryDateCheck(uint256 expiryDate) {
+        if (expiryDate < block.timestamp) {
+            revert AtomicTransaction_ExpiryReached();
+        }
+        _;
+    }
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -126,8 +134,10 @@ contract AtomicTransaction is
         //amount of underlying to deposit
         uint256 depositAmount,
         //anount of sell token to sell
-        uint256 sellAmount
-    ) external payable nonReentrant returns (bool) {
+        uint256 sellAmount,
+        //expiry date
+        uint256 expiryDate
+    ) external payable expiryDateCheck(expiryDate) nonReentrant returns (bool) {
         if (
             expectedAmount == 0 ||
             depositAmount == 0 ||
@@ -145,7 +155,7 @@ contract AtomicTransaction is
 
         if (
             !balancerPool.isBound(address(sellToken)) ||
-            !balancerPool.isBound(address(buyToken)) 
+            !balancerPool.isBound(address(buyToken))
         ) {
             revert AtomicTransaction_BalancerError();
         }
