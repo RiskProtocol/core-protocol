@@ -40,6 +40,7 @@ contract TokenFactory is
     error TokenFactory__InvalidSignatureLength();
     error TokenFactory__InvalidManagementFees();
     error TokenFactory__SmartTokenArrayOutOfBounds();
+    error TokenFactory__NoPremiumsToDrain();
 
     using MathUpgradeable for uint256;
     using SafeMathUpgradeable for uint256;
@@ -88,6 +89,7 @@ contract TokenFactory is
 
     //flashloan
     uint16 private premiumPercentage;
+    uint256 private premiumCharged;
 
     //Factors to be calculated at rebalance
     struct RebalanceElements {
@@ -139,6 +141,7 @@ contract TokenFactory is
         uint256 assets,
         uint256 shares
     );
+    event PremiumDrained(address receiver, uint256 amount);
 
     event WithdrawLimitToggled(bool enabled);
     event DepositLimitToggled(bool enabled);
@@ -227,6 +230,7 @@ contract TokenFactory is
         period = limitPeriod_;
         //flashloan
         premiumPercentage = 5;
+        premiumCharged = 0;
     }
 
     /// @notice Authorizes an upgrade to a new contract implementation.
@@ -828,10 +832,8 @@ contract TokenFactory is
                     REBALANCE_INT_MULTIPLIER -
                         (
                             managementFeeEnabled && managementFeesRate > 0
-                                ? managementFeesRate.mul(FFinterval).div(1 days) //assuming 1 interval is one day,
-                                //then we can use 1 days/1days = 1
-                                : //otherwise useful when doing hourly
-                                0
+                                ? managementFeesRate.mul(FFinterval).div(1 days) //assuming 1 interval is one day, //otherwise useful when doing hourly //then we can use 1 days/1days = 1
+                                : 0
                         )
                 )
                 .div(REBALANCE_INT_MULTIPLIER)
@@ -891,12 +893,20 @@ contract TokenFactory is
 
     // flashloan
     // transfer underlying token to receiver
-    function underlyingTransfer(address receiver_, uint256 amount_) external onlySmartTokens {
+    function underlyingTransfer(
+        address receiver_,
+        uint256 amount_
+    ) external onlySmartTokens {
         SafeERC20.safeTransfer(baseToken, receiver_, amount_);
     }
 
-    function underlyingReturn(address sender_, uint256 amount_) external onlySmartTokens {
-        SafeERC20.safeTransferFrom(baseToken, sender_, address(this), amount_);
+    function underlyingReturn(
+        address sender_,
+        uint256 amount_,
+        uint premium
+    ) external onlySmartTokens {
+        SafeERC20.safeTransferFrom(baseToken, sender_, address(this), amount_.add(premium));
+        premiumCharged += premium;
     }
 
     /// @notice Calculates the rollover value(Units of RiskON/OFF) for an account
@@ -1211,13 +1221,24 @@ contract TokenFactory is
     function toggleDepositLimit() external onlyOwner {
         hasDepositLimit = !hasDepositLimit;
         emit DepositLimitToggled(hasDepositLimit);
-    }   
-//flashloan premiums
-function setPremiumPercentage(uint16 percentage) external onlyOwner {
-    require(percentage >= 0 && percentage <= 10000, "Premium must be between 1 and 10000");
-    premiumPercentage = percentage;
-}
+    }
 
+    //flashloan premiums
+    function setPremiumPercentage(uint16 percentage) external onlyOwner {
+        require(
+            percentage >= 0 && percentage <= 10000,
+            "Premium must be between 1 and 10000"
+        );
+        premiumPercentage = percentage;
+    }
+
+    function drainFlashloanPremiums(address receiver) external onlyOwner {
+        if (premiumCharged == 0) revert TokenFactory__NoPremiumsToDrain();
+        uint256 amount = premiumCharged;
+        premiumCharged = 0;
+        SafeERC20.safeTransfer(baseToken, receiver, amount);
+        emit PremiumDrained(receiver, amount);
+    }
 
     /// @notice Retrieves the `scheduledRebalance` struct at the given sequence number.
     /// @dev This function is a getter for a single `scheduledRebalance` struct.
@@ -1341,9 +1362,11 @@ function setPremiumPercentage(uint16 percentage) external onlyOwner {
     function getLastFFTimeStamp() external view returns (uint256) {
         return FFLastTimeStamp;
     }
+
     function getDailyFeeFactorNumber() public view returns (uint256) {
         return dailyFeeFactors.length - 1; //adjusted since rebalanceElements is also filled on initialization
     }
+
     function getUserLastFFCount(
         address userAddress
     ) public view returns (uint256) {
@@ -1353,7 +1376,12 @@ function setPremiumPercentage(uint16 percentage) external onlyOwner {
     function getIsNativeToken() public view returns (bool) {
         return isNativeToken;
     }
-    function getFlashloanPremium() public view returns (uint16){
+
+    function getFlashloanPremium() public view returns (uint16) {
         return premiumPercentage;
+    }
+
+    function getAccumulatedFlashLoanPremium() public view returns (uint256) {
+        return premiumCharged;
     }
 }

@@ -760,7 +760,8 @@ contract SmartToken is
             address(tokenFactory)
         );
 
-        tokenFactory.underlyingReturn(receiver, amount.add(premium));
+        tokenFactory.underlyingReturn(receiver, amount, premium);
+
 
         if (
             IERC20Update(underlyingToken).balanceOf(address(tokenFactory)) !=

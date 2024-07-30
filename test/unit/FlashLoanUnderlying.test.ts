@@ -442,6 +442,32 @@ developmentChains.includes(network.name)
           expect(
             await underlyingToken.balanceOf(tokenFactory.address)
           ).to.be.equal(ethers.utils.parseEther("10").add(premium));
+
+          expect(
+            await tokenFactory.getAccumulatedFlashLoanPremium()
+          ).to.be.equal(premium);
+
+          //get balance of deployer
+          const deployerBalance = await underlyingToken.balanceOf(
+            deployer.address
+          );
+
+          //get the amount to be paid back
+          await expect(tokenFactory.drainFlashloanPremiums(deployer.address)).to.emit(tokenFactory, "PremiumDrained").withArgs(deployer.address, premium);
+
+          expect(await underlyingToken.balanceOf(deployer.address)).to.be.equal(
+            deployerBalance.add(premium)
+          );
+
+          expect(
+            await tokenFactory.getAccumulatedFlashLoanPremium()
+          ).to.be.equal(0);
+          await expect(
+             tokenFactory.drainFlashloanPremiums(deployer.address)
+          ).to.be.revertedWithCustomError(
+            tokenFactory,
+            "TokenFactory__NoPremiumsToDrain"
+          );
         });
 
         it(`it should properly return the POOL address`, async function () {
