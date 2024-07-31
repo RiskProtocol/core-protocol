@@ -33,6 +33,7 @@ async function main() {
       rateLimitsDefault.withdraw,
       rateLimitsDefault.deposit,
       rateLimitsDefault.period,
+      false
     ],
     vanityConfig.factoryAddress,
     false,

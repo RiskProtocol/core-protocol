@@ -1,22 +1,22 @@
 {
   "tokenFactory": {
-    "proxyAddress": "0x11823C9b417F11D2e499B72777a55d674cFf837e",
-    "saltStr": "183"
+    "proxyAddress": "0x11515C494B70CD385d24B3fdf01dC703a33e2051",
+    "saltStr": "135"
   },
   "SmartTokenX": {
-    "proxyAddress": "0x222e21214d2c2f0De8bce64c6CDeAE7BE5d17fdd",
-    "saltStr": "529"
+    "proxyAddress": "0x22375917B29584598d7242199b8F2f89A220Ae80",
+    "saltStr": "367"
   },
   "SmartTokenY": {
-    "proxyAddress": "0x339cbf167e735F6626B44D20D5421e90AE810c1A",
-    "saltStr": "1061"
+    "proxyAddress": "0x33d5435a830A32e1D1ca7c425aCA8495F12Dee44",
+    "saltStr": "208"
   },
   "Orchestator": {
-    "proxyAddress": "0x448fd93894d0CaAdF56302E08b38c064614578C5",
-    "saltStr": "751"
+    "proxyAddress": "0x44601A120936F6e7b151e817cfdD4653434E7Ea9",
+    "saltStr": "1747"
   },
   "AtomicTx": {
-    "proxyAddress": "0x55A864Aa23c5286612528433dA28dA1376733eD7",
-    "saltStr": "1249"
+    "proxyAddress": "0x55D5B4f54A0fDBf65bdb94f85A51977f0E2fe635",
+    "saltStr": "1353"
   }
 }

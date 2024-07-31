@@ -21,9 +21,9 @@ const config: HardhatUserConfig = {
         settings: {
           optimizer: {
             enabled: true,
-            runs: 550,
+            runs: 1500,
           },
-          viaIR: false,
+          viaIR: true,
         },
       },
       {
@@ -67,6 +67,12 @@ const config: HardhatUserConfig = {
       url: process.env.ARBITRUM_RPC_URL,
       accounts: [process.env.PRIVATE_KEY!],
       chainId: 42161,
+      allowUnlimitedContractSize: true,
+    },
+    optimism: {
+      url: process.env.OPTIMISM_RPC_URL,
+      accounts: [process.env.PRIVATE_KEY!],
+      chainId: 11155420,// @note testnet chainId
       allowUnlimitedContractSize: true,
     },
     devnet: {

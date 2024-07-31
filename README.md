@@ -38,7 +38,7 @@ Hence both functions help to keep the totalSupply accurate.
 - we run the script on localhost `yarn hardhat run --network localhost scripts/vanitySalt.ts `
 - Then we deploy the contracts on localhost, just to test, followed by testnets/mainnets
 ` yarn hardhat run --network localhost scripts/deploymentScript.ts `
-` yarn hardhat run --network sepolia scripts/deploymentScript.ts `
+` yarn hardhat run --network sepolia scripts/deploymentScript.ts `/
 ### Contracts deployed on Sepolia 
 {
   "tokenFactory": {
