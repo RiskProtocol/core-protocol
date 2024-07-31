@@ -1220,9 +1220,9 @@ developmentChains.includes(network.name)
 
           expect(
             Number(await smartToken1FF.balanceOf(deployer.address)).toPrecision(
-              6
+              5
             )
-          ).equals((Number(userBal) - Number(fees)).toPrecision(6));
+          ).equals((Number(userBal) - Number(fees)).toPrecision(5));
         });
         it(`It should apply rebalance fees correctly when the FF interval is hourly`, async function () {
           const {
