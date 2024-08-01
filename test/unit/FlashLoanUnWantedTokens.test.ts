@@ -18,6 +18,7 @@ import {
 import { loadFixture, time } from "@nomicfoundation/hardhat-network-helpers";
 import { BigNumber } from "ethers";
 import { isAddress } from "ethers-v6";
+import { get } from "../../scripts/utils/getVanityAddressSalt";
 
 developmentChains.includes(network.name)
   ? describe("WrappedSmartTokens", async function () {
@@ -123,6 +124,8 @@ developmentChains.includes(network.name)
           "wrappedSmartToken",
           deployer
         );
+        //deploy the template
+        const wrappedTemplate = await RiskWrappedTokenContract.deploy();
 
         //deploy the wrapper factory
         const WrapperFactoryContract = await ethers.getContractFactory(
@@ -131,7 +134,7 @@ developmentChains.includes(network.name)
         );
         const WrapperFactory = await upgrades.deployProxy(
           WrapperFactoryContract,
-          [deployer.address],
+          [deployer.address, wrappedTemplate.address],
           { initializer: "initialize", kind: "uups" }
         );
 
@@ -160,7 +163,21 @@ developmentChains.includes(network.name)
         };
         const keyId = process.env.KMS_KEY_ID as string;
         const kmsAddress = await getEthereumAddress(keyId, awsConfig);
+
+        //create3 factory
+        const FactoryName = "TRPCREATE3Factory";
+        const TRPCREATE3Factory = await ethers.getContractFactory(
+          FactoryName,
+          deployer
+        );
+        const trpCreate3 = await TRPCREATE3Factory.deploy();
+        await trpCreate3.deployed();
+        const factoryAddress = trpCreate3.address;
+
         const timeout = 1000 * 60 * 5; // 5 minutes
+
+        const salt = await getVanityAddressSalt(factoryAddress, "00");
+        // const  = ethers.utils.formatBytes32String("1");
         await WrapperFactory.create(
           SmartToken1.address,
           SmartToken2.address,
@@ -171,7 +188,9 @@ developmentChains.includes(network.name)
           deployer.address,
           kmsAddress,
           timeout,
-          sanctionsContract.address
+          sanctionsContract.address,
+          ethers.constants.AddressZero,//factoryAddress,
+          ethers.utils.formatBytes32String((salt).wX.saltStr)
         );
         await WrapperFactory.create(
           SmartToken2.address,
@@ -183,7 +202,9 @@ developmentChains.includes(network.name)
           deployer.address,
           kmsAddress,
           timeout,
-          sanctionsContract.address
+          sanctionsContract.address,
+          ethers.constants.AddressZero,//factoryAddress,
+          ethers.utils.formatBytes32String(((salt).wY.saltStr))
         );
 
         const wXAddr = await WrapperFactory.getWrappedSmartTokens(true);
@@ -1716,6 +1737,22 @@ developmentChains.includes(network.name)
           );
         });
       });
-      //
+      
     })
   : describe.skip;
+
+async function getVanityAddressSalt(
+  factoryAddress: any,
+  desiredPrefix: string
+) {
+  const [wallet] = await ethers.getSigners();
+  console.log(`wallet address : ${wallet.address}`);
+
+  const wX = await get(factoryAddress, wallet, desiredPrefix, 0);
+  const wY = await get(factoryAddress, wallet, desiredPrefix, 1);
+
+  return {
+    wX,
+    wY,
+  };
+}

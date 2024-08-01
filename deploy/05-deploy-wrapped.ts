@@ -47,7 +47,7 @@ const func: DeployFunction = async ({
   );
   const WrapperFactory = await upgrades.deployProxy(
     WrapperFactoryContract,
-    [deployer],
+    [deployer,RiskWrappedToken.address],
     { initializer: "initialize", kind: "uups" }
   );
 
@@ -121,7 +121,9 @@ const func: DeployFunction = async ({
     deployer,
     signersAddress,
     300,
-    sanctionsContractAddress
+    sanctionsContractAddress,
+    ethers.constants.AddressZero,
+    ethers.utils.keccak256(ethers.utils.toUtf8Bytes("ANYTHING"))
   );
   await WrapperFactory.create(
     smartToken2.address,
@@ -133,7 +135,9 @@ const func: DeployFunction = async ({
     deployer,
     signersAddress,
     300,
-    sanctionsContractAddress
+    sanctionsContractAddress,
+    ethers.constants.AddressZero,
+    ethers.utils.keccak256(ethers.utils.toUtf8Bytes("ANYTHING"))
   );
 
   log("wX deployed to:", await WrapperFactory.getWrappedSmartTokens(true));
