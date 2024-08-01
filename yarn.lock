@@ -2095,9 +2095,9 @@
     tenderly "^0.5.3"
     tslog "^4.3.1"
 
-"@trp/buttonwood-wrapper@https://github.com/RiskProtocol/button-wrappers.git#update-sol-version":
+"@trp/buttonwood-wrapper@https://github.com/RiskProtocol/button-wrappers.git#e6925e53de7bf8a69e86ec8b08aba94945ed0a55":
   version "1.1.0"
-  resolved "https://github.com/RiskProtocol/button-wrappers.git#8104952fd48edafdf7fe1ccbf1aa43ec3c17dba1"
+  resolved "https://github.com/RiskProtocol/button-wrappers.git#e6925e53de7bf8a69e86ec8b08aba94945ed0a55"
   dependencies:
     "@openzeppelin/contracts" "^4.1.0"
     "@openzeppelin/contracts-upgradeable" "4.3.0"

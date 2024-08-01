@@ -7,8 +7,8 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import "contracts/vaults/wrapped/WrappedSmartToken.sol";
-import "contracts/interfaces/IWrappedSmartToken.sol";
+import "./../../vaults/wrapped/WrappedSmartToken.sol";
+import "./../../interfaces/IWrappedSmartToken.sol";
 
 contract WrapperFactory is UUPSUpgradeable, OwnableUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
