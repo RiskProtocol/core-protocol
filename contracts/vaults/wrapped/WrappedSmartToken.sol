@@ -82,7 +82,7 @@ contract wrappedSmartToken is
         // NOTE: First mint with initial micro deposit
         uint256 mintAmount = INITIAL_DEPOSIT.mul(initialRate); //expecred to be 1:1
         IERC20Upgradeable(underlying).safeTransferFrom(
-            msg.sender,
+            _msgSender(),
             address(this),
             INITIAL_DEPOSIT
         );
@@ -272,17 +272,13 @@ contract wrappedSmartToken is
         uint256 userShare = IERC20Upgradeable(address(this)).balanceOf(
             _msgSender()
         );
-        uint256 totalSupply = totalSupply();
 
-        return (userShare.mul(SCALING_FACTOR)).div(totalSupply);
+        return (userShare.mul(SCALING_FACTOR)).div(totalSupply());
     }
 
     function refundUnwantedTokens(address user) private {
         if (IERC20Upgradeable(sellingToken).balanceOf(address(this)) > 0) {
             address recipient = (user == address(0)) ? _msgSender() : user;
-
-            //we calculate users share
-            uint256 userShare = calculateUserShare();
 
             uint256 balanceUnwantedTokens = IERC20Upgradeable(sellingToken)
                 .balanceOf(address(this));
@@ -291,7 +287,9 @@ contract wrappedSmartToken is
             SafeERC20Upgradeable.safeTransfer(
                 IERC20Upgradeable(sellingToken),
                 recipient,
-                (balanceUnwantedTokens.mul(userShare)).div(SCALING_FACTOR)
+                (balanceUnwantedTokens.mul(calculateUserShare())).div(
+                    SCALING_FACTOR
+                )
             );
         }
     }

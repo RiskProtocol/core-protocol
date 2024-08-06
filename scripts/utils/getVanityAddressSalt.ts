@@ -22,7 +22,7 @@ export async function get(
       saltEncoded
     );
 
-    console.log(`::::proxyAddress:::${proxyAddress}`);
+    // console.log(`::::proxyAddress:::${proxyAddress}`);
 
     if (proxyAddress.toLowerCase().startsWith(`0x${desiredPrefix}`)) {
       console.log(`:::::${proxyAddress}:::::salt:${salt}\n`);

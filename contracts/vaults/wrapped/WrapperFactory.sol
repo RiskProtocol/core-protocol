@@ -9,6 +9,7 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import "./../../vaults/wrapped/WrappedSmartToken.sol";
 import "./../../interfaces/IWrappedSmartToken.sol";
+import "./../../interfaces/IDeployFactory.sol";
 
 contract WrapperFactory is UUPSUpgradeable, OwnableUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
@@ -21,15 +22,26 @@ contract WrapperFactory is UUPSUpgradeable, OwnableUpgradeable {
         _disableInitializers();
     }
 
-    function initialize(address owner_) public initializer {
-        template = address(new wrappedSmartToken());
+    function initialize(address owner_, address template_) public initializer {
+        template = template_;
         __Ownable_init();
         transferOwnership(owner_);
         __UUPSUpgradeable_init();
     }
 
     /// @dev Create and initialize an instance of the Wrapped Risk Token
-
+    /// @param underlying the address of the underlying token
+    /// @param sellingToken_ the address of the selling token
+    /// @param name the name of the token
+    /// @param symbol the symbol of the token
+    /// @param initialRate the initial rate of the token
+    /// @param isWrappedX true if the token is wrappedX, false if wrappedY
+    /// @param owner_ the owner
+    /// @param signer_ the owner
+    /// @param timeout_ the timeout 
+    /// @param sanctionsContract_ rhe sanctions contract
+    /// @param create3Factory_ if address is 0, deploy using new ERC1967Proxy, else deploy using create3 (CUSTOM VANITY Addr)
+    /// @param salt //salt for create3 deployment
     function create(
         address underlying,
         address sellingToken_, //alternate SMARTTOKEN
@@ -40,7 +52,9 @@ contract WrapperFactory is UUPSUpgradeable, OwnableUpgradeable {
         address owner_,
         address signer_,
         uint256 timeout_,
-        address sanctionsContract_
+        address sanctionsContract_,
+        address create3Factory_,
+        bytes32 salt
     ) external onlyOwner returns (address) {
         return
             _create(
@@ -53,7 +67,9 @@ contract WrapperFactory is UUPSUpgradeable, OwnableUpgradeable {
                 owner_,
                 signer_,
                 timeout_,
-                sanctionsContract_
+                sanctionsContract_,
+                create3Factory_,
+                salt
             );
     }
 
@@ -68,23 +84,41 @@ contract WrapperFactory is UUPSUpgradeable, OwnableUpgradeable {
         address owner_,
         address signer_,
         uint256 timeout_,
-        address sanctionsContract_
+        address sanctionsContract_,
+        address create3Factory_,
+        bytes32 salt
     ) private returns (address) {
-        // Create instance
-        // address wrappedSmartToken_ = ClonesUpgradeable.clone(template);
+        address proxy;
+        if (address(create3Factory_) == address(0)) {
+            // Create instance
+            proxy = address(new ERC1967Proxy(template, ""));
+        } else {
+            ITRPCREATE3Factory deployFactory = ITRPCREATE3Factory(
+                create3Factory_
+            );
 
-        ERC1967Proxy proxy = new ERC1967Proxy(template, "");
+            // Deploy instance using create3
+            // get the bytecode
+            bytes memory bytecode = type(ERC1967Proxy).creationCode;
+            // Encode constructor arguments according to ABI
+            bytes memory constructorArgs = abi.encode(address(template), "");
+            bytes memory deployCode = abi.encodePacked(
+                bytecode,
+                constructorArgs
+            );
+
+            proxy = deployFactory.deploywCaller(salt, deployCode, _msgSender());
+        }
         // Approve transfer of initial deposit to instance
-        uint256 inititalDeposit = IWrappedSmartToken(address(proxy))
-            .INITIAL_DEPOSIT();
+        uint256 inititalDeposit = IWrappedSmartToken(proxy).INITIAL_DEPOSIT();
         IERC20Upgradeable(underlying).safeTransferFrom(
-            msg.sender,
+            _msgSender(),
             address(this),
             inititalDeposit
         );
-        IERC20Upgradeable(underlying).approve(address(proxy), inititalDeposit);
+        IERC20Upgradeable(underlying).approve(proxy, inititalDeposit);
         // Initialize instance
-        IWrappedSmartToken(address(proxy)).riskInitialize(
+        IWrappedSmartToken(proxy).riskInitialize(
             underlying,
             sellingToken_,
             name,
@@ -99,12 +133,12 @@ contract WrapperFactory is UUPSUpgradeable, OwnableUpgradeable {
 
         // Register instance
         if (isWrappedX) {
-            wrappedSmartTokens[0] = address(proxy);
+            wrappedSmartTokens[0] = proxy;
         } else {
-            wrappedSmartTokens[1] = address(proxy);
+            wrappedSmartTokens[1] = proxy;
         }
         // Return instance
-        return address(proxy);
+        return proxy;
     }
 
     function _authorizeUpgrade(
