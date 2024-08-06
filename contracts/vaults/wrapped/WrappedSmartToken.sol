@@ -7,10 +7,10 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
-import "contracts/interfaces/flashloan/IFlashLoanReceiverAlt.sol";
+import "./../../interfaces/flashloan/IFlashLoanReceiverAlt.sol";
 import "@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.sol";
-import "contracts/lib/FlashloanSpecifics.sol";
-import "contracts/vaults/BaseContract.sol";
+import "./../../lib/FlashloanSpecifics.sol";
+import "./../../vaults/BaseContract.sol";
 
 contract wrappedSmartToken is
     UnbuttonToken,
