@@ -229,7 +229,7 @@ developmentChains.includes(network.name)
             wallet
           );
 
-          await smartXInstance.mint(
+          await smartXInstance.deposit(
             ethers.utils.parseEther("1"),
             wallet.address
           );
@@ -261,7 +261,7 @@ developmentChains.includes(network.name)
           const timeout = 1000 * 60 * 5; // 5 minutes
 
           //deploy Wrapped X
-          const wXAddress = await WrapperFactory.create(
+           await WrapperFactory.create(
             smartXInstance.address,
             smartYInstance.address,
             "Wrapped SmartToken X",
@@ -275,7 +275,7 @@ developmentChains.includes(network.name)
             factoryAddress,
             ethers.utils.formatBytes32String(vanity.wX.saltStr)
           );
-          const wYaddress = await WrapperFactory.create(
+           await WrapperFactory.create(
             smartYInstance.address,
             smartXInstance.address,
             "Wrapped SmartToken Y",

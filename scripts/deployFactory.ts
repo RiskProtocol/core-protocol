@@ -3,7 +3,7 @@ import path from "path";
 import fs from "fs";
 
 async function main() {
-  const desiredNonce: number = 10; //set the nonce to what is needed
+  const desiredNonce: number = 5; //set the nonce to what is needed //todo:
   const FactoryName = "TRPCREATE3Factory";
   const jsonFilePath = path.join(__dirname, "vanityConfig.json");
 

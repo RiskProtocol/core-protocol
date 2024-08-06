@@ -17,7 +17,7 @@
     "forge:docs-gen": "forge doc",
     "forge:docs-build": "forge doc --build",
     "forge:docs-serve": "forge doc --serve --port 4000",
-    "local-ganache": "yarn ganache --wallet.accounts='0x1fbd59e2da25fd5135c4d8b681dc62e7ef9d2f0f3c9c2c4cbc17c2ad7b5dbbab','0X56BC75E2D63100000'"
+    "local-ganache": "yarn ganache --wallet.accounts=$(grep PRIVATE_KEY_G .env | cut -d '=' -f2),'0X56BC75E2D63100000'"
   },
   "devDependencies": {
     "@ethersproject/abi": "^5.4.7",
@@ -34,6 +34,7 @@
     "@types/node": ">=12.0.0",
     "chai": "^4.2.0",
     "dotenv": "^16.0.3",
+    "dotenv-cli": "^7.4.2",
     "ganache": "^7.9.2",
     "hardhat": "^2.22.6",
     "hardhat-contract-sizer": "^2.8.0",
