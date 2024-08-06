@@ -69,12 +69,6 @@ const config: HardhatUserConfig = {
       chainId: 42161,
       allowUnlimitedContractSize: true,
     },
-    optimism: {
-      url: process.env.OPTIMISM_RPC_URL,
-      accounts: [process.env.PRIVATE_KEY!],
-      chainId: 11155420,// @note testnet chainId
-      allowUnlimitedContractSize: true,
-    },
     devnet: {
       url: "https://rpc.vnet.tenderly.co/devnet/goerli/85802d3c-03ae-4364-b363-69e32cf22a69",
       accounts: [process.env.PRIVATE_KEY!],
