@@ -1475,7 +1475,7 @@
   resolved "https://registry.yarnpkg.com/@openzeppelin/contracts-upgradeable/-/contracts-upgradeable-4.8.3.tgz#6b076a7b751811b90fe3a172a7faeaa603e13a3f"
   integrity sha512-SXDRl7HKpl2WDoJpn7CK/M9U4Z8gNXDHHChAKh0Iz+Wew3wu6CmFYBeie3je8V0GSXZAIYYwUktSrnW/kwVPtg==
 
-"@openzeppelin/contracts-upgradeable@^4.9.1":
+"@openzeppelin/contracts-upgradeable@^4.8.3":
   version "4.9.6"
   resolved "https://registry.yarnpkg.com/@openzeppelin/contracts-upgradeable/-/contracts-upgradeable-4.9.6.tgz#38b21708a719da647de4bb0e4802ee235a0d24df"
   integrity sha512-m4iHazOsOCv1DgM7eD7GupTJ+NFVujRZt1wzddDPSVGpWdKq1SKkla5htKG7+IS4d2XOCtzkUNwRZ7Vq5aEUMA==
@@ -1485,7 +1485,7 @@
   resolved "https://registry.yarnpkg.com/@openzeppelin/contracts/-/contracts-3.4.2.tgz#d81f786fda2871d1eb8a8c5a73e455753ba53527"
   integrity sha512-z0zMCjyhhp4y7XKAcDAi3Vgms4T2PstwBdahiO0+9NaGICQKjynK3wduSRplTgk4LXmoO1yfDGO5RbjKYxtuxA==
 
-"@openzeppelin/contracts@^4.1.0", "@openzeppelin/contracts@^4.9.1":
+"@openzeppelin/contracts@^4.1.0", "@openzeppelin/contracts@^4.8.3":
   version "4.9.6"
   resolved "https://registry.yarnpkg.com/@openzeppelin/contracts/-/contracts-4.9.6.tgz#2a880a24eb19b4f8b25adc2a5095f2aa27f39677"
   integrity sha512-xSmezSupL+y9VkHZJGDoCBpmnB2ogM13ccaYDWqJTfS3dbuHkgjuwDFUmaFauBCboQMGB/S5UqUl2y54X99BmA==
@@ -2099,9 +2099,9 @@
     "@types/fs-extra" "^9.0.13"
     fs-extra "^10.1.0"
 
-"@trp/solady@git+https://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@github.com/RiskProtocol/solady.git#03f3fd05fb1da76edc4df83ae6bf32a842c15f12":
+"@trp/solady@git+https://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@github.com/RiskProtocol/solady.git#03f3fd05fb1da76edc4df83ae6bf32a842c15f12":
   version "0.0.105"
-  resolved "git+https://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@github.com/RiskProtocol/solady.git#03f3fd05fb1da76edc4df83ae6bf32a842c15f12"
+  resolved "git+https://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@github.com/RiskProtocol/solady.git#03f3fd05fb1da76edc4df83ae6bf32a842c15f12"
 
 "@trufflesuite/bigint-buffer@1.1.10":
   version "1.1.10"
