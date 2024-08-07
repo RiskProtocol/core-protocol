@@ -2,13 +2,30 @@ import vanityConfig from "./vanityConfig.json";
 import { get } from "./utils/getVanityAddressSalt";
 import { ethers } from "hardhat";
 import fs from "fs";
+import { promptUser } from "../helper-hardhat-config";
+import kleur from "kleur";
 
 async function run() {
   //getting vanity address for tokenFactory, using privatekey in hardhat
   //config
   //run using hardhat
   const [wallet] = await ethers.getSigners();
-  console.log(`wallet address : ${wallet.address}`);
+  let underlying = null;
+  console.log(kleur.bgMagenta("Generating Vanity Salt"));
+
+  const input = await promptUser(kleur.bgBlue(("What is the symbol of the underlying you want to generate vanity salt for(e.g. ETH): ")));
+  if (input) {
+    underlying = input.toLocaleLowerCase();
+  }
+  if (underlying?.length === 0) {
+    console.log(kleur.bgRed("Aborting script."));
+    return;
+  }
+
+  console.log(kleur.bgBlue("Underlying: " + underlying));
+  console.log(kleur.yellow(`wallet address : ${kleur.green(wallet.address)}`));
+  console.log(kleur.bgBlue("Generating Vanity Salt proceeding..."));
+
 
   const tokenFactoryPxAddress = await get(
     vanityConfig.factoryAddress,
@@ -84,7 +101,7 @@ async function run() {
   };
 
   const jsonContent = JSON.stringify(ContractSalts, null, 2);
-  const filename = "ContractSalts.json";
+  const filename = `${underlying}.ContractSalts.json`;
   // Write the JSON string to a file
   fs.writeFile(filename, jsonContent, "utf8", function (err) {
     if (err) {

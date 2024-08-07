@@ -2,26 +2,54 @@ import { ethers, upgrades, network } from "hardhat";
 import { deployUUPSviaCreate3 } from "./utils/deployer";
 import vanityConfig from "./vanityConfig.json";
 import {
-  BASE_TOKEN_ADDRESS,
-  FF_INTERVAL,
-  REBALANCE_INTERVAL,
-  W_TOKEN1_NAME,
-  W_TOKEN1_SYMBOL,
-  W_TOKEN2_NAME,
-  W_TOKEN2_SYMBOL,
+  // BASE_TOKEN_ADDRESS,
+  // FF_INTERVAL,
+  // REBALANCE_INTERVAL,
+  // W_TOKEN1_NAME,
+  // W_TOKEN1_SYMBOL,
+  // W_TOKEN2_NAME,
+  // W_TOKEN2_SYMBOL,
   getEthereumAddress,
-  rateLimitsDefault,
+  // rateLimitsDefault,
 } from "../helper-hardhat-config";
 import pxSalt from "../ContractSalts.json";
 import * as dotenv from "dotenv";
 import { verifyContract } from "./lib/utils";
+import { deployConfig } from "../deploy-config";
+import kleur from "kleur";
+import { promptUser } from "../helper-hardhat-config";
 dotenv.config();
+
+const BASE_TOKEN_ADDRESS = deployConfig.baseToken as string;
+const sanctionsContractAddress = deployConfig.sanctionsContract as string;
+const W_TOKEN1_NAME = deployConfig.W_TOKEN1_NAME as string;
+const W_TOKEN1_SYMBOL = deployConfig.W_TOKEN1_SYMBOL as string;
+const W_TOKEN2_NAME = deployConfig.W_TOKEN2_NAME as string;
+const W_TOKEN2_SYMBOL = deployConfig.W_TOKEN2_SYMBOL as string;
+const timeout = deployConfig.DATA_TIMEOUT as number;
 
 async function main() {
   const [wallet] = await ethers.getSigners();
 
-  const sanctionsContractAddress = process.env.SANCTIONS_CONTRACT_ADDRESS;
+  //user validation
+  console.log(kleur.bgMagenta("Deploying the Wrapped Smart Tokens"));
+  console.log(kleur.bgBlue("Please verify the following values are correct:"));
+  console.log(kleur.yellow(`BASE_TOKEN_ADDRESS:\t\t ${kleur.green(BASE_TOKEN_ADDRESS)}`));
+  console.log(kleur.yellow(`W_TOKEN1_NAME:\t\t ${kleur.green(W_TOKEN1_NAME)}`));
+  console.log(kleur.yellow(`W_TOKEN1_SYMBOL:\t\t ${kleur.green(W_TOKEN1_SYMBOL)}`));
+  console.log(kleur.yellow(`W_TOKEN2_NAME:\t\t ${kleur.green(W_TOKEN2_NAME)}`));
+  console.log(kleur.yellow(`W_TOKEN2_SYMBOL:\t\t ${kleur.green(W_TOKEN2_SYMBOL)}`));
+  console.log(kleur.yellow(`timeout:\t\t ${kleur.green(timeout)}`));
+  console.log(kleur.yellow(`sanctionsContractAddress:\t\t ${kleur.green(sanctionsContractAddress)}`));
+  console.log(kleur.yellow(`Vanity Factory Address:\t\t ${kleur.green(vanityConfig.factoryAddress)}`));
+  console.log(kleur.yellow(`Wallet Address:\t\t ${kleur.green(wallet.address)}`));
 
+  const confirmation = await promptUser(kleur.bgBlue(("Are these values correct? (y/n): ")));
+
+  if (confirmation.toLowerCase() !== "y") {
+    console.log(kleur.bgRed("Aborting script."));
+    return;
+  }
   /////deploy the wrapperFactory
   ///////////////////////////////
   const RiskWrappedTokenContract = await ethers.getContractFactory(
@@ -92,7 +120,6 @@ async function main() {
   console.log(`kmsAddress: ${kmsAddress}`);
   // now we deploy the wrapped tokens
 
-  const timeout = 1000 * 60 * 5; // 5 minutes
 
   try {
      //deploy Wrapped X
