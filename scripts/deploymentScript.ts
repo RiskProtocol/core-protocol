@@ -1,7 +1,6 @@
 import { ethers } from "hardhat";
 import { deployUUPSviaCreate3 } from "./utils/deployer";
 import vanityConfig from "./vanityConfig.json";
-import pxSalt from "../ContractSalts.json";
 import { deployConfig } from "../deploy-config";
 import * as dotenv from "dotenv";
 import kleur from "kleur";
@@ -18,9 +17,29 @@ const TOKEN2_SYMBOL = deployConfig.TOKEN2_SYMBOL as string;
 const rateLimitsDefault = deployConfig.rateLimitsDefault;
 const sanctionsContractAddress = deployConfig.sanctionsContract as string;
 
-async function main() {
+async function main() {try {
   const [wallet] = await ethers.getSigners();
+  let underlying = null;
+
   console.log(kleur.bgMagenta("Deploying the Core of Risk Protocol"));
+
+  const input = await promptUser(kleur.bgBlue(("What is the symbol of the underlying you want to deploy(e.g. ETH): ")));
+  if (input) {
+    underlying = input.toLocaleLowerCase();
+  }
+  if (underlying?.length === 0) {
+    console.log(kleur.bgRed("Aborting script."));
+    return;
+  }
+
+  const pxSalt = require(`../${underlying}.ContractSalts.json`);
+  if (!pxSalt) {
+    console.log(kleur.bgRed("Contract Salts not found for the underlying."));
+    return;
+  }
+
+  console.log(JSON.stringify(pxSalt, null, 2));
+
   console.log(kleur.bgBlue("Please verify the following values are correct:"));
   console.log(kleur.yellow(`FF_INTERVAL:\t\t ${kleur.green(FF_INTERVAL)}`));
   console.log(kleur.yellow(`REBALANCE_INTERVAL:\t ${kleur.green(REBALANCE_INTERVAL)}`));
@@ -31,6 +50,7 @@ async function main() {
   console.log(kleur.yellow(`rateLimitsDefault:\t ${kleur.green(JSON.stringify(rateLimitsDefault, null, 2))}`));
   console.log(kleur.yellow(`sanctionsContractAddress: ${kleur.green(sanctionsContractAddress)}`));
   console.log(kleur.yellow(`Wallet Address:\t\t ${kleur.green(wallet.address)}`));
+
 
   const confirmation = await promptUser(kleur.bgBlue(("Are these values correct? (y/n): ")));
 
@@ -58,7 +78,7 @@ async function main() {
     true,
     "contracts/vaults/TokenFactory.sol:TokenFactory"
   );
-  console.log(`Token Factory deployed at ProxyAddress:${TokenFactoryComplete}`);
+  console.log(kleur.bgGreen(`Token Factory deployed at ProxyAddress:${TokenFactoryComplete}`));
   //deploying SmartX
   const SmartXComplete = await deployUUPSviaCreate3(
     "SmartToken",
@@ -75,7 +95,7 @@ async function main() {
     true,
     "contracts/vaults/SmartToken.sol:SmartToken"
   );
-  console.log(`Smart X deployed at ProxyAddress:${SmartXComplete}`);
+  console.log(kleur.bgGreen(`Smart X deployed at ProxyAddress:${SmartXComplete}`));
 
   //deploying SmartY
   const SmartYComplete = await deployUUPSviaCreate3(
@@ -93,7 +113,7 @@ async function main() {
     true,
     "contracts/vaults/SmartToken.sol:SmartToken"
   );
-  console.log(`Smart Y deployed at ProxyAddress:${SmartYComplete}`);
+  console.log(kleur.bgGreen(`Smart Y deployed at ProxyAddress:${SmartYComplete}`));
 
   //initializeSMART
   const tokenFactoryInstance = await ethers.getContractAt(
@@ -104,6 +124,7 @@ async function main() {
   console.log(`\nTokenFactory Owner:${await tokenFactoryInstance.owner()}`);
 
   await tokenFactoryInstance.initializeSMART(SmartXComplete, SmartYComplete);
+  console.log(kleur.bgGreen("SMART Intializied!"));
 
   // deploy orchestrator
   const Orchestator = await deployUUPSviaCreate3(
@@ -114,9 +135,12 @@ async function main() {
     true,
     "contracts/orchestrator/Orchestrator.sol:Orchestrator"
   );
+  console.log(
+    kleur.bgGreen(`Orchestrator deployed at ProxyAddress:${Orchestator}`)
+  );
 
   await tokenFactoryInstance.initializeOrchestrator(Orchestator);
-  console.log("Orchestrator Intializied!");
+  console.log(kleur.bgGreen("Orchestrator Intializied!"));
 
   // deploy atomicSwap
   const AtomicTransaction = await deployUUPSviaCreate3(
@@ -129,8 +153,12 @@ async function main() {
   );
 
   console.log(
-    `AtomicTransaction deployed at ProxyAddress:${AtomicTransaction}`
+    kleur.bgGreen(`AtomicTransaction deployed at ProxyAddress:${AtomicTransaction}`)
   );
+  
+} catch (error) {
+  console.error(kleur.bgRed(error as string));
+}
 }
 
 main();

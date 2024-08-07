@@ -2,17 +2,9 @@ import { ethers, upgrades, network } from "hardhat";
 import { deployUUPSviaCreate3 } from "./utils/deployer";
 import vanityConfig from "./vanityConfig.json";
 import {
-  // BASE_TOKEN_ADDRESS,
-  // FF_INTERVAL,
-  // REBALANCE_INTERVAL,
-  // W_TOKEN1_NAME,
-  // W_TOKEN1_SYMBOL,
-  // W_TOKEN2_NAME,
-  // W_TOKEN2_SYMBOL,
+
   getEthereumAddress,
-  // rateLimitsDefault,
 } from "../helper-hardhat-config";
-import pxSalt from "../ContractSalts.json";
 import * as dotenv from "dotenv";
 import { verifyContract } from "./lib/utils";
 import { deployConfig } from "../deploy-config";
@@ -29,10 +21,30 @@ const W_TOKEN2_SYMBOL = deployConfig.W_TOKEN2_SYMBOL as string;
 const timeout = deployConfig.DATA_TIMEOUT as number;
 
 async function main() {
-  const [wallet] = await ethers.getSigners();
+  try {
+    const [wallet] = await ethers.getSigners();
+  let underlying = null;
 
   //user validation
   console.log(kleur.bgMagenta("Deploying the Wrapped Smart Tokens"));
+
+  const input = await promptUser(kleur.bgBlue(("What is the symbol of the underlying you want to deploy(e.g. ETH): ")));
+  if (input) {
+    underlying = input.toLocaleLowerCase();
+  }
+  if (underlying?.length === 0) {
+    console.log(kleur.bgRed("Aborting script."));
+    return;
+  }
+
+  const pxSalt = require(`../${underlying}.ContractSalts.json`);
+  if (!pxSalt) {
+    console.log(kleur.bgRed("Contract Salts not found for the underlying."));
+    return;
+  }
+
+  console.log(JSON.stringify(pxSalt, null, 2));
+
   console.log(kleur.bgBlue("Please verify the following values are correct:"));
   console.log(kleur.yellow(`BASE_TOKEN_ADDRESS:\t\t ${kleur.green(BASE_TOKEN_ADDRESS)}`));
   console.log(kleur.yellow(`W_TOKEN1_NAME:\t\t ${kleur.green(W_TOKEN1_NAME)}`));
@@ -72,7 +84,7 @@ async function main() {
 
   await WrapperFactory.deployed();
 
-  console.log(`WrapperFactory deployed at: ${WrapperFactory.address}`);
+  console.log(kleur.bgGreen(`WrapperFactory deployed at: ${WrapperFactory.address}`));
 
   // const WrapperFactory = await ethers.getContractAt("WrapperFactory", "0xD04cdeB1206aA33f7ebb063F84FBcf1E6693B89c", wallet);
   // let wrappedTemplate = { address: await WrapperFactory.getTemplate() };
@@ -99,7 +111,7 @@ async function main() {
   const { setTimeout } = require(`timers/promises`);
   await setTimeout(50000);
   await smartXInstance.deposit("1000", wallet.address);
- console.log(`smartXInstance deposited`);
+ console.log(kleur.bgGreen(`smartXInstance deposited`));
   // now we approve wrapper factory to spend the smart tokens
   await smartXInstance.approve(WrapperFactory.address, 1000);
   await smartYInstance.approve(WrapperFactory.address, 1000);
@@ -117,11 +129,11 @@ async function main() {
   };
   const keyId = process.env.KMS_KEY_ID as string;
   const kmsAddress = await getEthereumAddress(keyId, awsConfig);
-  console.log(`kmsAddress: ${kmsAddress}`);
+  console.log(kleur.bgCyan(`kmsAddress: ${kmsAddress}`));
   // now we deploy the wrapped tokens
 
 
-  try {
+
      //deploy Wrapped X
   await WrapperFactory.create(
     smartXInstance.address,
@@ -137,10 +149,7 @@ async function main() {
     vanityConfig.factoryAddress,
     ethers.utils.formatBytes32String(pxSalt.wX.saltStr)
   );
-  } catch (error) {
-    console.log(`error at line 94`)
-    console.error(error);
-  }
+
  
   await WrapperFactory.create(
     smartYInstance.address,
@@ -157,12 +166,12 @@ async function main() {
     ethers.utils.formatBytes32String(pxSalt.wY.saltStr)
   );
 
-  console.log(`Wrapped tokens deployed`);
+  console.log(kleur.bgGreen(`Wrapped tokens deployed`));
   const WrappedX = await WrapperFactory.getWrappedSmartTokens(true);
 
   if (![`hardhat`, `localhost`].includes(network.name)) {
     console.log(
-      `Waiting to ensure that it will be ready for verification on etherscan...`
+      kleur.bgCyan(`Waiting to ensure that it will be ready for verification on etherscan...`)
     );
     const { setTimeout } = require(`timers/promises`);
     await setTimeout(20000);
@@ -178,6 +187,11 @@ async function main() {
     //wY
     await verifyContract(pxSalt.wY.proxyAddress, [wrappedTemplate.address, ""]);
   }
+  } catch (error) {
+    console.error(kleur.bgRed(error as string));
+
+  }
+  
 }
 
 main();
