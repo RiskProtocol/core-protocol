@@ -4,7 +4,7 @@ import vanityConfig from "./vanityConfig.json";
 import { deployConfig } from "../deploy-config";
 import * as dotenv from "dotenv";
 import kleur from "kleur";
-import {promptUser} from "../helper-hardhat-config"
+import {getEthereumAddress, promptUser} from "../helper-hardhat-config"
 dotenv.config();
 
 const BASE_TOKEN_ADDRESS = deployConfig.baseToken as string;
@@ -40,6 +40,8 @@ async function main() {try {
 
   console.log(JSON.stringify(pxSalt, null, 2));
 
+
+
   console.log(kleur.bgBlue("Please verify the following values are correct:"));
   console.log(kleur.yellow(`FF_INTERVAL:\t\t ${kleur.green(FF_INTERVAL)}`));
   console.log(kleur.yellow(`REBALANCE_INTERVAL:\t ${kleur.green(REBALANCE_INTERVAL)}`));
@@ -58,6 +60,21 @@ async function main() {try {
     console.log(kleur.bgRed("Aborting script."));
     return;
   }
+
+    /////////////////////////////
+  ///KMS
+  /////////////////////////////
+  const awsConfig = {
+    region: process.env.AWS_REGION || "eu-north-1",
+    credentials: {
+      accessKeyId: process.env.AWS_ACCESS_KEY_ID || "",
+      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || "",
+    },
+  };
+  const keyId = process.env.KMS_KEY_ID as string;
+  const kmsAddress = await getEthereumAddress(keyId, awsConfig);
+  console.log(kleur.bgCyan(`kmsAddress: ${kmsAddress}`));
+  
   //deploying tokenFactory
   const TokenFactoryComplete = await deployUUPSviaCreate3(
     "TokenFactory",
@@ -67,7 +84,7 @@ async function main() {try {
       REBALANCE_INTERVAL,
       FF_INTERVAL,
       sanctionsContractAddress, //sanctions but just testing
-      wallet.address,
+      kmsAddress,
       wallet.address,
       rateLimitsDefault.withdraw,
       rateLimitsDefault.deposit,
