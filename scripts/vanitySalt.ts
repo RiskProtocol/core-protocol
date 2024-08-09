@@ -40,6 +40,18 @@ async function run() {
     vanityConfig.atomicTx.desiredPrefix,
     4
   );
+  const WxPxAddress = await get(
+    vanityConfig.factoryAddress,
+    wallet,
+    vanityConfig.wX.desiredPrefix,
+    5
+  );
+  const WyPxAddress = await get(
+    vanityConfig.factoryAddress,
+    wallet,
+    vanityConfig.wY.desiredPrefix,
+    6
+  );
 
   console.log(
     `tokenFactoryPxAddress address: ${JSON.stringify(tokenFactoryPxAddress)}\n`
@@ -52,6 +64,14 @@ async function run() {
   console.log(
     `AtomicSwapPxAddress address: ${JSON.stringify(AtomicSwapPxAddress)}\n`
   );
+  console.log(
+    `WxPxAddress address: ${JSON.stringify(WxPxAddress)}\n`
+  );
+
+  console.log(
+    `WyPxAddress address: ${JSON.stringify(WyPxAddress)}\n`
+  );
+
 
   const ContractSalts = {
     tokenFactory: tokenFactoryPxAddress,
@@ -59,6 +79,8 @@ async function run() {
     SmartTokenY: SmartYPxAddress,
     Orchestator: OrchestratorPxAddress,
     AtomicTx: AtomicSwapPxAddress,
+    wX: WxPxAddress,
+    wY: WyPxAddress,
   };
 
   const jsonContent = JSON.stringify(ContractSalts, null, 2);

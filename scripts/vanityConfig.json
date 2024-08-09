@@ -1,19 +1,25 @@
 {
-  "factoryAddress": "0xdFE364b0169fc1f867b73A6e7fe11f26870321e5",
+  "factoryAddress": "0xbafa73730392ADd373C0c68e26f33Bf75431aEb5",
   "placeHolderImplAddress": "0x0B6Ca1E37bB7F117A15b21564604eCc35f7732b4",
   "tokenFactory": {
-    "desiredPrefix": "11"
+    "desiredPrefix": "888"
   },
   "smartTokenX": {
-    "desiredPrefix": "22"
+    "desiredPrefix": "888"
   },
   "smartTokenY": {
-    "desiredPrefix": "33"
+    "desiredPrefix": "888"
   },
   "orchestrator": {
-    "desiredPrefix": "44"
+    "desiredPrefix": "888"
   },
   "atomicTx": {
-    "desiredPrefix": "55"
+    "desiredPrefix": "888"
+  },
+  "wX": {
+    "desiredPrefix": "888"
+  },
+  "wY": {
+    "desiredPrefix": "888"
   }
 }

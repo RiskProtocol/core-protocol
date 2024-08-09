@@ -9,12 +9,16 @@ export const MULTIPLIER = 1e18;
 export const DECIMALS = "18";
 export const INITIAL_PRICE = "2000000000000000000000"; // 2000, we then add the 18 decimals which is 18 zeros
 export const SmartTokenXValue = "667000000000000000000"; // 667, we then add the 18 decimals which is 18 zeros
-export const BASE_TOKEN_ADDRESS = "0x70997970C51812dc3A010C7d01b50e0d17dc79C8";
+export const BASE_TOKEN_ADDRESS = "0x8B354F90b206716E8e233f67A8eB334A501833a6"//"0x70997970C51812dc3A010C7d01b50e0d17dc79C8";
 export const BASE_TOKEN_DECIMALS = 18;
 export const TOKEN1_NAME = "RistP One";
 export const TOKEN1_SYMBOL = "R1";
 export const TOKEN2_NAME = "RistP Two";
 export const TOKEN2_SYMBOL = "R2";
+export const W_TOKEN1_NAME = "wRistPOne";
+export const W_TOKEN1_SYMBOL = "wR1";
+export const W_TOKEN2_NAME = "wRistPTwo";
+export const W_TOKEN2_SYMBOL = "wR2";
 export const REBALANCE_INTERVAL = 7776000; // 90 days
 export const FF_INTERVAL = 86400;
 export const defaultOperators: string[] = [];
@@ -45,6 +49,31 @@ export const signRebalance = async (
     data.isNaturalRebalance,
     data.underlyingValue,
     data.smartTokenXValue,
+  ]);
+  // Hash the data
+  const hashedData = utils.keccak256(encodedData);
+
+  const signKey = new ethers.utils.SigningKey(signer.privateKey);
+  const sig = signKey.signDigest(hashedData);
+  // Sign the data
+  const signature = ethers.utils.joinSignature(sig); // await signer.signMessage(utils.arrayify(hashedData));
+  return { signature, encodedData };
+};
+
+export const signFlashloan = async (
+  signer: Wallet,
+  data: {
+    smartTokenXValue: number;
+    smartTokenYValue: number;
+    timestamp: number;
+  }
+) => {
+  const types = ["uint256", "uint256", "uint256"];
+  // Encode the data
+  const encodedData = utils.defaultAbiCoder.encode(types, [
+    data.smartTokenXValue,
+    data.smartTokenYValue,
+    data.timestamp,
   ]);
   // Hash the data
   const hashedData = utils.keccak256(encodedData);
@@ -149,6 +178,24 @@ export async function signAwsKMS(keyId: string, data: any, awsConfig: any) {
     data.isNaturalRebase,
     data.underlyingValue,
     data.smartTokenXValue,
+  ]);
+
+  const digestData = ethers.utils.keccak256(encodedData);
+  const sign = new core.Signer(new KMSWallets(provider));
+  const signature = await sign.signDigest({ keyId: keyId }, digestData);
+
+  return { signature, digestData, encodedData };
+}
+
+export async function signFLashloanAwsKMS(keyId: string, data: any, awsConfig: any) {
+  const provider = new KMSProviderAWS(awsConfig);
+
+  const types = ["uint256", "uint256", "uint256"];
+  // Encode the data
+  const encodedData =  ethers.utils.defaultAbiCoder.encode(types, [
+    data.smartTokenXValue,
+    data.smartTokenYValue,
+    data.timestamp,
   ]);
 
   const digestData = ethers.utils.keccak256(encodedData);

@@ -24,6 +24,7 @@ contract BaseContract is Initializable, OwnableUpgradeable {
     error BaseContract__WithdrawCircuitBreaker();
     error BaseContract__TransferCircuitBreaker();
     error BaseContract__RebalanceCircuitBreaker();
+    error BaseContract__FlashLoanCircuitBreaker();
 
     address private sanctionsContract;
 
@@ -31,6 +32,7 @@ contract BaseContract is Initializable, OwnableUpgradeable {
     bool private withdrawCircuitBreaker;
     bool private transferCircuitBreaker;
     bool private rebalanceCircuitBreaker;
+    bool private flashLoanCircuitBreaker;
 
     /// @dev Checks if the address is sanctioned.
     /// @param addressToCheck The address to be checked.
@@ -65,7 +67,16 @@ contract BaseContract is Initializable, OwnableUpgradeable {
     /// @dev Reverts if the rebalance circuit breaker is active.
     /// This modifier is used to halt rebalance operations in emergency situations.
     modifier stopRebalance() {
-        if (rebalanceCircuitBreaker) revert BaseContract__RebalanceCircuitBreaker();
+        if (rebalanceCircuitBreaker)
+            revert BaseContract__RebalanceCircuitBreaker();
+        _;
+    }
+
+    /// @dev Reverts if the stopFlashLoan circuit breaker is active.
+    /// This modifier is used to halt flashloans operations in emergency situations.
+    modifier stopFlashLoan() {
+        if (flashLoanCircuitBreaker)
+            revert BaseContract__FlashLoanCircuitBreaker();
         _;
     }
 
@@ -111,6 +122,13 @@ contract BaseContract is Initializable, OwnableUpgradeable {
         rebalanceCircuitBreaker = !rebalanceCircuitBreaker;
     }
 
+    /// @notice Toggles the rebalance circuit breaker on or off.
+    /// @dev This function allows the contract owner to halt or resume rebalance operations in case of emergency.
+    /// Only the owner can call this function.
+    function toggleFlashLoanCircuitBreaker() external onlyOwner {
+        flashLoanCircuitBreaker = !flashLoanCircuitBreaker;
+    }
+
     /// @notice Activates all circuit breakers, halting deposit, withdraw, transfer, and rebalance operations.
     /// @dev This function allows the contract owner to halt critical operations in case of emergency.
     /// Only the owner can call this function.
@@ -119,6 +137,7 @@ contract BaseContract is Initializable, OwnableUpgradeable {
         withdrawCircuitBreaker = true;
         transferCircuitBreaker = true;
         rebalanceCircuitBreaker = true;
+        flashLoanCircuitBreaker = true;
     }
 
     /// @notice Deactivates all circuit breakers, resuming deposit, withdraw, transfer, and rebalance operations.
@@ -129,6 +148,7 @@ contract BaseContract is Initializable, OwnableUpgradeable {
         withdrawCircuitBreaker = false;
         transferCircuitBreaker = false;
         rebalanceCircuitBreaker = false;
+        flashLoanCircuitBreaker = false;
     }
 
     /// @notice Checks if the deposit circuit breaker is active.
@@ -153,5 +173,11 @@ contract BaseContract is Initializable, OwnableUpgradeable {
     /// @return A boolean value indicating whether the rebalance circuit breaker is active or not.
     function isRebalanceCircuitBreaker() external view returns (bool) {
         return rebalanceCircuitBreaker;
+    }
+
+    /// @notice Checks if the flasloan circuit breaker is active.
+    /// @return A boolean value indicating whether the rebalance circuit breaker is active or not.
+    function isFlashloanCircuitBreaker() external view returns (bool) {
+        return flashLoanCircuitBreaker;
     }
 }

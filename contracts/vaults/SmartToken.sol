@@ -9,9 +9,11 @@ import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.
 import "@openzeppelin/contracts-upgradeable/interfaces/IERC4626Upgradeable.sol";
 
 import "./../interfaces/IERC20Update.sol";
+import "./../interfaces/flashloan/IFlashLoanReceiver.sol";
 import "./../interfaces/IWETH.sol";
 import "./../lib/ERC20/ERC20Upgradeable.sol";
 import "./../lib/ERC20/extensions/ERC20PermitUpgradeable.sol";
+import "./../lib/FlashloanSpecifics.sol";
 import "./TokenFactory.sol";
 import "./BaseContract.sol";
 
@@ -30,7 +32,8 @@ contract SmartToken is
     ERC20PermitUpgradeable,
     BaseContract,
     IERC4626Upgradeable,
-    ReentrancyGuardUpgradeable
+    ReentrancyGuardUpgradeable,
+    FlashloanSpecifics
 {
     //errors
     error SmartToken__NotTokenFactory();
@@ -54,6 +57,9 @@ contract SmartToken is
     bool private isX;
     bool private isNativeToken;
     IWETH private weth;
+    uint16 private constant premiumDenominator = 10000;
+
+    using SafeMathUpgradeable for uint256;
 
     /// @dev Ensures that the function is only callable by the TokenFactory contract.
     /// Calls the helper function `_onlyTokenFactory` to check the caller.
@@ -152,6 +158,7 @@ contract SmartToken is
             weth = IWETH(address(underlyingToken));
         }
     }
+
     //since we now handle native tokens
     receive() external payable {
         if (tokenFactory.getIsNativeToken() == false) {
@@ -168,6 +175,7 @@ contract SmartToken is
         }
         payable(receiver).transfer(address(this).balance);
     }
+
     /// @notice Authorizes an upgrade to a new contract implementation.
     /// @dev This function can only be called by the contract owner.
     /// It overrides the `_authorizeUpgrade` function from the `UUPSUpgradeable`
@@ -498,6 +506,7 @@ contract SmartToken is
         // the tokenFactory contract
         return _handleDeposit(assets, receiver);
     }
+
     /// @notice Deposits an amount of underlying assets, crediting the shares(RiskON/OFF) to the receiver.
     /// @dev It overrides the `deposit` function from the `IERC4626Upgradeable` interface.
     /// The `stopDeposit` circuit breaker can be used to freeze deposits and `validateDepositAmount` modifier to
@@ -523,6 +532,7 @@ contract SmartToken is
     {
         return _handleDeposit(assets, receiver);
     }
+
     /// @notice Deposits an amount of underlying (NATIVE) assets, crediting the shares(RiskON/OFF) to the receiver.
     /// @dev It uses msg.value as the deposit amount.
     /// The `stopDeposit` circuit breaker can be used to freeze deposits and `validateDepositAmount` modifier to
@@ -559,6 +569,7 @@ contract SmartToken is
 
         return shares;
     }
+
     /// @notice Calculates the maximum amount of shares(RiskOn/Off) that can be minted for a user.
     /// @dev It overrides the `maxMint` function from the `IERC4626Upgradeable` interface.
     /// @param account The address of user for which to calculate the maximum mintable shares(RiskOn/Off).
@@ -682,6 +693,86 @@ contract SmartToken is
         return _handleWithdraw(assets, receiver, owner_);
     }
 
+    /// @notice Allows user to take flashloans from the tokenFactory (Vault/POOL)
+    /// @dev This function is guarded by the `nonReentrant` and `stopFlashLoan` modifiers.
+    /// It makes use of AAVE's flashloan interface to provide backwards compatibility for ease of use
+    /// @param receiver The address of the receiver.
+    /// @param amount The amount of underlying assets to flashloan.
+    /// @param params The parameters for the flashloan. Used by the receiver contract(Aave's interface)
+    function flashLoan(
+        address receiver,
+        uint256 amount,
+        bytes memory params
+    )
+        external
+        nonReentrant
+        stopFlashLoan
+        onlyNotSanctioned(receiver)
+        onlyNotSanctioned(_msgSender())
+    {
+        if (address(receiver) == address(0)) {
+            revert FlashLoan__InvalidReceiver();
+        }
+        //validate loan amount
+        //verify if tokenFactory has enough assets
+        if (
+            IERC20Update(underlyingToken).balanceOf(address(tokenFactory)) <
+            amount
+        ) {
+            revert FlashLoan__InsufficientUnderlying();
+        }
+
+        //transfer the amount to the receiver
+        tokenFactory.underlyingTransfer(receiver, amount);
+
+        // Call executeOperation on the receiver contract
+        IFlashLoanReceiver receiverLoan = IFlashLoanReceiver(receiver);
+
+        uint16 premiumPercentage = tokenFactory.getFlashloanPremium();
+        //premium is the premiumpercentage /premiumDenominator i.e 5/10000 = 0.0005
+        uint256 premium = (premiumPercentage != 0)
+            ? amount.mul(premiumPercentage).div(premiumDenominator)
+            : 0;
+
+        //ensures compatibility with AAVE's receiever interface
+        address[] memory assets = new address[](1);
+        assets[0] = (address(underlyingToken));
+        uint256[] memory amounts = new uint256[](1);
+        amounts[0] = (amount);
+        uint256[] memory premiums = new uint256[](1);
+        premiums[0] = (premium);
+
+        if (
+            !(
+                receiverLoan.executeOperation(
+                    assets,
+                    amounts,
+                    premiums,
+                    _msgSender(),
+                    params
+                )
+            )
+        ) {
+            revert FlashLoan__FailedExecOps();
+        }
+
+        uint256 tokenBalanceInitial = IERC20Update(underlyingToken).balanceOf(
+            address(tokenFactory)
+        );
+
+        tokenFactory.underlyingReturn(receiver, amount, premium);
+
+
+        if (
+            IERC20Update(underlyingToken).balanceOf(address(tokenFactory)) !=
+            tokenBalanceInitial.add(amount.add(premium))
+        ) {
+            revert FlashLoan__FailedRepayments();
+        }
+
+        emit FlashLoanExecuted(receiver, _msgSender(), amount, premium, params);
+    }
+
     /// @notice Computes the maximum amount of underlying assets that can be redeemed by owner.
     /// @dev It overrides the `maxRedeem` function from the `IERC4626Upgradeable` interface.
     /// @param owner_ The address of the owner.
@@ -770,6 +861,7 @@ contract SmartToken is
             tokenFactory.getUserLastFFCount(account) !=
             tokenFactory.getDailyFeeFactorNumber();
     }
+
     function handlePendingFF(address sender, address receiver) public {
         if (hasPendingFF(sender)) {
             //The 'applyFF' method on the Vault(TokenFactory) is called
@@ -829,5 +921,12 @@ contract SmartToken is
         tokenFactory._withdraw(_msgSender(), receiver, owner_, assets, shares);
 
         return shares;
+    }
+
+    /// @notice Retrieves the address of the flashloan POOL (TokenFactory) contract.
+    /// @dev This function casts the `tokenFactory` variable to an address and returns it.
+    /// @return The address of the flashloan POOL (TokenFactory) contract.
+    function getFlashLoanPool() public view returns (address) {
+        return address(tokenFactory);
     }
 }

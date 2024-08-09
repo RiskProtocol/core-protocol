@@ -47,7 +47,7 @@ jobs:
         with:
           version: nightly
       - name: Run tests
-        run: forge test --no-match-path "test/foundry/invariants/*.t.sol" -vvv
+        run: forge test --no-match-path "test/foundry/invariants/*.t.sol" -vvv --via-ir
 
   slackNotification:
     needs: [tests]

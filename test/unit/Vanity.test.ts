@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { ethers, network } from "hardhat";
+import { ethers, network, upgrades } from "hardhat";
 import {
   developmentChains,
   REBALANCE_INTERVAL,
@@ -7,8 +7,8 @@ import {
   TOKEN1_SYMBOL,
   TOKEN2_NAME,
   TOKEN2_SYMBOL,
-  BASE_TOKEN_ADDRESS,
   rateLimitsDefault,
+  getEthereumAddress,
 } from "../../helper-hardhat-config";
 import { deployUUPSviaCreate3 } from "../../scripts/utils/deployer";
 import { get } from "../../scripts/utils/getVanityAddressSalt";
@@ -68,23 +68,25 @@ developmentChains.includes(network.name)
           expect(vanity.SmartTokenY.proxyAddress.startsWith("0x66"));
           expect(vanity.Orchestator.proxyAddress.startsWith("0x66"));
           expect(vanity.AtomicTx.proxyAddress.startsWith("0x66"));
+          expect(vanity.wX.proxyAddress.startsWith("0x66"));
+          expect(vanity.wY.proxyAddress.startsWith("0x66"));
         });
         it("Should deploy the factory", async function () {
           expect(factoryAddress).to.not.equal(0);
 
           const [wallet] = await ethers.getSigners();
 
-          const sanctionsContractAddress =
-            process.env.SANCTIONS_CONTRACT_ADDRESS;
+          // const sanctionsContractAddress =
+          //   process.env.SANCTIONS_CONTRACT_ADDRESS;
           //deploying tokenFactory
           const TokenFactoryComplete = await deployUUPSviaCreate3(
             "TokenFactory",
             vanity.tokenFactory.saltStr, //salt
             [
-              BASE_TOKEN_ADDRESS, //Base Token
+              underlyingToken.address, //Base Token
               REBALANCE_INTERVAL,
               3600, //one hour
-              sanctionsContractAddress, //sanctions but just testing
+              sanctionsContract.address, //sanctions but just testing
               wallet.address,
               wallet.address,
               rateLimitsDefault.withdraw,
@@ -107,7 +109,7 @@ developmentChains.includes(network.name)
               TOKEN1_NAME,
               TOKEN1_SYMBOL,
               TokenFactoryComplete,
-              sanctionsContractAddress,
+              sanctionsContract.address,
               true,
               wallet.address,
             ],
@@ -124,7 +126,7 @@ developmentChains.includes(network.name)
               TOKEN2_NAME,
               TOKEN2_SYMBOL,
               TokenFactoryComplete,
-              sanctionsContractAddress,
+              sanctionsContract.address,
               false,
               wallet.address,
             ],
@@ -170,7 +172,7 @@ developmentChains.includes(network.name)
             [
               SmartXComplete,
               SmartYComplete,
-              BASE_TOKEN_ADDRESS,
+              underlyingToken.address,
               wallet.address,
             ],
             factoryAddress,
@@ -179,6 +181,134 @@ developmentChains.includes(network.name)
           );
 
           expect(AtomicTxComplete).to.equal(vanity.AtomicTx.proxyAddress);
+
+          //Wrapper X and Y
+          //we first deploy the wrapperFactory
+          //deploy wrapped template
+          const RiskWrappedTokenContract = await ethers.getContractFactory(
+            "wrappedSmartToken",
+            wallet
+          );
+          //deploy the template
+          const wrappedTemplate = await RiskWrappedTokenContract.deploy();
+
+          //deploy the wrapper factory
+          const WrapperFactoryContract = await ethers.getContractFactory(
+            "WrapperFactory",
+            wallet
+          );
+          const WrapperFactory = await upgrades.deployProxy(
+            WrapperFactoryContract,
+            [wallet.address, wrappedTemplate.address],
+            { initializer: "initialize", kind: "uups" }
+          );
+
+          await WrapperFactory.deployed();
+
+          //we now deposit some underlying tokens to the tokenFactory to get some SMARTs
+          await underlyingToken.approve(
+            tokenFactoryInstance.address,
+            ethers.utils.parseEther("100")
+          );
+
+          expect(
+            await underlyingToken.allowance(
+              wallet.address,
+              tokenFactoryInstance.address
+            )
+          ).to.equal(ethers.utils.parseEther("100"));
+          //instance of SMArt X
+          const smartXInstance = await ethers.getContractAt(
+            "SmartToken",
+            SmartXComplete,
+            wallet
+          );
+          const smartYInstance = await ethers.getContractAt(
+            "SmartToken",
+            SmartYComplete,
+            wallet
+          );
+
+          await smartXInstance.deposit(
+            ethers.utils.parseEther("1"),
+            wallet.address
+          );
+
+          //deploy wrapped X
+          await smartXInstance.approve(
+            WrapperFactory.address,
+            ethers.constants.MaxUint256
+          );
+          await smartYInstance.approve(
+            WrapperFactory.address,
+            ethers.constants.MaxUint256
+          );
+
+          //get KMS items
+          /////////////////////////////
+          ///KMS
+          /////////////////////////////
+          const awsConfig = {
+            region: process.env.AWS_REGION || "eu-north-1",
+            credentials: {
+              accessKeyId: process.env.AWS_ACCESS_KEY_ID || "",
+              secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || "",
+            },
+          };
+          const keyId = process.env.KMS_KEY_ID as string;
+          const kmsAddress = await getEthereumAddress(keyId, awsConfig);
+
+          const timeout = 1000 * 60 * 5; // 5 minutes
+
+          //deploy Wrapped X
+           await WrapperFactory.create(
+            smartXInstance.address,
+            smartYInstance.address,
+            "Wrapped SmartToken X",
+            "wX",
+            1,
+            true,
+            wallet.address,
+            kmsAddress,
+            timeout,
+            sanctionsContract.address,
+            factoryAddress,
+            ethers.utils.formatBytes32String(vanity.wX.saltStr)
+          );
+           await WrapperFactory.create(
+            smartYInstance.address,
+            smartXInstance.address,
+            "Wrapped SmartToken Y",
+            "wY",
+            1,
+            false,
+            wallet.address,
+            kmsAddress,
+            timeout,
+            sanctionsContract.address,
+            factoryAddress,
+            ethers.utils.formatBytes32String(vanity.wY.saltStr)
+          );
+
+          expect(await WrapperFactory.getWrappedSmartTokens(true)).to.equal(
+            vanity.wX.proxyAddress
+          );
+          expect(await WrapperFactory.getWrappedSmartTokens(false)).to.equal(
+            vanity.wY.proxyAddress
+          );
+
+          const wX = await ethers.getContractAt(
+            "wrappedSmartToken",
+            vanity.wX.proxyAddress,
+            wallet
+          );
+          const wY = await ethers.getContractAt(
+            "wrappedSmartToken",
+            vanity.wY.proxyAddress,
+            wallet
+          );
+          expect(await wX.totalSupply()).to.equal(1000);
+          expect(await wY.totalSupply()).to.equal(1000);
         });
       });
     })
@@ -208,11 +338,16 @@ async function getVanityAddressSalt(
 
   const AtomicTx = await get(factoryAddress, wallet, desiredPrefix, 4);
 
+  const wX = await get(factoryAddress, wallet, desiredPrefix, 5);
+  const wY = await get(factoryAddress, wallet, desiredPrefix, 6);
+
   return {
     tokenFactory: tokenFactoryPxAddress,
     SmartTokenX: SmartXPxAddress,
     SmartTokenY: SmartYPxAddress,
     Orchestator: OrchestratorPxAddress,
     AtomicTx: AtomicTx,
+    wX: wX,
+    wY: wY,
   };
 }
