@@ -19,3 +19,4 @@ remix-compiler.config.js
 scripts/deploymentScript_test.ts
 artifacts/contracts/vaults/SmartToken.sol/SmartToken.dbg.json
 artifacts/contracts/vaults/SmartToken.sol/SmartToken.json
+test.json
