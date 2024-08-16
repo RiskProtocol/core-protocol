@@ -37,7 +37,6 @@ contract TokenFactory is
     error TokenFactory__InvalidNaturalRebalance();
     error TokenFactory__AlreadyInitialized();
     error TokenFactory__InvalidSignature();
-    error TokenFactory__InvalidSignatureLength();
     error TokenFactory__InvalidManagementFees();
     error TokenFactory__SmartTokenArrayOutOfBounds();
     error TokenFactory__NoPremiumsToDrain();
@@ -903,7 +902,7 @@ contract TokenFactory is
     function underlyingReturn(
         address sender_,
         uint256 amount_,
-        uint premium
+        uint256 premium
     ) external onlySmartTokens {
         SafeERC20.safeTransferFrom(baseToken, sender_, address(this), amount_.add(premium));
         premiumCharged += premium;
@@ -992,7 +991,7 @@ contract TokenFactory is
         address recoveredAddress = ECDSAUpgradeable.recover(hash, signature);
 
         // Verify the address
-        if (signers[recoveredAddress] == false) {
+        if (!signers[recoveredAddress]) {
             revert TokenFactory__InvalidSignature();
         }
 
@@ -1198,17 +1197,17 @@ contract TokenFactory is
         }
     }
 
-    function updateWithdrawLimit(uint newLimit) external onlyOwner {
+    function updateWithdrawLimit(uint256 newLimit) external onlyOwner {
         require(newLimit > 0, "Deposit limit must be positive");
         withdrawLimit = newLimit;
     }
 
-    function updateDepositLimit(uint newLimit) external onlyOwner {
+    function updateDepositLimit(uint256 newLimit) external onlyOwner {
         require(newLimit > 0, "Deposit limit must be positive");
         depositLimit = newLimit;
     }
 
-    function updateLimitPeriod(uint newPeriod) external onlyOwner {
+    function updateLimitPeriod(uint256 newPeriod) external onlyOwner {
         require(newPeriod > 0, "Period must be positive");
         period = newPeriod;
     }

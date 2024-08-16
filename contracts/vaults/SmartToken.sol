@@ -7,7 +7,7 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/interfaces/IERC4626Upgradeable.sol";
-
+import "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 import "./../interfaces/IERC20Update.sol";
 import "./../interfaces/flashloan/IFlashLoanReceiver.sol";
 import "./../interfaces/IWETH.sol";
@@ -41,14 +41,12 @@ contract SmartToken is
     error SmartToken__DepositMoreThanMax();
     error SmartToken__MintMoreThanMax();
     error SmartToken__WithdrawMoreThanMax();
-    error SmartToken__RedeemMoreThanMax();
     error SmartToken__OnlyAssetOwner();
     error SmartToken__ZeroDeposit();
     error SmartToken__InsufficientUnderlying();
     error SmartToken__DepositLimitHit();
     error SmartToken__WithdrawLimitHit();
     error SmartToken__ExpiryDateReached();
-    error SmartToken__WithdrawNativeFailed();
 
     /// @notice The tokenFactory instance
     TokenFactory private tokenFactory;
@@ -57,7 +55,7 @@ contract SmartToken is
     bool private isX;
     bool private isNativeToken;
     IWETH private weth;
-    uint16 private constant premiumDenominator = 10000;
+    uint16 private constant PREMIUM_DENOMINATOR = 10000;
 
     using SafeMathUpgradeable for uint256;
 
@@ -161,7 +159,7 @@ contract SmartToken is
 
     //since we now handle native tokens
     receive() external payable {
-        if (tokenFactory.getIsNativeToken() == false) {
+        if (!tokenFactory.getIsNativeToken()) {
             revert SmartToken__MethodNotAllowed();
         }
     }
@@ -170,10 +168,12 @@ contract SmartToken is
     /// @dev This function can only be called by the contract owner.
     /// @param receiver The address of the account that will receive the ethers.
     function drain(address receiver) external onlyOwner {
-        if (tokenFactory.getIsNativeToken() == false) {
+        if (!tokenFactory.getIsNativeToken()) {
             revert SmartToken__MethodNotAllowed();
         }
-        payable(receiver).transfer(address(this).balance);
+        // payable(receiver).transfer(address(this).balance);
+        AddressUpgradeable.sendValue(payable(receiver), address(this).balance);
+
     }
 
     /// @notice Authorizes an upgrade to a new contract implementation.
@@ -553,7 +553,7 @@ contract SmartToken is
         validateDepositAmount(msg.value, receiver)
         returns (uint256)
     {
-        if (tokenFactory.getIsNativeToken() == false)
+        if (!tokenFactory.getIsNativeToken())
             revert SmartToken__MethodNotAllowed();
 
         if (msg.value == 0) revert SmartToken__ZeroDeposit();
@@ -729,9 +729,9 @@ contract SmartToken is
         IFlashLoanReceiver receiverLoan = IFlashLoanReceiver(receiver);
 
         uint16 premiumPercentage = tokenFactory.getFlashloanPremium();
-        //premium is the premiumpercentage /premiumDenominator i.e 5/10000 = 0.0005
+        //premium is the premiumpercentage /PREMIUM_DENOMINATOR i.e 5/10000 = 0.0005
         uint256 premium = (premiumPercentage != 0)
-            ? amount.mul(premiumPercentage).div(premiumDenominator)
+            ? amount.mul(premiumPercentage).div(PREMIUM_DENOMINATOR)
             : 0;
 
         //ensures compatibility with AAVE's receiever interface

@@ -34,6 +34,9 @@ contract BaseContract is Initializable, OwnableUpgradeable {
     bool private rebalanceCircuitBreaker;
     bool private flashLoanCircuitBreaker;
 
+    uint256[50] private __gap;
+
+
     /// @dev Checks if the address is sanctioned.
     /// @param addressToCheck The address to be checked.
     modifier onlyNotSanctioned(address addressToCheck) {

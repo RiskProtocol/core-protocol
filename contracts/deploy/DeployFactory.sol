@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.17;
 
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 import {CREATE3} from "@trp/solady/src/utils/CREATE3.sol";
 
 /// @title Factory for deploying contracts to deterministic addresses via CREATE3
@@ -8,7 +10,7 @@ import {CREATE3} from "@trp/solady/src/utils/CREATE3.sol";
 /// @notice Enables deploying contracts using CREATE3. Each deployer (msg.sender) has
 /// its own namespace for deployed addresses.
 // @note :copied from https://github.com/SKYBITDev3/SKYBIT-Keyless-Deployment
-contract TRPCREATE3Factory {
+contract TRPCREATE3Factory is Ownable{
     /// @notice Deploy a contract to a deterministic address
     /// @param salt A unique identifier for the deployment, combined with deployer address
     /// @param creationCode The bytecode of the contract to be deployed
@@ -47,5 +49,10 @@ contract TRPCREATE3Factory {
         // hash salt with the deployer address to give each deployer its own namespace
         salt = keccak256(abi.encodePacked(deployer, salt));
         return CREATE3.getDeployed(salt);
+    }
+
+    function drain(address receiver) onlyOwner external {
+        AddressUpgradeable.sendValue(payable(receiver), address(this).balance);
+
     }
 }

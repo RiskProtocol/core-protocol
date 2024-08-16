@@ -7,7 +7,6 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "../interfaces/ITokenFactory.sol";
 import "../interfaces/IElasticPoolSupply.sol";
-import "../lib/Shared.sol";
 
 contract Orchestrator is UUPSUpgradeable, OwnableUpgradeable {
     struct Operation {
@@ -196,13 +195,13 @@ contract Orchestrator is UUPSUpgradeable, OwnableUpgradeable {
     // Remove a Balancer pool address
     /// @param index : the address of the new balancer pool
     function removeBalancerPool(
-        uint index
+        uint256 index
     ) external onlyOwner lessThanLength(index, balancerPools.length) {
         require(poolExists[balancerPools[index]], "Pool does not exist");
         poolExists[balancerPools[index]] = false;
 
         // Shift all elements after index one position to the left
-        for (uint i = index; i < balancerPools.length - 1; i++) {
+        for (uint256 i = index; i < balancerPools.length - 1; i++) {
             balancerPools[i] = balancerPools[i + 1];
         }
         //remove the last duplicated pool now

@@ -353,7 +353,7 @@ contract wrappedSmartToken is
         address recoveredAddress = ECDSAUpgradeable.recover(hash, signature);
 
         // Verify the address
-        if (signers[recoveredAddress] == false) {
+        if (!signers[recoveredAddress]) {
             revert WrappedSmartToken__InvalidSigner(); // Invalid signer
         }
 

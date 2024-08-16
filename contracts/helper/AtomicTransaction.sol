@@ -5,6 +5,7 @@ pragma solidity ^0.8.9;
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
@@ -32,7 +33,6 @@ contract AtomicTransaction is
     uint256 private balancerVariable_maxPrice;
 
     error AtomicTransaction_SlippageError();
-    error AtomicTransaction_SwapError();
     error AtomicTransaction_InvalidBalance();
     error AtomicTransaction_InvalidParams();
     error AtomicTransaction_BalancerError();
@@ -84,7 +84,7 @@ contract AtomicTransaction is
     }
 
     function drain() external onlyOwner {
-        payable(owner()).transfer(address(this).balance);
+        AddressUpgradeable.sendValue(payable(owner()), address(this).balance);
         SafeERC20.safeTransfer(
             smartTokenX,
             owner(),
