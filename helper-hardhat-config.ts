@@ -3,6 +3,8 @@ import { ethers } from "hardhat";
 import { KMSWallets } from "@web3-kms-signer/kms-wallets";
 import * as core from "@web3-kms-signer/core";
 import { KMSProviderAWS } from "@web3-kms-signer/kms-provider-aws";
+import readline from "readline";
+
 
 export const developmentChains = ["localhost", "hardhat"];
 export const MULTIPLIER = 1e18;
@@ -208,4 +210,18 @@ export async function signFLashloanAwsKMS(keyId: string, data: any, awsConfig: a
 export async function getEthereumAddress(keyId: string, awsConfig: any) {
   const provider = new KMSProviderAWS(awsConfig);
   return await new KMSWallets(provider).getAddressHex(keyId);
+}
+
+export async function promptUser(prompt: string): Promise<string> {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+
+  return new Promise((resolve) => {
+    rl.question(prompt, (answer) => {
+      rl.close();
+      resolve(answer);
+    });
+  });
 }
