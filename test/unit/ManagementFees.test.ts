@@ -301,7 +301,7 @@ developmentChains.includes(network.name)
             const days = REBALANCE_INTERVAL / FF_INTERVAL;
             const test = 200 / MULTIPLIER;
              const dailyFeeN = 0.02
-            const anualFee = dailyFeeScalar(dailyFeeN,days)
+            const rebalancePeriodFee = dailyFeeScalar(dailyFeeN,days)
             const dailyFee = ethers.utils.parseEther(dailyFeeN.toString());
             await tokenFactory.setManagementFeeRate(
               dailyFee
@@ -341,7 +341,7 @@ developmentChains.includes(network.name)
 
 
             const fee = BigInt(
-              feeCalculator(userBal, BigInt(ethers.utils.parseEther(anualFee.toString()).toString()))
+              feeCalculator(userBal, BigInt(ethers.utils.parseEther(rebalancePeriodFee.toString()).toString()))
             );
             const diff = BigInt(userBal) - fee;
 
@@ -379,7 +379,7 @@ developmentChains.includes(network.name)
             // set the management fee to 0.2% and activating fees
             const days = REBALANCE_INTERVAL / FF_INTERVAL;
             const dailyFeeN = 0.02
-            const anualFee = ethers.utils.parseEther(dailyFeeScalar(dailyFeeN,days).toString())
+            const rebalancePeriodFee = ethers.utils.parseEther(dailyFeeScalar(dailyFeeN,days).toString())
             const dailyFee = ethers.utils.parseEther(dailyFeeN.toString());
             await tokenFactory.setManagementFeeRate(
               dailyFee,
@@ -464,7 +464,7 @@ developmentChains.includes(network.name)
             //const mgmtFee = MGMTFEEDAILY2P; //0.2 per day
             const days = REBALANCE_INTERVAL / FF_INTERVAL;
             const dailyFeeN = 0.002
-            const anualFee = ethers.utils.parseEther(dailyFeeScalar(dailyFeeN,days).toString()).toString()
+            const rebalancePeriodFee = ethers.utils.parseEther(dailyFeeScalar(dailyFeeN,days).toString()).toString()
             const dailyFee = ethers.utils.parseEther(dailyFeeN.toString());  
             await tokenFactory.setManagementFeeRate(
               dailyFee
@@ -483,7 +483,7 @@ developmentChains.includes(network.name)
 
             const fees = feeCalculator(
               userBalBeofre,
-              BigInt(anualFee)
+              BigInt(rebalancePeriodFee)
             );
 
             expect(
@@ -522,7 +522,7 @@ developmentChains.includes(network.name)
             const days = REBALANCE_INTERVAL / FF_INTERVAL;
 
             const dailyFeeN = 0.02
-            const anualFee = ethers.utils.parseEther(dailyFeeScalar(dailyFeeN,days).toString()).toString()
+            const rebalancePeriodFee = ethers.utils.parseEther(dailyFeeScalar(dailyFeeN,days).toString()).toString()
             const dailyFee = ethers.utils.parseEther(dailyFeeN.toString()); 
 
             await tokenFactory.setManagementFeeRate(
@@ -576,7 +576,7 @@ developmentChains.includes(network.name)
             const days = REBALANCE_INTERVAL / FF_INTERVAL;
 
             const dailyFeeN = 0.2
-            const anualFee = ethers.utils.parseEther(dailyFeeScalar(dailyFeeN,days).toString()).toString()
+            const rebalancePeriodFee = ethers.utils.parseEther(dailyFeeScalar(dailyFeeN,days).toString()).toString()
             const dailyFee = ethers.utils.parseEther(dailyFeeN.toString()); 
             await tokenFactory.setManagementFeeRate(
               dailyFee,
@@ -657,7 +657,7 @@ developmentChains.includes(network.name)
             // set the management fee to 0.2% and activating fees
             const days = REBALANCE_INTERVAL / FF_INTERVAL;
             const dailyFeeN = 0.2
-            const anualFee = ethers.utils.parseEther(dailyFeeScalar(dailyFeeN,days).toString()).toString()
+            const rebalancePeriodFee = ethers.utils.parseEther(dailyFeeScalar(dailyFeeN,days).toString()).toString()
             const dailyFee = ethers.utils.parseEther(dailyFeeN.toString()); 
             await tokenFactory.setManagementFeeRate(
               dailyFee
@@ -770,7 +770,7 @@ developmentChains.includes(network.name)
             // set the management fee to 0.2% and activating fees
             const days = REBALANCE_INTERVAL / FF_INTERVAL;
             const dailyFeeN = 0.0002
-            const anualFee = ethers.utils.parseEther(dailyFeeScalar(dailyFeeN,days).toString()).toString()
+            const rebalancePeriodFee = ethers.utils.parseEther(dailyFeeScalar(dailyFeeN,days).toString()).toString()
             const dailyFee = ethers.utils.parseEther(dailyFeeN.toString()); 
             await tokenFactory.setManagementFeeRate(
               dailyFee
@@ -818,7 +818,7 @@ developmentChains.includes(network.name)
             );
             const deployerFee = feeCalculator(
               deployerBalanceAfter0,
-              BigInt(anualFee)
+              BigInt(rebalancePeriodFee)
             );
             expect(
               Number(await smartToken1.balanceOf(deployer.address)).toPrecision(
@@ -855,7 +855,7 @@ developmentChains.includes(network.name)
 
             const deployerFee1 = feeCalculator(
               deployerBalanceAfter0,
-              BigInt(anualFee)
+              BigInt(rebalancePeriodFee)
             );
             expect(
               Number(await smartToken1.balanceOf(deployer.address)).toPrecision(
@@ -891,7 +891,7 @@ developmentChains.includes(network.name)
             );
             const deployerFee2 = feeCalculator(
               deployerBalanceAfter2,
-              BigInt(anualFee)
+              BigInt(rebalancePeriodFee)
             );
             expect(
               Number(await smartToken1.balanceOf(deployer.address)).toPrecision(
@@ -925,7 +925,7 @@ developmentChains.includes(network.name)
             await tokenFactory.setTreasuryWallet(treasury.address);
             const days = REBALANCE_INTERVAL / FF_INTERVAL;
             const dailyFeeN = 0.002
-            const anualFee = ethers.utils.parseEther(dailyFeeScalar(dailyFeeN,days).toString()).toString()
+            const rebalancePeriodFee = ethers.utils.parseEther(dailyFeeScalar(dailyFeeN,days).toString()).toString()
             const dailyFee = ethers.utils.parseEther(dailyFeeN.toString()); 
             await tokenFactory.setManagementFeeRate(
               dailyFee,
@@ -1037,7 +1037,7 @@ developmentChains.includes(network.name)
           await tokenFactory.setTreasuryWallet(treasury.address);
           const days = REBALANCE_INTERVAL / FF_INTERVAL;
           const dailyFeeN = 0.02
-          const anualFee = ethers.utils.parseEther(dailyFeeScalar(dailyFeeN,days).toString()).toString()
+          const rebalancePeriodFee = ethers.utils.parseEther(dailyFeeScalar(dailyFeeN,days).toString()).toString()
           const dailyFee = ethers.utils.parseEther(dailyFeeN.toString()); 
           await tokenFactory.setManagementFeeRate(
             dailyFee
@@ -1084,7 +1084,7 @@ developmentChains.includes(network.name)
           await tokenFactory.setTreasuryWallet(treasury.address);
           const days = REBALANCE_INTERVAL / FF_INTERVAL;
           const dailyFeeN = 0.02
-          const anualFee = ethers.utils.parseEther(dailyFeeScalar(dailyFeeN,days).toString()).toString()
+          const rebalancePeriodFee = ethers.utils.parseEther(dailyFeeScalar(dailyFeeN,days).toString()).toString()
           const dailyFee = ethers.utils.parseEther(dailyFeeN.toString()); 
           await tokenFactory.setManagementFeeRate(
             dailyFee
@@ -1143,7 +1143,7 @@ developmentChains.includes(network.name)
           await tokenFactory.setTreasuryWallet(treasury.address);
           const days = REBALANCE_INTERVAL / FF_INTERVAL;
           const dailyFeeN = 0.02
-          const anualFee = ethers.utils.parseEther(dailyFeeScalar(dailyFeeN,days).toString()).toString()
+          const rebalancePeriodFee = ethers.utils.parseEther(dailyFeeScalar(dailyFeeN,days).toString()).toString()
           const dailyFee = ethers.utils.parseEther(dailyFeeN.toString()); 
           await tokenFactory.setManagementFeeRate(
             dailyFee
@@ -1209,7 +1209,7 @@ developmentChains.includes(network.name)
           const days = REBALANCE_INTERVAL / FF_INTERVAL;
           // const feeDetails = feeScalar(0.02, days);
           const dailyFeeN = 0.002
-          const anualFee = ethers.utils.parseEther(dailyFeeScalar(dailyFeeN,days).toString()).toString()
+          const rebalancePeriodFee = ethers.utils.parseEther(dailyFeeScalar(dailyFeeN,days).toString()).toString()
           const dailyFee = ethers.utils.parseEther(dailyFeeN.toString()); 
           // feeDetails.dailyFee = Math.round(
           //   Number(feeDetails.dailyFee) / 24
@@ -1273,7 +1273,7 @@ developmentChains.includes(network.name)
           await tokenFactoryFF.setTreasuryWallet(treasury.address);
           const days = REBALANCE_INTERVAL / FF_INTERVAL;
           const dailyFeeN = 0.002
-          const anualFee = ethers.utils.parseEther(dailyFeeScalar(dailyFeeN,days).toString()).toString()
+          const rebalancePeriodFee = ethers.utils.parseEther(dailyFeeScalar(dailyFeeN,days).toString()).toString()
           const dailyFee = ethers.utils.parseEther(dailyFeeN.toString()); 
           await tokenFactoryFF.setManagementFeeRate(
             dailyFee
@@ -1313,7 +1313,7 @@ developmentChains.includes(network.name)
           await time.setNextBlockTimestamp(now2);
 
           const fee = BigInt(
-            feeCalculator(userBal, BigInt(anualFee))
+            feeCalculator(userBal, BigInt(rebalancePeriodFee))
           );
           const diff = BigInt(userBal) - fee;
 
