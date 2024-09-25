@@ -1118,6 +1118,57 @@ developmentChains.includes(network.name)
           );
         });
 
+        it("it should confirm that user gets correct amount of underlying token back after redemption with fees", async function () {
+          const {
+            tokenFactory,
+            deployer,
+            underlyingToken,
+            smartToken1,
+            smartToken2,tester
+          } = await loadFixture(deployTokenFixture);
+          const depositAmount = ethers.utils.parseEther("6");
+
+          await tokenFactory.initializeSMART(
+            smartToken1.address,
+
+            smartToken2.address
+          );
+          const redemptionFee = 10e16;
+          await tokenFactory.setRedemptionFee(redemptionFee.toString());
+          await tokenFactory.setTreasuryWallet(tester.address);
+
+          expect (await tokenFactory.getRedemptionFee()).to.equal(BigInt(redemptionFee));
+
+
+          // deposit underlying token
+          await underlyingToken.approve(tokenFactory.address, depositAmount);
+          await smartToken1.deposit(depositAmount, deployer.address);
+
+          // get user balance before redemption
+          const initialBalance = await underlyingToken.balanceOf(
+            deployer.address
+          );
+          const expectedBalance = +initialBalance + +depositAmount;
+
+          // redeem underlying token
+          await smartToken1.redeem(
+            depositAmount,
+            deployer.address,
+            deployer.address
+          );
+          const expectedFee = +depositAmount * redemptionFee / 10**18;
+
+          expect(await underlyingToken.balanceOf(tester.address)).to.equal((expectedFee).toString());
+          console.log(`L1190`)
+          console.log(expectedFee);
+          console.log(expectedBalance);
+          console.log(Number(await underlyingToken.balanceOf(deployer.address)));
+          assert.equal(
+            Number(await underlyingToken.balanceOf(deployer.address)),
+            Number(expectedBalance- expectedFee)
+          );
+        });
+
         it("it should apply pending rebalance if a user wants to redeem tokens", async function () {
           const {
             tokenFactory,
