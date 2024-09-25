@@ -5,13 +5,12 @@ import * as core from "@web3-kms-signer/core";
 import { KMSProviderAWS } from "@web3-kms-signer/kms-provider-aws";
 import readline from "readline";
 
-
 export const developmentChains = ["localhost", "hardhat"];
 export const MULTIPLIER = 1e18;
 export const DECIMALS = "18";
 export const INITIAL_PRICE = "2000000000000000000000"; // 2000, we then add the 18 decimals which is 18 zeros
 export const SmartTokenXValue = "667000000000000000000"; // 667, we then add the 18 decimals which is 18 zeros
-export const BASE_TOKEN_ADDRESS = "0x8B354F90b206716E8e233f67A8eB334A501833a6"//"0x70997970C51812dc3A010C7d01b50e0d17dc79C8";
+export const BASE_TOKEN_ADDRESS = "0x8B354F90b206716E8e233f67A8eB334A501833a6"; //"0x70997970C51812dc3A010C7d01b50e0d17dc79C8";
 export const BASE_TOKEN_DECIMALS = 18;
 export const TOKEN1_NAME = "RistP One";
 export const TOKEN1_SYMBOL = "R1";
@@ -109,12 +108,33 @@ export const feeCalculator2 = (
   return (BigInt(mgmtFee) * BigInt(assetBal1)) / BigInt(MULTIPLIER);
 };
 
+//@note unsed now
+// the inverse of dailyFeeScalar
 export const feeScalar = (mgmtFee: number, daysInRebalanceInterval: number) => {
   const dailyFee = 1 - (1 - mgmtFee) ** (1 / daysInRebalanceInterval);
   return {
     dailyFee: Math.round(dailyFee * MULTIPLIER).toString(),
     RebaseFee: Math.round(mgmtFee * MULTIPLIER).toString(),
   };
+};
+
+export const dailyFeeScalar = (
+  dailyFee: number,
+  daysInRebalanceInterval: number
+) => {
+  //takes in the daily fee and returns the expected mgmt fee coumpounded for teh whole rebase period
+  //explaination
+  /**
+   * Mathematical Explanation:
+  If you simply multiply the daily fee by rebase interval, you ignore this diminishing base effect and 
+  overestimate the impact of the fee. The correct way to calculate the compounded fee over a year is using the formula:
+  This accounts for the compounding by reducing the base each day before applying the same percentage fee the next day.
+  Example with Numbers:
+  if a rebase interval is 365
+  Using the earlier example, the daily fee of 0.00544% compounded over 365 days results in an annual fee of about 2%, 
+  not 1.9844% (which would be 0.00544% x 365). The compounding formula provides the correct framework for understanding how these daily changes accumulate over a year to reach the total annual fee.
+   */
+  return 1 - (1 - dailyFee) ** daysInRebalanceInterval;
 };
 export type RebalanceElements = {
   BalanceFactorXY: BigInt;
@@ -189,12 +209,16 @@ export async function signAwsKMS(keyId: string, data: any, awsConfig: any) {
   return { signature, digestData, encodedData };
 }
 
-export async function signFLashloanAwsKMS(keyId: string, data: any, awsConfig: any) {
+export async function signFLashloanAwsKMS(
+  keyId: string,
+  data: any,
+  awsConfig: any
+) {
   const provider = new KMSProviderAWS(awsConfig);
 
   const types = ["uint256", "uint256", "uint256"];
   // Encode the data
-  const encodedData =  ethers.utils.defaultAbiCoder.encode(types, [
+  const encodedData = ethers.utils.defaultAbiCoder.encode(types, [
     data.smartTokenXValue,
     data.smartTokenYValue,
     data.timestamp,

@@ -78,7 +78,6 @@ contract TokenFactory is
     mapping(uint256 => bool) private sequenceNumberApplied;
     //management fees
     uint256 private managementFeesRate; //Mgmt fee is per day & scalin Factor is now 10E18
-    uint256 private managementFeesRateRebalance;
     bool private managementFeeEnabled;
     uint256 private lastRebalanceFees;
     address private treasuryWallet;
@@ -1031,18 +1030,14 @@ contract TokenFactory is
     ///    scaling factor is 10E18
     ///    Example 5% per day = 0.05*10E18
     /// @param rate The new rate of management fees. It is DAILY RATE
-    /// @param rateRebalance The new rate of management fees for rebalance.(REBALANCE RATE)
     /// @return A boolean value
     function setManagementFeeRate(
-        uint256 rate, //Daily Rate
-        uint256 rateRebalance //Rebalance Rate(example Quaterly rate)
+        uint256 rate //Daily Rate
     ) external onlyOwner returns (bool) {
         if (!(rate <= REBALANCE_INT_MULTIPLIER)) {
             revert TokenFactory__InvalidManagementFees();
         }
         managementFeesRate = rate;
-        managementFeesRateRebalance = rateRebalance;
-
         return true;
     }
 
@@ -1264,8 +1259,8 @@ contract TokenFactory is
         return lastTimeStamp;
     }
 
-    function getManagementFeeRate() public view returns (uint256, uint256) {
-        return (managementFeesRate, managementFeesRateRebalance);
+    function getManagementFeeRate() public view returns (uint256) {
+        return (managementFeesRate);
     }
 
     /// @notice Retrieves the managementFeeEnabled
