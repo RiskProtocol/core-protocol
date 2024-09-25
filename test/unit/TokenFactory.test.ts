@@ -1159,10 +1159,7 @@ developmentChains.includes(network.name)
           const expectedFee = +depositAmount * redemptionFee / 10**18;
 
           expect(await underlyingToken.balanceOf(tester.address)).to.equal((expectedFee).toString());
-          console.log(`L1190`)
-          console.log(expectedFee);
-          console.log(expectedBalance);
-          console.log(Number(await underlyingToken.balanceOf(deployer.address)));
+
           assert.equal(
             Number(await underlyingToken.balanceOf(deployer.address)),
             Number(expectedBalance- expectedFee)
@@ -1297,13 +1294,11 @@ developmentChains.includes(network.name)
           const days = REBALANCE_INTERVAL / FF_INTERVAL;
           const feeDetails = feeScalar(0.05, days);
           await tokenFactory.setManagementFeeRate(
-            feeDetails.dailyFee,
-            feeDetails.RebaseFee
+            feeDetails.dailyFee
           );
-          const [dailyFee, rebaseFee] =
+          const dailyFee =
             await tokenFactory.getManagementFeeRate();
           expect(dailyFee).to.equal(feeDetails.dailyFee);
-          expect(rebaseFee).to.equal(feeDetails.RebaseFee);
         });
 
         it(`Should allow not allow other users to set the management fee rate`, async () => {
@@ -1316,7 +1311,7 @@ developmentChains.includes(network.name)
           await expect(
             tokenFactory
               .connect(tester)
-              .setManagementFeeRate(feeDetails.dailyFee, feeDetails.RebaseFee)
+              .setManagementFeeRate(feeDetails.dailyFee)
           ).to.be.revertedWith("Ownable: caller is not the owner");
         });
 
@@ -1328,14 +1323,12 @@ developmentChains.includes(network.name)
           const days = REBALANCE_INTERVAL / FF_INTERVAL;
           const feeDetails = feeScalar(1, days);
           await tokenFactory.setManagementFeeRate(
-            feeDetails.dailyFee,
-            feeDetails.RebaseFee
+            feeDetails.dailyFee
           );
 
-          const [dailyFee, rebaseFee] =
+          const dailyFee =
             await tokenFactory.getManagementFeeRate();
           expect(dailyFee).to.equal(feeDetails.dailyFee);
-          expect(rebaseFee).to.equal(feeDetails.RebaseFee);
         });
 
         it(`Should allow management fee rate to be 0(0%)`, async () => {
@@ -1347,11 +1340,10 @@ developmentChains.includes(network.name)
           const feeDetails = feeScalar(0, days);
           await tokenFactory
             .connect(deployer)
-            .setManagementFeeRate(feeDetails.dailyFee, feeDetails.RebaseFee);
-          const [dailyFee, rebaseFee] =
+            .setManagementFeeRate(feeDetails.dailyFee);
+          const dailyFee =
             await tokenFactory.getManagementFeeRate();
           expect(dailyFee).to.equal(feeDetails.dailyFee);
-          expect(rebaseFee).to.equal(feeDetails.RebaseFee);
         });
 
         it(`Should allow not allow management fee rate to be more than 1e18(100%)`, async () => {
@@ -1366,8 +1358,7 @@ developmentChains.includes(network.name)
             tokenFactory
               .connect(deployer)
               .setManagementFeeRate(
-                feeDetails.dailyFee + 1,
-                feeDetails.RebaseFee + 1
+                feeDetails.dailyFee + 1
               )
           ).to.be.reverted;
         });
@@ -1407,7 +1398,7 @@ developmentChains.includes(network.name)
           const feeDetails = feeScalar(mgmtFee / 10e18, days);
           await tokenFactory
             .connect(deployer)
-            .setManagementFeeRate(feeDetails.dailyFee, feeDetails.RebaseFee);
+            .setManagementFeeRate(feeDetails.dailyFee );
           const amount = 1000;
           const isDefault = true;
 
@@ -1463,7 +1454,7 @@ developmentChains.includes(network.name)
           const feeDetails = feeScalar(mgmtFee / 10e18, days);
           await tokenFactory
             .connect(deployer)
-            .setManagementFeeRate(feeDetails.dailyFee, feeDetails.RebaseFee);
+            .setManagementFeeRate(feeDetails.dailyFee);
           const amount = 1000;
           const isDefault = true;
 
@@ -1484,7 +1475,7 @@ developmentChains.includes(network.name)
           const feeDetails = feeScalar(mgmtFee / 10e18, days);
           await tokenFactory
             .connect(deployer)
-            .setManagementFeeRate(feeDetails.dailyFee, feeDetails.RebaseFee);
+            .setManagementFeeRate(feeDetails.dailyFee);
           const amount = ethers.utils.parseEther("0");
           const isDefault = true;
 
@@ -1532,7 +1523,7 @@ developmentChains.includes(network.name)
           const mgmtFee = feeDetails.dailyFee;
           await tokenFactory
             .connect(deployer)
-            .setManagementFeeRate(feeDetails.dailyFee, feeDetails.RebaseFee);
+            .setManagementFeeRate(feeDetails.dailyFee);
           const amount = ethers.utils.parseEther("1");
           const isDefault = true;
 
@@ -2035,6 +2026,63 @@ developmentChains.includes(network.name)
               .connect(tester)
               .rebalance(rebalanceData2.encodedData, rebalanceData2.signature)
           ).to.emit(tokenFactoryKMS, "Rebalance");
+        });
+        it("it can be triggered even when the last time stamp is set to a backdate", async function () {
+          const { tokenFactory, tester, orchestrator, rebaseSigner } =
+            await loadFixture(deployTokenFixture);
+          const now = await tokenFactory.getLastTimeStamp();
+
+          //current blocktime
+          const block = await ethers.provider.getBlock("latest");
+          const currentBlockTime = block.timestamp;
+
+          const back_date = currentBlockTime - REBALANCE_INTERVAL; //backdate the backdate by 1 second
+
+          await tokenFactory.updateLastRebalanceTimeStamp(back_date);
+
+          const encodedNaturalRebalance1 = await signRebalance(
+            rebaseSigner,
+            defaultRebalanceData
+          );
+
+          await expect(
+            orchestrator
+              .connect(tester)
+              .rebalance(
+                encodedNaturalRebalance1.encodedData,
+                encodedNaturalRebalance1.signature
+              )
+          ).to.emit(tokenFactory, "Rebalance");
+        });
+        it("it can be triggered even when the last time stamp is set to a future date", async function () {
+          const { tokenFactory, tester, orchestrator, rebaseSigner } =
+            await loadFixture(deployTokenFixture);
+          const now = await tokenFactory.getLastTimeStamp();
+
+          //current blocktime
+          const block = await ethers.provider.getBlock("latest");
+          const currentBlockTime = block.timestamp;
+
+          const future_date = currentBlockTime + 1000; //backdate the backdate by 1 second
+
+
+          await tokenFactory.updateLastRebalanceTimeStamp(future_date);
+          await time.setNextBlockTimestamp(future_date+REBALANCE_INTERVAL);
+
+
+          const encodedNaturalRebalance1 = await signRebalance(
+            rebaseSigner,
+            defaultRebalanceData
+          );
+
+          await expect(
+            orchestrator
+              .connect(tester)
+              .rebalance(
+                encodedNaturalRebalance1.encodedData,
+                encodedNaturalRebalance1.signature
+              )
+          ).to.emit(tokenFactory, "Rebalance");
         });
       });
     })
