@@ -1979,6 +1979,63 @@ developmentChains.includes(network.name)
               .rebalance(rebalanceData2.encodedData, rebalanceData2.signature)
           ).to.emit(tokenFactoryKMS, "Rebalance");
         });
+        it("it can be triggered even when the last time stamp is set to a backdate", async function () {
+          const { tokenFactory, tester, orchestrator, rebaseSigner } =
+            await loadFixture(deployTokenFixture);
+          const now = await tokenFactory.getLastTimeStamp();
+
+          //current blocktime
+          const block = await ethers.provider.getBlock("latest");
+          const currentBlockTime = block.timestamp;
+
+          const back_date = currentBlockTime - REBALANCE_INTERVAL; //backdate the backdate by 1 second
+
+          await tokenFactory.updateLastRebalanceTimeStamp(back_date);
+
+          const encodedNaturalRebalance1 = await signRebalance(
+            rebaseSigner,
+            defaultRebalanceData
+          );
+
+          await expect(
+            orchestrator
+              .connect(tester)
+              .rebalance(
+                encodedNaturalRebalance1.encodedData,
+                encodedNaturalRebalance1.signature
+              )
+          ).to.emit(tokenFactory, "Rebalance");
+        });
+        it("it can be triggered even when the last time stamp is set to a future date", async function () {
+          const { tokenFactory, tester, orchestrator, rebaseSigner } =
+            await loadFixture(deployTokenFixture);
+          const now = await tokenFactory.getLastTimeStamp();
+
+          //current blocktime
+          const block = await ethers.provider.getBlock("latest");
+          const currentBlockTime = block.timestamp;
+
+          const future_date = currentBlockTime + 1000; //backdate the backdate by 1 second
+
+
+          await tokenFactory.updateLastRebalanceTimeStamp(future_date);
+          await time.setNextBlockTimestamp(future_date+REBALANCE_INTERVAL);
+
+
+          const encodedNaturalRebalance1 = await signRebalance(
+            rebaseSigner,
+            defaultRebalanceData
+          );
+
+          await expect(
+            orchestrator
+              .connect(tester)
+              .rebalance(
+                encodedNaturalRebalance1.encodedData,
+                encodedNaturalRebalance1.signature
+              )
+          ).to.emit(tokenFactory, "Rebalance");
+        });
       });
     })
   : describe.skip;

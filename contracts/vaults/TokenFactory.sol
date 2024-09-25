@@ -1235,6 +1235,11 @@ contract TokenFactory is
         emit PremiumDrained(receiver, amount);
     }
 
+    //function to update the last timestamp
+    function updateLastRebalanceTimeStamp(uint256 newTimeStamp) external onlyOwner {
+        lastTimeStamp = newTimeStamp;
+    }
+
     /// @notice Retrieves the `scheduledRebalance` struct at the given sequence number.
     /// @dev This function is a getter for a single `scheduledRebalance` struct.
     /// @param sequenceNumber The sequence number of the `scheduledRebalances` mapping to retrieve.

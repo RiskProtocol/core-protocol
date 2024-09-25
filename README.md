@@ -44,6 +44,9 @@ yarn hardhat run --network localhost  scripts/deploymentScript-wrapped.ts
 -- Wrappers should be deployed at last
 1. Ensure that the wallet has 1000 wei of underlying
 2. run `yarn hardhat run --network localhost scripts/deploymentScript-wrapped.ts 
+
+-- Upgrading contracts
+use : yarn hardhat run --network sepolia  scripts/utils/deployUpgrades.ts 
 ### Contracts deployed on Sepolia 
 {
   "tokenFactory": {
