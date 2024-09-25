@@ -124,6 +124,9 @@ contract TokenFactory is
     mapping(address => uint256) private currentDepositPeriodEnd;
     mapping(address => uint256) private currentDepositPeriodAmount;
 
+    //redemption fee
+    uint256 private redemptionFee;
+
     // Events
     event RebalanceApplied(address userAddress, uint256 rebalanceCount);
     event Rebalance(uint256 rebalanceCount);
@@ -230,6 +233,7 @@ contract TokenFactory is
         //flashloan
         premiumPercentage = 5;
         premiumCharged = 0;
+        redemptionFee = 0;
     }
 
     /// @notice Authorizes an upgrade to a new contract implementation.
@@ -433,7 +437,15 @@ contract TokenFactory is
         if (feesRefund > 0) {
             assets += feesRefund;
         }
+
+        //redemption fee
+        if (redemptionFee > 0 && treasuryWallet != address(0)) {
+            uint256 fee = assets.mul(redemptionFee).div(REBALANCE_INT_MULTIPLIER);
+            assets -= fee;
+            SafeERC20.safeTransfer(baseToken, treasuryWallet, fee);
+        }
         //Transfer the corresponding amount of underlying token/assets to the receiver
+
         SafeERC20.safeTransfer(baseToken, receiver, assets);
         emit Withdraw(caller, receiver, owner, assets, shares);
     }
@@ -904,7 +916,12 @@ contract TokenFactory is
         uint256 amount_,
         uint premium
     ) external onlySmartTokens {
-        SafeERC20.safeTransferFrom(baseToken, sender_, address(this), amount_.add(premium));
+        SafeERC20.safeTransferFrom(
+            baseToken,
+            sender_,
+            address(this),
+            amount_.add(premium)
+        );
         premiumCharged += premium;
     }
 
@@ -1234,6 +1251,13 @@ contract TokenFactory is
         SafeERC20.safeTransfer(baseToken, receiver, amount);
         emit PremiumDrained(receiver, amount);
     }
+    //@notice set the redemption fee
+    //@dev This function is used to set the redemption fee
+    //@param fee The redemption fee:10e18 == 100%
+    function setRedemptionFee(uint256 fee) external onlyOwner {
+        redemptionFee = fee;
+    }
+
 
     //function to update the last timestamp
     function updateLastRebalanceTimeStamp(uint256 newTimeStamp) external onlyOwner {
@@ -1383,5 +1407,9 @@ contract TokenFactory is
 
     function getAccumulatedFlashLoanPremium() public view returns (uint256) {
         return premiumCharged;
+    }
+
+    function getRedemptionFee() external view returns (uint256) {
+        return redemptionFee;
     }
 }

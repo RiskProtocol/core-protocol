@@ -430,6 +430,95 @@ developmentChains.includes(network.name)
 
             assert.equal(userWithdrawNet, expectedWithdraw);
           });
+          it(`It should withdraw correct amount with respect to fees (Also redemption fee).`, async function () {
+            const {
+              tokenFactory,
+              deployer,
+              underlyingToken,
+              smartToken1,
+              smartToken2,
+              tester,
+            } = await loadFixture(deployTokenFixture);
+            const depositAmount: bigint = BigInt(item.depositValue);
+
+            await tokenFactory.initializeSMART(
+              smartToken1.address,
+
+              smartToken2.address
+            );
+
+            // set the management fee to 0.2% and activating fees
+            const days = REBALANCE_INTERVAL / FF_INTERVAL;
+            const feeDetails = feeScalar(0.02, days);
+            await tokenFactory.setManagementFeeRate(
+              feeDetails.dailyFee
+
+            );
+            await tokenFactory.setManagementFeeState(true);
+
+            // deposit underlying token
+            await underlyingToken.approve(tokenFactory.address, depositAmount);
+            await smartToken2.mint(depositAmount, deployer.address);
+
+            const withdrawAmount: bigint =
+              (await smartToken1.balanceOf(deployer.address)) >
+              (await smartToken2.balanceOf(deployer.address))
+                ? smartToken1.balanceOf(deployer.address)
+                : await smartToken2.balanceOf(deployer.address);
+
+            let block = await ethers.provider.getBlock("latest");
+            const now: bigint = BigInt(block.timestamp);
+            //contract call
+            await time.setNextBlockTimestamp(now);
+            const fee = await tokenFactory.calculateManagementFee(
+              withdrawAmount,
+              0
+            );
+            const userBalance1: bigint = await underlyingToken.balanceOf(
+              deployer.address
+            );
+            //redemption fee
+
+            await tokenFactory.setRedemptionFee((10 ** 16).toString()); //0.1%
+            expect((await tokenFactory.getRedemptionFee()).toString()).to.equal(
+              (10 ** 16).toString()
+            );
+
+            await tokenFactory.setTreasuryWallet(tester.address);
+
+            const redemptionFee =
+              ((Number(withdrawAmount) + Number(fee)) * 10 ** 16) / 10 ** 18;
+
+            await time.setNextBlockTimestamp(now);
+
+
+            // withdraw underlying token
+            await smartToken1.withdraw(
+              withdrawAmount,
+              deployer.address,
+              deployer.address
+            );
+
+            const expectedWithdraw: bigint =
+              BigInt(withdrawAmount) + BigInt(fee) - BigInt(redemptionFee);
+
+            const userBalance2: bigint = await underlyingToken.balanceOf(
+              deployer.address
+            );
+
+            expect(
+              Number(
+                await underlyingToken.balanceOf(tester.address)
+              ).toPrecision(10)
+            ).to.equal(redemptionFee.toPrecision(10));
+            const userWithdrawNet: bigint =
+              BigInt(userBalance2) - BigInt(userBalance1);
+
+            assert.equal(
+              Number(userWithdrawNet).toPrecision(10),
+              Number(expectedWithdraw).toPrecision(10)
+            );
+          });
 
           it(`it should have correct balances for X and Y tokens after rebalance with initial token balance of X:${item.beforeRebalance.x}, Y:${item.beforeRebalance.y} and when management Fees are set.`, async function () {
             const {
