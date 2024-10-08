@@ -849,6 +849,36 @@ contract TokenFactory is
             }
         }
     }
+    function missedFeeFactorUpdate() external onlyOwner {
+        //figure out if any FF was acually missed
+        uint256 missedFFs = (block.timestamp - (FFLastTimeStamp + FFinterval)) /
+            FFinterval;
+        if (missedFFs > 0 && missedFFs < 10) {
+            for (uint256 i = 0; i < missedFFs; i++) {
+                FFLastTimeStamp += FFinterval;
+                updateFeeFactor();
+
+                //charge the missed fees
+                if (managementFeeEnabled && managementFeesRate > 0) {
+                    FFCheck(address(this));
+                    //totalSupply for X ===Y hence we care for only 1
+                    //total user fees
+                    uint256 mgmtFeesPerInterval = managementFeesRate
+                        .mul(FFinterval)
+                        .div(1 days);
+                    uint256 fees = (mgmtFeesPerInterval)
+                        .mul(smartTokenArray[0].totalSupply())
+                        .div(FFinterval)
+                        .div(REBALANCE_INT_MULTIPLIER);
+                    //here we create and hold
+                    factoryTreasuryTransfer(fees);
+
+                    lastRebalanceFees += fees;
+
+                }
+            }
+        }
+    }
 
     /// @notice should apply this to users before any interaction with the contracts
     function applyFF(address owner) public {
@@ -904,7 +934,12 @@ contract TokenFactory is
         uint256 amount_,
         uint premium
     ) external onlySmartTokens {
-        SafeERC20.safeTransferFrom(baseToken, sender_, address(this), amount_.add(premium));
+        SafeERC20.safeTransferFrom(
+            baseToken,
+            sender_,
+            address(this),
+            amount_.add(premium)
+        );
         premiumCharged += premium;
     }
 
@@ -1236,7 +1271,9 @@ contract TokenFactory is
     }
 
     //function to update the last timestamp
-    function updateLastRebalanceTimeStamp(uint256 newTimeStamp) external onlyOwner {
+    function updateLastRebalanceTimeStamp(
+        uint256 newTimeStamp
+    ) external onlyOwner {
         lastTimeStamp = newTimeStamp;
     }
 

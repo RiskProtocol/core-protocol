@@ -359,6 +359,58 @@ developmentChains.includes(network.name)
             );
           });
 
+          it(`It should apply rebalance with mgmt fee even when FF has not been updated previously`, async function () {
+            const {
+              tokenFactory,
+              deployer,
+              underlyingToken,
+              smartToken1,
+              smartToken2,
+              treasury,
+            } = await loadFixture(deployTokenFixture);
+            const depositAmount = item.depositValue;
+
+            await tokenFactory.initializeSMART(
+              smartToken1.address,
+              smartToken2.address
+            );
+
+            // set the management fee to 0.2% and activating fees
+            await tokenFactory.setTreasuryWallet(treasury.address);
+             const dailyFeeN = 0.02
+            const dailyFee = ethers.utils.parseEther(dailyFeeN.toString());
+            await tokenFactory.setManagementFeeRate(
+              dailyFee
+            );
+            await tokenFactory.setManagementFeeState(true);
+
+            // deposit underlying token
+            await underlyingToken.approve(tokenFactory.address, depositAmount);
+            await smartToken1.mint(depositAmount, deployer.address);
+
+            const now = await tokenFactory.getLastTimeStamp();
+            
+            //Assume Defender Scheduler was down for 3 days
+            const ThreeDaysINSeconds = 86400*3;
+
+            await time.setNextBlockTimestamp(+now + +ThreeDaysINSeconds);
+
+            // await tokenFactory.dailyFeeFactorsUpdate()
+            const FFnoBefore = await tokenFactory.getDailyFeeFactorNumber()
+            await expect (  tokenFactory.dailyFeeFactorsUpdate()).to.be.revertedWithCustomError(tokenFactory, "TokenFactory__InvalidDivision");
+             expect (await tokenFactory.missedFeeFactorUpdate()).to.be.ok;
+              const FFnoAfter = await tokenFactory.getDailyFeeFactorNumber()
+              expect (FFnoBefore+2).to.equal(FFnoAfter);
+            
+             //expect treasury not charged yet
+              expect (await smartToken1.balanceOf(treasury.address)).to.equal(0);
+              expect (await smartToken2.balanceOf(treasury.address)).to.equal(0);
+
+             await expect (  tokenFactory.dailyFeeFactorsUpdate()).to.be.ok;   
+             expect (await smartToken1.balanceOf(treasury.address)).to.greaterThan(0);
+             expect (await smartToken2.balanceOf(treasury.address)).to.greaterThan(0);
+          });
+
           it(`It should withdraw correct amount with respect to fees.`, async function () {
             const {
               tokenFactory,
