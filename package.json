@@ -54,7 +54,7 @@
     "@openzeppelin/contracts": "^4.8.3",
     "@openzeppelin/contracts-upgradeable": "^4.8.3",
     "@openzeppelin/hardhat-upgrades": "^1.27.0",
-    "@remix-project/remixd": "^0.6.18",
+    "@remix-project/remixd": "^0.6.37",
     "@tenderly/hardhat-tenderly": "^1.7.7",
     "@trp/buttonwood-wrapper": "https://github.com/RiskProtocol/button-wrappers.git#e6925e53de7bf8a69e86ec8b08aba94945ed0a55",
     "@trp/solady": "git+https://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@github.com/RiskProtocol/solady.git#03f3fd05fb1da76edc4df83ae6bf32a842c15f12",

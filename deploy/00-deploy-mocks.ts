@@ -11,7 +11,7 @@ const deployMocks: DeployFunction = async ({
   /* We deploy this only for local development, remember if you are deploying to a localhost,
      you'll need a local network running to interact eg yarn hardhat node
     */
-  if (['local', 'development'].includes(process.env.ENVIRONMENT!)) {
+  if (['local', 'development', 'hardhat'].includes(process.env.ENVIRONMENT!)) {
     log("Local or development network detected! Deploying mocks with address", deployer);
 
     log("Deploying MockERC20TokenWithPermit...");
@@ -37,7 +37,7 @@ const deployMocks: DeployFunction = async ({
     log("----------------------------------");
   }
 
-  if (process.env.ENVIRONMENT === "local") {
+  if (process.env.ENVIRONMENT === "local" || process.env.ENVIRONMENT === "hardhat") {
     log("Local network detected! Deploying mocks sanctions contract with address", deployer);
     log("Deploying MockSanctionContract...");
     const mockSanctionContract = await deploy("MockSanctionContract", {
