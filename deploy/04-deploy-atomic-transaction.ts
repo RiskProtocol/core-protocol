@@ -19,7 +19,7 @@ const func: DeployFunction = async ({
   );
   //underlying token
   let baseTokenAddress: string;
-  if (["local", "development"].includes(process.env.ENVIRONMENT!)) {
+  if (["local", "development", "hardhat"].includes(process.env.ENVIRONMENT!)) {
     const mockERC20TokenWithPermit = await deployments.get(
       "MockERC20TokenWithPermit"
     );

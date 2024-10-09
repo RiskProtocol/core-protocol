@@ -21,7 +21,7 @@ const func: DeployFunction = async ({
 
   let baseTokenAddress: string;
 
-  if (["local", "development"].includes(process.env.ENVIRONMENT!)) {
+  if (["local", "development", "hardhat"].includes(process.env.ENVIRONMENT!)) {
     const mockERC20TokenWithPermit = await deployments.get(
       "MockERC20TokenWithPermit"
     );
@@ -32,7 +32,7 @@ const func: DeployFunction = async ({
 
   let sanctionsContractAddress: string;
 
-  if (process.env.ENVIRONMENT === "local") {
+  if (process.env.ENVIRONMENT === "local" || process.env.ENVIRONMENT === "hardhat") {
     const mockSanctionContract = await deployments.get("MockSanctionContract");
     sanctionsContractAddress = mockSanctionContract.address;
   } else {
