@@ -1218,6 +1218,11 @@ contract TokenFactory is
         emit DepositLimitToggled(hasDepositLimit);
     }
 
+    function setFFinterval(uint256 newInterval) external onlyOwner {
+        require(newInterval > 0, "FFInterval must be positive");
+        FFinterval = newInterval;
+    }
+
     //flashloan premiums
     function setPremiumPercentage(uint16 percentage) external onlyOwner {
         require(
@@ -1383,5 +1388,9 @@ contract TokenFactory is
 
     function getAccumulatedFlashLoanPremium() public view returns (uint256) {
         return premiumCharged;
+    }
+
+    function getFFinterval() public view returns (uint256) {
+        return FFinterval;
     }
 }

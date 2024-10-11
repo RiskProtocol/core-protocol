@@ -408,6 +408,20 @@ developmentChains.includes(network.name)
           await expect(await tokenFactory.isValidSigner(rebaseSigner.address))
             .to.be.true;
         });
+
+        it("Should set and get the FF interval correctly", async function () {
+          const { tokenFactory, deployer,tester, rebaseSigner } = await loadFixture(
+            deployTokenFixture
+          );
+          await tokenFactory.setFFinterval(86400);
+          expect (await tokenFactory.getFFinterval()).to.equal(86400);
+
+          await tokenFactory.setFFinterval(172800);
+          expect (await tokenFactory.getFFinterval()).to.equal(172800);
+
+          await expect( tokenFactory.setFFinterval(0)).to.be.revertedWith("FFInterval must be positive");
+          await expect( tokenFactory.connect(tester).setFFinterval(172800)).to.be.revertedWith("Ownable: caller is not the owner");
+        });
       });
 
       describe("Deposit", async function () {
